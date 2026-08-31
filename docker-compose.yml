@@ -1,5 +1,5 @@
 # ============================================================
-# Backspace — All-in-one production deployment
+# VERTEX — All-in-one production deployment
 # ============================================================
 # Run ./install.sh for first-time setup, or configure manually:
 #   1. Copy .env.example to .env and fill in values
@@ -8,24 +8,24 @@
 # ============================================================
 
 services:
-  # ── Backspace application server ──────────────────────────
-  backspace:
+  # ── VERTEX application server ──────────────────────────
+  VERTEX:
     # Prebuilt multi-arch image on GHCR (published by .github/workflows/
     # docker-publish.yml). `docker compose pull` / install.sh's default path
     # fetches this so weak/ARM hosts skip the heavy local build. Both `image:`
     # and `build:` are declared: if the image isn't present locally and can't be
     # pulled, `docker compose up --build` (install.sh's fallback, and deploy.sh)
     # builds from source instead and tags the result under this same ref.
-    # Override the tag with BACKSPACE_IMAGE_TAG in .env (defaults to `latest`).
-    image: ${BACKSPACE_IMAGE:-ghcr.io/thezwiss/backspace}:${BACKSPACE_IMAGE_TAG:-latest}
+    # Override the tag with VERTEX_IMAGE_TAG in .env (defaults to `latest`).
+    image: ${VERTEX_IMAGE:-ghcr.io/thezwiss/VERTEX}:${VERTEX_IMAGE_TAG:-latest}
     build:
       context: .
       args:
         # AGPL-3.0 § 13: bake the running build's git commit into the image so
         # /api/instance/info advertises the exact version. deploy.sh exports
-        # BACKSPACE_COMMIT before `docker compose build`; empty when unset.
-        BACKSPACE_COMMIT: ${BACKSPACE_COMMIT:-}
-    container_name: backspace
+        # VERTEX_COMMIT before `docker compose build`; empty when unset.
+        VERTEX_COMMIT: ${VERTEX_COMMIT:-}
+    container_name: VERTEX
     restart: unless-stopped
     volumes:
       - ./data:/app/data
@@ -33,11 +33,11 @@ services:
       - .env
     environment:
       - NODE_ENV=production
-      - DB_PATH=/app/data/backspace.db
+      - DB_PATH=/app/data/VERTEX.db
       - UPLOAD_DIR=/app/data/uploads
       # Fail fast with a clear message if the secret is missing/empty, instead of
       # letting the container boot-crash on every `restart: unless-stopped` cycle
-      # (a silent loop that only shows up in `docker compose logs backspace`).
+      # (a silent loop that only shows up in `docker compose logs VERTEX`).
       # install.sh generates this before bringing the stack up; this guard only
       # bites the manual `cp .env.example .env && docker compose up` path.
       - "JWT_SECRET=${JWT_SECRET:?Set JWT_SECRET in .env - generate one with: openssl rand -hex 32}"
@@ -69,7 +69,7 @@ services:
     networks:
       - internal
     depends_on:
-      backspace:
+      VERTEX:
         condition: service_healthy
 
   # ── LiveKit voice/video server ────────────────────────────

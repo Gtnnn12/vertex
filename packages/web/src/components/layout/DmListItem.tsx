@@ -6,6 +6,7 @@ import { parseFederatedUsername, isSelf, isFederationGlobeApplicable } from '../
 import { useCanonicalUserView } from '../../utils/userViewLookup';
 import { formatDmTimestamp, formatDmSidebarPreview, formatDmHeaderName } from '../../utils/dmFormatters';
 import { getRejectedPeerOrigins, getAwaitingApprovalPeerOrigins } from '../../hooks/useWebSocket';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 function isMemberUnreachable(homeInstance: string | null | undefined): boolean {
   if (!homeInstance) return false;
@@ -31,6 +32,7 @@ interface DmListItemProps {
 }
 
 export function DmListItem({ dm, isActive, isUnread, user, onSelect, onClose, onLeave, onContextMenu }: DmListItemProps) {
+  const { t } = useLanguage();
   const otherMembers = dm.members.filter(m => !isSelf(m, user));
   const isGroup = !!dm.ownerId;
   if (otherMembers.length === 0 && !isGroup) return null;
@@ -118,7 +120,7 @@ export function DmListItem({ dm, isActive, isUnread, user, onSelect, onClose, on
   // sender prefix for group user-messages. We only need to provide the
   // empty-group fallback ourselves.
   const preview = formatDmSidebarPreview(dm, user);
-  const previewText = preview ?? (isGroup ? `${dm.members.length} Members` : null);
+  const previewText = preview ?? (isGroup ? `${dm.members.length} ${t('members')}` : null);
 
   const itemJsx = (
     <div
@@ -166,14 +168,14 @@ export function DmListItem({ dm, isActive, isUnread, user, onSelect, onClose, on
             </Tooltip>
           )}
           {firstOther && isMemberUnreachable(firstOther.homeInstance) && (
-            <Tooltip content="Cannot relay messages — their server denied peering. Contact their admin." position="top">
+            <Tooltip content={t('cannot_relay_messages')} position="top">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-accent-rose opacity-70 flex-shrink-0">
                 <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
               </svg>
             </Tooltip>
           )}
           {firstOther && !isMemberUnreachable(firstOther.homeInstance) && isMemberAwaitingApproval(firstOther.homeInstance) && (
-            <Tooltip content="Messages will be delivered once their admin approves the peering request." position="top">
+            <Tooltip content={t('messages_pending_peering')} position="top">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-accent-amber opacity-70 flex-shrink-0">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
               </svg>
@@ -196,7 +198,7 @@ export function DmListItem({ dm, isActive, isUnread, user, onSelect, onClose, on
       <button
         onClick={handleClose}
         className={closeClass}
-        title={isGroup ? 'Leave Group DM' : 'Close DM'}
+        title={isGroup ? t('leave_group_dm') : t('close_dm')}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
           <path d="M18.4 4L12 10.4L5.6 4L4 5.6L10.4 12L4 18.4L5.6 20L12 13.6L18.4 20L20 18.4L13.6 12L20 5.6L18.4 4Z" />

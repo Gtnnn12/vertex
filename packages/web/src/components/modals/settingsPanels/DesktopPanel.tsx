@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Toggle } from '../../ui/Toggle';
+import { useLanguage } from '../../../contexts/LanguageContext';
 
 function AutoLaunchSettings() {
   const [openAtLogin, setOpenAtLogin] = useState(false);
   const [startMinimized, setStartMinimized] = useState(true);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const { t } = useLanguage();
 
   useEffect(() => {
     window.backspace?.getAutoLaunchSettings().then((settings) => {
@@ -49,18 +51,18 @@ function AutoLaunchSettings() {
     <>
       <div className="flex items-center justify-between py-1">
         <div className="flex-1 mr-4">
-          <div className="text-sm text-txt-primary">Start at boot</div>
+          <div className="text-sm text-txt-primary">{t('start_at_boot')}</div>
           <div className="text-xs text-txt-tertiary mt-0.5">
-            Automatically launch Backspace when you log in
+            {t('auto_launch_description')}
           </div>
         </div>
         <Toggle enabled={openAtLogin} onChange={handleOpenAtLoginChange} disabled={busy} />
       </div>
       <div className="flex items-center justify-between py-1">
         <div className="flex-1 mr-4">
-          <div className={`text-sm ${openAtLogin ? 'text-txt-primary' : 'text-txt-tertiary'}`}>Start minimized</div>
+          <div className={`text-sm ${openAtLogin ? 'text-txt-primary' : 'text-txt-tertiary'}`}>{t('start_minimized')}</div>
           <div className="text-xs text-txt-tertiary mt-0.5">
-            Start hidden in the system tray instead of showing the window
+            {t('start_minimized_description')}
           </div>
         </div>
         <Toggle enabled={startMinimized} onChange={handleStartMinimizedChange} disabled={busy || !openAtLogin} />
@@ -72,6 +74,7 @@ function AutoLaunchSettings() {
 function UpdateSettings() {
   const [version, setVersion] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
+  const { t } = useLanguage();
 
   useEffect(() => {
     window.backspace?.getVersion().then(setVersion).catch(() => {});
@@ -88,10 +91,10 @@ function UpdateSettings() {
     <div className="flex items-center justify-between py-1">
       <div className="flex-1 mr-4">
         <div className="text-sm text-txt-primary">
-          {version ? `Version ${version}` : 'Backspace Desktop'}
+          {version ? `${t('version')} ${version}` : t('desktop_app_name')}
         </div>
         <div className="text-xs text-txt-tertiary mt-0.5">
-          Check for new versions of the desktop app
+          {t('check_for_updates_description')}
         </div>
       </div>
       <button
@@ -99,16 +102,17 @@ function UpdateSettings() {
         disabled={checking}
         className="px-3 py-1.5 text-sm text-txt-secondary hover:text-txt-primary bg-white/[0.04] hover:bg-white/[0.08] rounded-lg transition-colors disabled:opacity-50"
       >
-        {checking ? 'Checking...' : 'Check for Updates'}
+        {checking ? t('checking') : t('check_for_updates')}
       </button>
     </div>
   );
 }
 
 export function DesktopPanel() {
+  const { t } = useLanguage();
   return (
     <div className="space-y-5">
-      <h2 className="text-lg font-semibold text-txt-primary mb-6">Desktop</h2>
+      <h2 className="text-lg font-semibold text-txt-primary mb-6">{t('desktop')}</h2>
 
       <div className="rounded-lg bg-white/[0.03] border border-white/[0.04] p-3.5 space-y-3">
         <AutoLaunchSettings />
@@ -119,13 +123,13 @@ export function DesktopPanel() {
         <div className="flex items-center justify-between">
           <div>
             <div className="text-sm text-txt-primary font-medium">{window.location.origin}</div>
-            <div className="text-xs text-txt-tertiary mt-0.5">Currently connected instance</div>
+            <div className="text-xs text-txt-tertiary mt-0.5">{t('currently_connected_instance')}</div>
           </div>
           <button
             onClick={() => window.backspace?.clearInstanceUrl()}
             className="px-3 py-1.5 text-sm text-txt-secondary hover:text-txt-primary bg-white/[0.04] hover:bg-white/[0.08] rounded-lg transition-colors"
           >
-            Change Instance
+            {t('change_instance')}
           </button>
         </div>
       </div>

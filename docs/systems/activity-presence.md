@@ -228,7 +228,7 @@ This synthetic injection only occurs in the ready payload snapshot, not in live 
 
 After receiving a `ready` event, the client performs two re-push operations (`useWebSocket.ts:217-236`):
 
-1. **Electron re-query:** If running in desktop and this is the home connection, calls `window.backspace.getCurrentActivity()` and pushes the result. This handles sleep/wake scenarios where the process scanner didn't fire a change event.
+1. **Electron re-query:** If running in desktop and this is the home connection, calls `window.VERTEX.getCurrentActivity()` and pushes the result. This handles sleep/wake scenarios where the process scanner didn't fire a change event.
 
 2. **Multi-instance fan-out:** Reads `myActivities` from the activity store and sends `activity_update` to the newly connected instance via `wsSend(event, origin)`. This ensures remote instances have the user's current activities in their in-memory store immediately.
 
@@ -290,7 +290,7 @@ This spec covers how detected activities enter the broadcast pipeline. The detec
 
 `activityBridge.ts` is initialized once in `AppLayout` via `useEffect`:
 
-1. Calls `initActivityBridge()` → subscribes to `window.backspace.onActivityDetected`
+1. Calls `initActivityBridge()` → subscribes to `window.VERTEX.onActivityDetected`
 2. On activity change: calls `pushActivities([activity])` or `pushActivities([])` (null means no activity)
 3. On init: also queries `getCurrentActivity()` for immediate state
 4. Cleanup: `teardownActivityBridge()` removes the IPC listener

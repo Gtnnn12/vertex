@@ -11,6 +11,7 @@ import { formatDmHeaderName, formatDmInputLabel, isDeletedPartnerDm } from '../.
 import { DmDeletedNotice } from '../chat/DmDeletedNotice';
 import { useCanonicalUserView } from '../../utils/userViewLookup';
 import type { User } from '@backspace/shared';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const FALLBACK_USER = { id: '', username: '', createdAt: 0, isAdmin: false, replicatedInstances: [] } as unknown as User;
 
@@ -19,6 +20,7 @@ interface MobileChatScreenProps {
 }
 
 export function MobileChatScreen({ params }: MobileChatScreenProps) {
+  const { t } = useLanguage();
   const popMobileScreen = useUIStore((s) => s.popMobileScreen);
   const pushMobileScreen = useUIStore((s) => s.pushMobileScreen);
 
@@ -55,26 +57,26 @@ export function MobileChatScreen({ params }: MobileChatScreenProps) {
   // it and always rendered the joined-names fallback). 1-on-1 DMs keep the
   // canonical-view lookup so replicated aliases still surface the home
   // account's displayName.
-  let channelName = 'Channel';
+  let channelName = t('channel');
   let inputPlaceholder: string | undefined;
   if (isDm && dm) {
     if (isGroup) {
       channelName = formatDmHeaderName(dm, authUser);
-      inputPlaceholder = `Message ${formatDmInputLabel(dm, authUser)}`;
+      inputPlaceholder = `${t('message')} ${formatDmInputLabel(dm, authUser)}`;
     } else if (rawMainOther) {
       channelName =
         canonicalMainOther.displayName ??
         parseFederatedUsername(canonicalMainOther.username).baseName ??
-        'Direct Message';
+        t('direct_message');
       // Use the canonical `channelName` directly so header + placeholder stay
       // aligned even when the raw partner and canonical view disagree.
-      inputPlaceholder = `Message @${channelName}`;
+      inputPlaceholder = `${t('message')} @${channelName}`;
     } else {
-      channelName = 'Direct Message';
+      channelName = t('direct_message');
     }
   } else if (!isDm && channelId) {
     const ch = channels.find(c => c.id === channelId);
-    channelName = ch?.name || 'channel';
+    channelName = ch?.name || t('channel');
   }
 
   return (
@@ -107,7 +109,7 @@ export function MobileChatScreen({ params }: MobileChatScreenProps) {
               }
             }}
             className="w-8 h-8 flex items-center justify-center text-txt-secondary hover:text-txt-primary"
-            aria-label={isDm && isGroup ? 'Group info' : 'Members'}
+            aria-label={isDm && isGroup ? t('group_info') : t('members')}
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />

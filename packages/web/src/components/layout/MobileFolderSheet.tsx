@@ -4,6 +4,7 @@ import { useSpaceStore } from '../../stores/spaceStore';
 import { useContextMenuStore } from '../../stores/contextMenuStore';
 import { useDragToClose } from '../../hooks/useDragToClose';
 import { getSpaceGradient } from '../../utils/gradients';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const FOLDER_COLORS = [
   { name: 'Mint', value: 'rgb(var(--accent-mint))' },

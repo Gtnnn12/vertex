@@ -23,6 +23,7 @@ import { useDragManager, type DropTarget, type LayoutItem } from '../../hooks/us
 import { useDelayedLoading } from '../../hooks/useDelayedLoading';
 import { useAudioDevices } from '../../hooks/useAudioDevices';
 import { DropdownItem } from '../modals/settingsPanels/_shared/SettingsPickerPrimitives';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 export function ChannelSidebar() {
   const spaces = useSpaceStore((s) => s.spaces);
@@ -53,6 +54,7 @@ export function ChannelSidebar() {
   const isPermissionMuted = !!(myOriginId && spaceId && permissionMutedUserIds.has(`${spaceId}:${myOriginId}`));
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useLanguage();
 
   const [floatingPanelEl, setFloatingPanelEl] = useState<HTMLDivElement | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -452,7 +454,7 @@ export function ChannelSidebar() {
               <path d="M3 18a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-1c0-2.76-5.37-4-8-4s-8 1.24-8 4v1Z" />
               <path d="M3.5 13.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" opacity=".5" />
             </svg>
-            <span className="font-medium text-[16px]">Friends</span>
+            <span className="font-medium text-[16px]">{t('friends')}</span>
           </div>
 
           {/* Placeholder nav items */}
@@ -462,7 +464,7 @@ export function ChannelSidebar() {
             <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="flex-shrink-0">
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
             </svg>
-            <span className="font-medium text-[16px]">Coming Soon</span>
+            <span className="font-medium text-[16px]">{t('coming_soon')}</span>
           </div>
           <div
             className="flex items-center gap-3 px-2 h-[42px] rounded-[6px] mb-[2px] text-txt-tertiary cursor-default opacity-50"
@@ -470,15 +472,15 @@ export function ChannelSidebar() {
             <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="flex-shrink-0">
               <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z" />
             </svg>
-            <span className="font-medium text-[16px]">Coming Soon</span>
+            <span className="font-medium text-[16px]">{t('coming_soon')}</span>
           </div>
 
           <div className="mt-[18px] px-2 mb-1 flex items-center justify-between group">
-            <span className="text-[12px] font-bold text-txt-tertiary tracking-wider">Direct Messages</span>
+            <span className="text-[12px] font-bold text-txt-tertiary tracking-wider">{t('direct_messages')}</span>
             <button
               onClick={() => openModal('newDm')}
               className="text-txt-tertiary hover:text-txt-primary transition-colors"
-              title="New Direct Message"
+              title={t('new_direct_message')}
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                 <path d="M8 2a.5.5 0 01.5.5v5h5a.5.5 0 010 1h-5v5a.5.5 0 01-1 0v-5h-5a.5.5 0 010-1h5v-5A.5.5 0 018 2z" />
@@ -509,7 +511,7 @@ export function ChannelSidebar() {
             {dmChannels.length === 0 && (
               <div className="flex flex-col items-center py-6 opacity-80">
                 <Mascot state="sleeping" className="w-20 h-20 mb-2" />
-                <p className="text-[13px] text-txt-tertiary">No conversations yet.</p>
+                <p className="text-[13px] text-txt-tertiary">{t('no_conversations')}</p>
               </div>
             )}
           </div>

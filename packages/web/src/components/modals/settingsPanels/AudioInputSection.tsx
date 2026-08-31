@@ -3,6 +3,7 @@ import { useVoiceStore } from '../../../stores/voiceStore';
 import { AudioManager } from '../../../audio/AudioManager';
 import { useAudioDevices } from '../../../hooks/useAudioDevices';
 import { SectionShell, DropdownItem } from './_shared/SettingsPickerPrimitives';
+import { useLanguage } from '../../../contexts/LanguageContext';
 
 export function AudioInputSection() {
   const inputDeviceId = useVoiceStore((s) => s.inputDeviceId);
@@ -22,6 +23,7 @@ export function AudioInputSection() {
   const [audioCtxGen, setAudioCtxGen] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const animFrameRef = useRef<number>(0);
+  const { t } = useLanguage();
 
   // Click-outside-to-close. iOS Safari does not synthesize `mousedown` from
   // touch reliably, so we listen for `touchstart` alongside `mousedown` to
@@ -91,25 +93,25 @@ export function AudioInputSection() {
 
   if (permState === 'unknown') {
     return (
-      <SectionShell title="Input Device">
-        <div className="text-sm text-txt-tertiary">Checking microphone access…</div>
+      <SectionShell title={t('input_device')}>
+        <div className="text-sm text-txt-tertiary">{t('checking_microphone_access')}</div>
       </SectionShell>
     );
   }
 
   if (permState === 'denied') {
     return (
-      <SectionShell title="Input Device">
+      <SectionShell title={t('input_device')}>
         <div className="space-y-2">
-          <div className="text-sm text-txt-primary">⚠ Microphone access denied</div>
+          <div className="text-sm text-txt-primary">⚠ {t('microphone_access_denied')}</div>
           <div className="text-xs text-txt-tertiary">
-            Grant microphone permission to choose an input device.
+            {t('grant_microphone_permission_hint')}
           </div>
           <button
             onClick={() => { requestPermission().catch(() => {}); }}
             className="text-xs px-3 py-1.5 rounded-md bg-surface-base hover:bg-interactive-hover text-txt-secondary transition-colors"
           >
-            Try again
+            {t('try_again')}
           </button>
         </div>
       </SectionShell>
@@ -118,16 +120,16 @@ export function AudioInputSection() {
 
   if (permState === 'prompt') {
     return (
-      <SectionShell title="Input Device">
+      <SectionShell title={t('input_device')}>
         <div className="space-y-3">
           <div className="text-xs text-txt-tertiary">
-            Microphone permission needed to list and choose an input device.
+            {t('microphone_permission_needed')}
           </div>
           <button
             onClick={() => { requestPermission().catch(() => {}); }}
             className="text-[13px] px-3 py-2 rounded-md bg-accent-primary hover:bg-accent-primary-hover text-white font-medium transition-colors"
           >
-            Enable microphone access
+            {t('enable_microphone_access')}
           </button>
         </div>
       </SectionShell>
@@ -136,8 +138,8 @@ export function AudioInputSection() {
 
   // permState === 'granted'
   const selectedLabel = inputDeviceId === 'default'
-    ? 'System Default'
-    : inputLabels.get(inputDeviceId) ?? 'System Default';
+    ? t('system_default')
+    : inputLabels.get(inputDeviceId) ?? t('system_default');
   const resolvedHint = inputDeviceId === 'default' && activeUpstreamId
     ? inputLabels.get(activeUpstreamId)
     : null;
@@ -152,7 +154,7 @@ export function AudioInputSection() {
   const activeBars = Math.round(micLevel * micBars * (inputVolume / 100));
 
   return (
-    <SectionShell title="Input Device">
+    <SectionShell title={t('input_device')}>
       <div className="space-y-3">
         <div ref={dropdownRef}>
           <button
@@ -168,7 +170,7 @@ export function AudioInputSection() {
           </button>
           {listOpen && (
             <div className="mt-1 rounded-md bg-surface-base border border-border-hard py-1 max-h-64 overflow-y-auto">
-              <DropdownItem label="System Default" active={inputDeviceId === 'default'} onClick={() => handleSelect('default')} />
+              <DropdownItem label={t('system_default')} active={inputDeviceId === 'default'} onClick={() => handleSelect('default')} />
               {inputs.filter(d => d.deviceId !== 'default').map((d) => (
                 <DropdownItem
                   key={d.deviceId}
@@ -181,15 +183,15 @@ export function AudioInputSection() {
           )}
         </div>
         {resolvedHint && (
-          <div className="text-xs text-txt-tertiary -mt-1">Currently using: {resolvedHint}</div>
+          <div className="text-xs text-txt-tertiary -mt-1">{t('currently_using')}: {resolvedHint}</div>
         )}
         {inputs.length === 0 && (
-          <div className="text-xs text-txt-tertiary">No microphones detected.</div>
+          <div className="text-xs text-txt-tertiary">{t('no_microphones_detected')}</div>
         )}
 
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <div className="text-[13px] font-medium text-txt-primary">Input Volume</div>
+            <div className="text-[13px] font-medium text-txt-primary">{t('input_volume')}</div>
             <div className="text-xs text-txt-tertiary tabular-nums">{inputVolume}%</div>
           </div>
           <input
@@ -214,7 +216,7 @@ export function AudioInputSection() {
             ))}
           </div>
           <div className="text-xs text-txt-tertiary mt-1.5">
-            The level meter activates once you join a voice channel.
+            {t('level_meter_join_hint')}
           </div>
         </div>
       </div>

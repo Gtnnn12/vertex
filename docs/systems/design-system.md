@@ -1,6 +1,6 @@
 # Design System — "Aether Drift"
 
-Prototype (source of truth): `Backspace-design-prototype.html` (open in browser)
+Prototype (source of truth): `VERTEX-design-prototype.html` (open in browser)
 Styles: `packages/web/src/styles/globals.css`
 Theme: `packages/web/tailwind.config.js`
 Font: DM Sans (primary) with system fallbacks
@@ -13,7 +13,7 @@ Font: DM Sans (primary) with system fallbacks
 - Quiet glass (felt, not seen). No decorative gradients. Minimal shadows.
 - Two-material system: solid matte panels for content (75%), frosted glass bubbles for persistent controls (25%)
 - `prefers-reduced-transparency` → fall back to solid surfaces
-- NOT a Discord clone — Backspace has its own visual identity
+- NOT a Discord clone — VERTEX has its own visual identity
 
 ---
 

@@ -1,0 +1,155 @@
+warning: in the working copy of 'packages/web/index.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'packages/web/src/components/auth/LoginPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'packages/web/src/components/chat/MessageInput.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'packages/web/src/components/chat/SearchPopover.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'packages/web/src/components/modals/settingsPanels/AccountPanel.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'packages/web/src/components/modals/settingsPanels/VideoSection.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'packages/web/src/styles/globals.css', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'pnpm-lock.yaml', LF will be replaced by CRLF the next time Git touches it
+ .env.example                                       |  24 [32m+[m[31m-[m
+ .github/ISSUE_TEMPLATE/bug_report.yml              |   4 [32m+[m[31m-[m
+ .github/ISSUE_TEMPLATE/config.yml                  |   4 [32m+[m[31m-[m
+ .github/ISSUE_TEMPLATE/feature_request.yml         |   2 [32m+[m[31m-[m
+ .github/workflows/ci.yml                           |   2 [32m+[m[31m-[m
+ .github/workflows/cla.yml                          |   4 [32m+[m[31m-[m
+ .github/workflows/docker-publish.yml               |  18 [32m+[m[31m-[m
+ .github/workflows/release.yml                      |   2 [32m+[m[31m-[m
+ CLA.md                                             |   6 [32m+[m[31m-[m
+ CLAUDE.md                                          |  10 [32m+[m[31m-[m
+ CONTRIBUTING.md                                    |   6 [32m+[m[31m-[m
+ Caddyfile                                          |   6 [32m+[m[31m-[m
+ Dockerfile                                         |  12 [32m+[m[31m-[m
+ LICENSE-COMMERCIAL.md                              |  16 [32m+[m[31m-[m
+ NOTICE                                             |  12 [32m+[m[31m-[m
+ README.md                                          |  84 [32m+++[m[31m---[m
+ SECURITY.md                                        |   2 [32m+[m[31m-[m
+ assets/brand/app-icon-1024.png                     | Bin [31m1180332[m -> [32m1189132[m bytes
+ assets/brand/app-icon-x1.png                       | Bin [31m24260[m -> [32m24432[m bytes
+ assets/brand/app-icon-x2.png                       | Bin [31m93696[m -> [32m94409[m bytes
+ assets/brand/app-icon-x3.png                       | Bin [31m204509[m -> [32m206104[m bytes
+ assets/brand/app-icon.svg                          |  34 [32m+[m[31m--[m
+ assets/brand/mark-mono-dark.svg                    |   2 [32m+[m[31m-[m
+ assets/brand/mark.svg                              |  29 [32m+[m[31m-[m
+ assets/social-preview.png                          | Bin [31m226921[m -> [32m228596[m bytes
+ backup.sh                                          |   8 [32m+[m[31m-[m
+ deploy.sh                                          |  14 [32m+[m[31m-[m
+ docker-compose.proxy.yml                           |   4 [32m+[m[31m-[m
+ docker-compose.yml                                 |  22 [32m+[m[31m-[m
+ docs/comparison.md                                 |  38 [32m+[m[31m--[m
+ docs/screenshots.md                                |   2 [32m+[m[31m-[m
+ docs/screenshots/admin-federation.webp             | Bin [31m79676[m -> [32m80327[m bytes
+ docs/screenshots/admin-streaming.webp              | Bin [31m73436[m -> [32m74033[m bytes
+ docs/screenshots/chat-moderation.webp              | Bin [31m82910[m -> [32m83537[m bytes
+ docs/screenshots/chat.webp                         | Bin [31m88160[m -> [32m88860[m bytes
+ docs/screenshots/file-sharing.webp                 | Bin [31m71840[m -> [32m72435[m bytes
+ docs/screenshots/friends.webp                      | Bin [31m49120[m -> [32m49462[m bytes
+ docs/screenshots/gif-picker.webp                   | Bin [31m74520[m -> [32m75107[m bytes
+ docs/screenshots/group-dm.webp                     | Bin [31m50794[m -> [32m51207[m bytes
+ docs/screenshots/screen-share-settings.webp        | Bin [31m82520[m -> [32m83185[m bytes
+ docs/screenshots/space-discovery.webp              | Bin [31m87432[m -> [32m88141[m bytes
+ docs/screenshots/user-discovery.webp               | Bin [31m100918[m -> [32m101719[m bytes
+ docs/screenshots/voice-call-pip.webp               | Bin [31m89582[m -> [32m90249[m bytes
+ docs/screenshots/voice-streams.webp                | Bin [31m129474[m -> [32m130521[m bytes
+ docs/screenshots/voice-video-grid.webp             | Bin [31m140700[m -> [32m141818[m bytes
+ .../plans/2026-07-13-plan-b-container-hardening.md |  22 [32m+[m[31m-[m
+ .../specs/2026-07-10-federation-ts-split-design.md |   4 [32m+[m[31m-[m
+ ...026-07-10-security-scanning-hardening-design.md |  16 [32m+[m[31m-[m
+ docs/systems/activity-presence.md                  |   4 [32m+[m[31m-[m
+ docs/systems/admin.md                              |  10 [32m+[m[31m-[m
+ docs/systems/api.md                                |   2 [32m+[m[31m-[m
+ docs/systems/auth.md                               |   6 [32m+[m[31m-[m
+ docs/systems/client-federation.md                  |   8 [32m+[m[31m-[m
+ docs/systems/database.md                           |   2 [32m+[m[31m-[m
+ docs/systems/deployment.md                         |  70 [32m++[m[31m---[m
+ docs/systems/design-system.md                      |   4 [32m+[m[31m-[m
+ docs/systems/desktop.md                            |  76 [32m++[m[31m---[m
+ docs/systems/embeds.md                             |   6 [32m+[m[31m-[m
+ docs/systems/federation.md                         |   4 [32m+[m[31m-[m
+ docs/systems/mobile-ui.md                          |   4 [32m+[m[31m-[m
+ docs/systems/sounds.md                             |   4 [32m+[m[31m-[m
+ docs/systems/spaces.md                             |   2 [32m+[m[31m-[m
+ electronbuild.sh                                   |   2 [32m+[m[31m-[m
+ install.sh                                         | 102 [32m+++[m[31m----[m
+ package.json                                       |  28 [32m+[m[31m-[m
+ packages/server/package.json                       |  97 [32m++++[m[31m---[m
+ packages/web/index.html                            |   4 [32m+[m[31m-[m
+ packages/web/package.json                          |   4 [32m+[m[31m-[m
+ packages/web/src/components/JoinPage.tsx           |  89 [32m+++[m[31m---[m
+ .../web/src/components/NotificationController.tsx  |   6 [32m+[m[31m-[m
+ packages/web/src/components/auth/LoginPage.tsx     |  24 [32m+[m[31m-[m
+ packages/web/src/components/auth/RegisterPage.tsx  |  70 [32m++[m[31m---[m
+ packages/web/src/components/chat/ExplorePage.tsx   |  41 [32m+[m[31m--[m
+ packages/web/src/components/chat/FriendsPage.tsx   |  26 [32m+[m[31m-[m
+ packages/web/src/components/chat/Message.tsx       |  25 [32m+[m[31m-[m
+ packages/web/src/components/chat/MessageInput.tsx  |  60 [32m++[m[31m--[m
+ packages/web/src/components/chat/MessageList.tsx   |  35 [32m+[m[31m--[m
+ packages/web/src/components/chat/SearchPopover.tsx |  35 [32m+[m[31m--[m
+ .../web/src/components/chat/SpaceInviteCard.tsx    |  12 [32m+[m[31m-[m
+ packages/web/src/components/chat/SystemMessage.tsx |  22 [32m+[m[31m-[m
+ .../web/src/components/chat/TypingIndicator.tsx    |  10 [32m+[m[31m-[m
+ .../web/src/components/chat/messageMenuItems.tsx   |  34 [32m+[m[31m--[m
+ .../web/src/components/layout/ActivityPanel.tsx    |  12 [32m+[m[31m-[m
+ packages/web/src/components/layout/AppLayout.tsx   |   8 [32m+[m[31m-[m
+ .../web/src/components/layout/ChannelSidebar.tsx   |  14 [32m+[m[31m-[m
+ packages/web/src/components/layout/DmListItem.tsx  |  10 [32m+[m[31m-[m
+ .../web/src/components/layout/DmRosterPanel.tsx    |  34 [32m++[m[31m-[m
+ packages/web/src/components/layout/DmSearchBar.tsx |  27 [32m+[m[31m-[m
+ packages/web/src/components/layout/MainContent.tsx |  50 [32m++[m[31m--[m
+ .../web/src/components/layout/MemberSidebar.tsx    |  16 [32m+[m[31m-[m
+ .../web/src/components/layout/MobileBottomNav.tsx  |   8 [32m+[m[31m-[m
+ .../web/src/components/layout/MobileChatScreen.tsx |  16 [32m+[m[31m-[m
+ .../web/src/components/layout/MobileDmsScreen.tsx  |  13 [32m+[m[31m-[m
+ .../src/components/layout/MobileFolderSheet.tsx    |   1 [32m+[m
+ .../src/components/layout/MobileInstancePanel.tsx  |  20 [32m+[m[31m-[m
+ .../src/components/layout/MobileMembersScreen.tsx  |  20 [32m+[m[31m-[m
+ .../src/components/layout/MobileSettingsScreen.tsx |  32 [32m++[m[31m-[m
+ packages/web/src/components/layout/MobileShell.tsx |  49 [32m++[m[31m--[m
+ .../components/layout/MobileVoiceFullScreen.tsx    |  34 [32m+[m[31m--[m
+ .../src/components/layout/MobileVoiceMiniBar.tsx   |   8 [32m+[m[31m-[m
+ .../web/src/components/layout/MobileYouScreen.tsx  |  12 [32m+[m[31m-[m
+ .../web/src/components/modals/UserSettings.tsx     |  58 [32m++[m[31m--[m
+ .../instanceSettingsPanels/FederationPanel.tsx     | 312 [32m+++++++++++[m[31m----------[m
+ .../modals/instanceSettingsPanels/GeneralPanel.tsx |  36 [32m+[m[31m--[m
+ .../instanceSettingsPanels/RegistrationPanel.tsx   |  81 [32m+++[m[31m---[m
+ .../modals/instanceSettingsPanels/StoragePanel.tsx | 102 [32m+++[m[31m----[m
+ .../instanceSettingsPanels/StreamingPanel.tsx      |  65 [32m++[m[31m---[m
+ .../modals/settingsPanels/AccountPanel.tsx         | 118 [32m++++[m[31m----[m
+ .../modals/settingsPanels/AudioInputSection.tsx    |  36 [32m+[m[31m--[m
+ .../modals/settingsPanels/AudioOutputSection.tsx   |  24 [32m+[m[31m-[m
+ .../modals/settingsPanels/ConnectionsPanel.tsx     |   4 [32m+[m[31m-[m
+ .../modals/settingsPanels/DesktopPanel.tsx         |  24 [32m+[m[31m-[m
+ .../modals/settingsPanels/InstancePanel.tsx        |  16 [32m+[m[31m-[m
+ .../modals/settingsPanels/KeybindsPanel.tsx        |  37 [32m+[m[31m--[m
+ .../modals/settingsPanels/PrivacyPanel.tsx         |  18 [32m+[m[31m-[m
+ .../modals/settingsPanels/VideoSection.tsx         |  90 [32m+++[m[31m---[m
+ .../modals/settingsPanels/VoicePanel.tsx           |  26 [32m+[m[31m-[m
+ .../modals/spaceSettingsPanels/BansPanel.tsx       |  20 [32m+[m[31m-[m
+ .../modals/spaceSettingsPanels/MembersPanel.tsx    |  35 [32m+[m[31m--[m
+ .../modals/spaceSettingsPanels/OverviewPanel.tsx   |  68 [32m++[m[31m---[m
+ .../modals/spaceSettingsPanels/RolesPanel.tsx      | 105 [32m+++[m[31m----[m
+ packages/web/src/components/ui/ActivityCard.tsx    |   4 [32m+[m[31m-[m
+ packages/web/src/components/ui/ConfirmDialog.tsx   |  13 [32m+[m[31m-[m
+ packages/web/src/components/ui/Modal.tsx           |   6 [32m+[m[31m-[m
+ packages/web/src/components/ui/SourceCodeLink.tsx  |   8 [32m+[m[31m-[m
+ .../web/src/components/ui/UserProfilePopout.tsx    |  14 [32m+[m[31m-[m
+ .../src/components/voice/ConnectionInfoPopover.tsx |  60 [32m++[m[31m--[m
+ .../web/src/components/voice/IncomingCallModal.tsx |   8 [32m+[m[31m-[m
+ .../src/components/voice/MobileVoiceJoinSheet.tsx  |  56 [32m++[m[31m--[m
+ .../web/src/components/voice/PictureInPicture.tsx  |  12 [32m+[m[31m-[m
+ .../web/src/components/voice/ScreenSharePicker.tsx |  22 [32m+[m[31m-[m
+ .../voice/ScreenShareSettingsPopover.tsx           |  50 [32m++[m[31m--[m
+ packages/web/src/components/voice/StreamTile.tsx   |  33 [32m++[m[31m-[m
+ .../web/src/components/voice/VoiceChatPanel.tsx    |   6 [32m+[m[31m-[m
+ .../web/src/components/voice/VoiceControlBar.tsx   |  18 [32m+[m[31m-[m
+ .../web/src/components/voice/VoiceControls.tsx     |  18 [32m+[m[31m-[m
+ packages/web/src/components/voice/VoiceGrid.tsx    |  14 [32m+[m[31m-[m
+ packages/web/src/components/voice/VoiceUser.tsx    |  14 [32m+[m[31m-[m
+ packages/web/src/components/voice/VoiceUserRow.tsx |  14 [32m+[m[31m-[m
+ .../web/src/components/voice/voiceMenuItems.tsx    |  14 [32m+[m[31m-[m
+ packages/web/src/hooks/useLiveKit.ts               |  22 [32m+[m[31m-[m
+ packages/web/src/main.tsx                          |   5 [32m+[m[31m-[m
+ packages/web/src/styles/globals.css                |  41 [32m+++[m
+ packages/web/tsconfig.json                         |  29 [32m+[m[31m-[m
+ pnpm-lock.yaml                                     |   6 [32m+[m[31m-[m
+ restore.sh                                         |  24 [32m+[m[31m-[m
+ 146 files changed, 1841 insertions(+), 1666 deletions(-)

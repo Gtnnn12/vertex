@@ -7,6 +7,7 @@ import { useSpaceStore } from '../../stores/spaceStore';
 import { Avatar } from '../ui/Avatar';
 import type { ParticipantInfo } from '../../hooks/useLiveKit';
 import { useVoiceParticipantMeta } from '../../hooks/useVoiceParticipantMeta';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 /** Stable fallback for useVoiceParticipantMeta when no participant exists */
 const EMPTY_PARTICIPANT: ParticipantInfo = {
@@ -115,6 +116,7 @@ function selectPipStream(
 }
 
 export function PictureInPicture() {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -232,10 +234,10 @@ export function PictureInPicture() {
   const channelName = useMemo(() => {
     if (currentVoiceChannelId) {
       const ch = channels.find(c => c.id === currentVoiceChannelId);
-      return ch?.name ?? 'Voice';
+      return ch?.name ?? t('voice');
     }
-    return 'Call';
-  }, [currentVoiceChannelId, channels]);
+    return t('call');
+  }, [currentVoiceChannelId, channels, t]);
 
   // Derive the LiveKit Track from the selected stream's participant
   const lkTrack = selectedStream
@@ -382,7 +384,7 @@ export function PictureInPicture() {
   if (!shouldShow) return null;
 
   const displayName = displayParticipant
-    ? (displayParticipant.isLocal ? `${resolvedName} (You)` : resolvedName)
+    ? (displayParticipant.isLocal ? `${resolvedName} (${t('you')})` : resolvedName)
     : channelName;
   const hasVideo = selectedStream !== null;
   const isScreen = selectedStream?.type === 'screen';
@@ -444,7 +446,7 @@ export function PictureInPicture() {
       {/* LIVE badge */}
       {isScreen && (
         <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-accent-rose rounded text-[11px] font-bold text-white uppercase tracking-wide">
-          LIVE
+          {t('live')}
         </div>
       )}
 

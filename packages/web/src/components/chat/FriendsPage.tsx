@@ -22,6 +22,7 @@ import { parseFederatedUsername, isFederationGlobeApplicable } from '../../utils
 import { useCanonicalUserView } from '../../utils/userViewLookup';
 import { Username } from '../ui/Username';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const statusLabel: Record<string, string> = { online: 'Online', idle: 'Idle', dnd: 'Do Not Disturb', offline: 'Offline' };
 
@@ -102,6 +103,7 @@ export function FriendsPage({ mobile }: FriendsPageProps) {
   const [pendingUnfriend, setPendingUnfriend] = useState<{ id: string; name: string } | null>(null);
   const navigate = useNavigate();
   const addDmChannel = useSpaceStore((s) => s.addDmChannel);
+  const { t } = useLanguage();
 
   // If the user clicked "Retry your friend request" in the Connections panel
   // and we just navigated here, the federation store carries the original
@@ -172,12 +174,12 @@ export function FriendsPage({ mobile }: FriendsPageProps) {
         return (
           <div className="flex-1 overflow-y-auto p-4">
             <h2 className="text-xs font-bold text-txt-tertiary mb-4 tracking-wider px-2">
-              Online — {onlineFriends.length}
+              {t('online_count').replace('{count}', String(onlineFriends.length))}
             </h2>
             {onlineFriends.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full opacity-80">
                 <Mascot state="idle" className="w-32 h-32 mb-4" />
-                <p className="text-txt-tertiary text-sm">No one's online right now.</p>
+                <p className="text-txt-tertiary text-sm">{t('no_one_online')}</p>
               </div>
             ) : (
               <>
@@ -192,12 +194,12 @@ export function FriendsPage({ mobile }: FriendsPageProps) {
         return (
           <div className="flex-1 overflow-y-auto p-4">
             <h2 className="text-xs font-bold text-txt-tertiary mb-4 tracking-wider px-2">
-              All Friends — {friends.length}
+              {t('friends_count').replace('{count}', String(friends.length))}
             </h2>
             {friends.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full opacity-80">
                 <Mascot state="lonely" className="w-32 h-32 mb-4" />
-                <p className="text-txt-tertiary text-sm">No friends yet — add someone!</p>
+                <p className="text-txt-tertiary text-sm">{t('no_friends_yet')}</p>
               </div>
             ) : (
               <>
@@ -212,7 +214,7 @@ export function FriendsPage({ mobile }: FriendsPageProps) {
         return (
           <div className="flex-1 overflow-y-auto p-4">
             <h2 className="text-xs font-bold text-txt-tertiary mb-4 tracking-wider px-2">
-              Pending — {pendingIncoming.length + pendingOutgoing.length}
+              {t('pending_count').replace('{count}', String(pendingIncoming.length + pendingOutgoing.length))}
             </h2>
             {[...pendingIncoming, ...pendingOutgoing].length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full opacity-80">
@@ -341,7 +343,7 @@ export function FriendsPage({ mobile }: FriendsPageProps) {
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
             </svg>
           </button>
-          <span className="font-semibold text-sm text-txt-primary">Friends</span>
+          <span className="font-semibold text-sm text-txt-primary">{t('friends')}</span>
         </div>
       ) : (
         <div className="h-14 px-4 flex items-center border-b border-border-hard flex-shrink-0 z-10 bg-surface-chat">
@@ -349,14 +351,14 @@ export function FriendsPage({ mobile }: FriendsPageProps) {
             <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="text-txt-tertiary">
               <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
             </svg>
-            <span className="font-bold text-txt-primary">Friends</span>
+            <span className="font-bold text-txt-primary">{t('friends')}</span>
           </div>
           <div className="w-[1px] h-6 bg-surface-elevated mx-2" />
           <div className="flex items-center gap-4 ml-2">
-            <TabButton active={activeTab === 'online'} onClick={() => setActiveTab('online')}>Online</TabButton>
-            <TabButton active={activeTab === 'all'} onClick={() => setActiveTab('all')}>All</TabButton>
+            <TabButton active={activeTab === 'online'} onClick={() => setActiveTab('online')}>{t('online')}</TabButton>
+            <TabButton active={activeTab === 'all'} onClick={() => setActiveTab('all')}>{t('all')}</TabButton>
             <TabButton active={activeTab === 'pending'} onClick={() => setActiveTab('pending')}>
-              Pending
+              {t('pending')}
               {(pendingIncoming.length > 0) && (
                 <span className="ml-2 px-1.5 py-0.5 bg-accent-rose text-white text-[10px] rounded-full leading-none">
                   {pendingIncoming.length}
@@ -369,7 +371,7 @@ export function FriendsPage({ mobile }: FriendsPageProps) {
                 activeTab === 'add' ? 'text-status-online bg-transparent' : 'bg-status-online text-[#13131a] hover:bg-status-online/90'
               }`}
             >
-              Add Friend
+              {t('add_friend')}
             </button>
           </div>
           <div className="ml-auto flex items-center gap-1">
@@ -391,7 +393,7 @@ export function FriendsPage({ mobile }: FriendsPageProps) {
                   : 'border-transparent text-txt-secondary hover:text-txt-primary'
               }`}
             >
-              {tab === 'add' ? 'Add Friend' : tab === 'activity' ? 'Activity' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {tab === 'add' ? t('add_friend') : tab === 'activity' ? t('activity') : t(tab)}
               {tab === 'pending' && pendingIncoming.length > 0 && (
                 <span className="ml-1.5 px-1.5 py-0.5 text-xs bg-notification text-white rounded-full">
                   {pendingIncoming.length}

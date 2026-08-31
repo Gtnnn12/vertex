@@ -4,6 +4,7 @@ import { useVoiceStore } from '../../stores/voiceStore';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { useDragToClose } from '../../hooks/useDragToClose';
 import { VoiceUserRow } from './VoiceUserRow';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 /**
  * Permission state for the in-sheet camera preview. Mirrors the smaller
@@ -32,6 +33,7 @@ export function MobileVoiceJoinSheet({
   onClose,
   onJoin,
 }: MobileVoiceJoinSheetProps) {
+  const { t } = useLanguage();
   const [preMuted, setPreMuted] = useState(false);
   const [visible, setVisible] = useState(false);
 
@@ -284,13 +286,13 @@ export function MobileVoiceJoinSheet({
           setPermState('denied');
           setPreviewActive(false);
         } else if (name === 'NotReadableError') {
-          setPreviewError('Camera is in use by another application.');
+          setPreviewError(t('camera_in_use'));
         } else if (name === 'OverconstrainedError') {
-          setPreviewError('Selected camera is unavailable.');
+          setPreviewError(t('selected_camera_unavailable'));
         } else if (name === 'NotFoundError') {
-          setPreviewError('No camera detected.');
+          setPreviewError(t('no_camera_detected'));
         } else {
-          setPreviewError('Could not start camera preview.');
+          setPreviewError(t('could_not_start_camera_preview'));
         }
       }
     };
@@ -364,16 +366,16 @@ export function MobileVoiceJoinSheet({
         setPermState('denied');
         setPreviewActive(false);
       } else if (name === 'NotReadableError') {
-        setPreviewError('Camera is in use by another application.');
+        setPreviewError(t('camera_in_use'));
       } else if (name === 'OverconstrainedError') {
-        setPreviewError('Selected camera is unavailable.');
+        setPreviewError(t('selected_camera_unavailable'));
       } else if (name === 'NotFoundError') {
-        setPreviewError('No camera detected.');
+        setPreviewError(t('no_camera_detected'));
       } else {
-        setPreviewError('Could not start camera preview.');
+        setPreviewError(t('could_not_start_camera_preview'));
       }
     }
-  }, [cameraDeviceId, stopPreview]);
+  }, [cameraDeviceId, stopPreview, t]);
 
   const stopPreviewFromUser = useCallback(() => {
     startGenRef.current += 1;
@@ -385,10 +387,10 @@ export function MobileVoiceJoinSheet({
   // Derived: do we have multiple cameras to expose a picker for?
   const showCameraPicker = permState === 'granted' && cameraDevices.length > 1;
   const selectedCameraLabel = useMemo(() => {
-    if (cameraDeviceId === null) return 'Auto';
+    if (cameraDeviceId === null) return t('auto');
     const d = cameraDevices.find((c) => c.deviceId === cameraDeviceId);
-    return d?.label || 'Selected camera';
-  }, [cameraDeviceId, cameraDevices]);
+    return d?.label || t('selected_camera');
+  }, [cameraDeviceId, cameraDevices, t]);
 
   return createPortal(
     <>
@@ -434,8 +436,8 @@ export function MobileVoiceJoinSheet({
         {/* Channel switch warning */}
         {isSwitching && (
           <div className="mx-5 mb-3 px-3 py-2 rounded-lg bg-accent-amber/10 text-accent-amber text-xs">
-            You'll leave <span className="font-semibold">{currentChannelName}</span> and join{' '}
-            <span className="font-semibold">{channelName}</span>
+            {t('you_will_leave')} <span className="font-semibold">{currentChannelName}</span>{' '}
+            {t('and_join')} <span className="font-semibold">{channelName}</span>
           </div>
         )}
 
@@ -457,13 +459,13 @@ export function MobileVoiceJoinSheet({
                 type="button"
                 onClick={startPreviewFromUser}
                 className="absolute inset-0 flex flex-col items-center justify-center text-txt-tertiary active:bg-white/[0.03] transition-colors"
-                aria-label="Enable camera preview"
+                aria-label={t('enable_camera_preview')}
               >
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" className="mb-1.5">
                   <path d="M17 10.5V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-3.5l4 4v-11l-4 4z" />
                 </svg>
                 <span className="text-xs">
-                  {permState === 'unknown' ? 'Checking camera…' : 'Tap to preview camera'}
+                  {permState === 'unknown' ? t('checking_camera') : t('tap_to_preview_camera')}
                 </span>
               </button>
             )}
@@ -471,13 +473,13 @@ export function MobileVoiceJoinSheet({
             {/* Denied state */}
             {!previewActive && !previewError && permState === 'denied' && (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-txt-tertiary px-6 text-center gap-2">
-                <span className="text-xs">Camera permission denied.</span>
+                <span className="text-xs">{t('camera_permission_denied')}</span>
                 <button
                   type="button"
                   onClick={startPreviewFromUser}
                   className="text-[11px] px-3 py-1.5 rounded-md bg-surface-elevated text-txt-secondary"
                 >
-                  Try again
+                  {t('try_again')}
                 </button>
               </div>
             )}
@@ -491,7 +493,7 @@ export function MobileVoiceJoinSheet({
                   onClick={startPreviewFromUser}
                   className="text-[11px] px-3 py-1.5 rounded-md bg-surface-elevated text-txt-secondary"
                 >
-                  Try again
+                  {t('try_again')}
                 </button>
               </div>
             )}
@@ -503,7 +505,7 @@ export function MobileVoiceJoinSheet({
                 onClick={stopPreviewFromUser}
                 className="absolute top-2 right-2 rounded-md bg-black/60 text-white/90 text-[11px] px-2.5 py-1.5"
               >
-                Stop preview
+                {t('stop_preview')}
               </button>
             )}
 
@@ -573,8 +575,8 @@ export function MobileVoiceJoinSheet({
         {/* Empty state */}
         {userCount === 0 && (
           <div className="px-5 mb-4 py-3 text-center">
-            <p className="text-sm text-txt-tertiary">No one is in this channel yet.</p>
-            <p className="text-xs text-txt-tertiary/60 mt-1">Be the first to join!</p>
+            <p className="text-sm text-txt-tertiary">{t('no_one_in_channel')}</p>
+            <p className="text-xs text-txt-tertiary/60 mt-1">{t('be_the_first_to_join')}</p>
           </div>
         )}
 
@@ -584,7 +586,7 @@ export function MobileVoiceJoinSheet({
           <button
             onClick={() => setPreMuted(!preMuted)}
             className="w-12 h-12 bg-surface-elevated rounded-full flex items-center justify-center text-txt-secondary active:scale-95 transition-transform"
-            aria-label={preMuted ? 'Unmute microphone' : 'Mute microphone'}
+            aria-label={preMuted ? t('unmute_microphone') : t('mute_microphone')}
           >
             {preMuted ? (
               /* Mic off icon */
@@ -607,14 +609,14 @@ export function MobileVoiceJoinSheet({
             onClick={handleJoin}
             className="bg-accent-mint text-black font-semibold rounded-full px-8 py-3 active:scale-95 transition-transform"
           >
-            {isSwitching ? 'Switch Channel' : 'Join Voice'}
+            {isSwitching ? t('switch_channel') : t('join_voice')}
           </button>
 
           {/* Close button */}
           <button
             onClick={onClose}
             className="w-12 h-12 bg-surface-elevated rounded-full flex items-center justify-center text-txt-secondary active:scale-95 transition-transform"
-            aria-label="Close"
+            aria-label={t('close')}
           >
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
               <path d="M6 18L18 6M6 6l12 12" />
@@ -656,7 +658,7 @@ export function MobileVoiceJoinSheet({
               cameraDeviceId === null ? 'text-txt-primary' : 'text-txt-secondary'
             } active:bg-interactive-hover`}
           >
-            Auto (system default)
+            {t('auto_system_default')}
           </button>
           {cameraDevices.map((d, i) => (
             <button
@@ -670,7 +672,7 @@ export function MobileVoiceJoinSheet({
                 cameraDeviceId === d.deviceId ? 'text-txt-primary' : 'text-txt-secondary'
               } active:bg-interactive-hover`}
             >
-              {d.label || `Camera ${i + 1}`}
+              {d.label || t('camera_n').replace('{n}', String(i + 1))}
             </button>
           ))}
         </div>

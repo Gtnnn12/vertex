@@ -3,8 +3,10 @@ import { useUIStore } from '../../stores/uiStore';
 import { useVoiceStore } from '../../stores/voiceStore';
 import { useSpaceStore, getChannelOrigin } from '../../stores/spaceStore';
 import { wsSend } from '../../hooks/useWebSocket';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 export function MobileVoiceMiniBar() {
+  const { t } = useLanguage();
   const pushMobileScreen = useUIStore((s) => s.pushMobileScreen);
   const mobileStack = useUIStore((s) => s.mobileStack);
 
@@ -28,11 +30,11 @@ export function MobileVoiceMiniBar() {
 
   // Resolve channel name
   const isDmCall = currentVoiceChannelId.startsWith('dm-');
-  let channelName = 'Voice Call';
+  let channelName = t('voice_call');
   if (isDmCall) {
     const dmId = currentVoiceChannelId.replace('dm-', '');
     const dm = dmChannels.find(d => d.id === dmId);
-    if (dm) channelName = 'DM Call';
+    if (dm) channelName = t('dm_call');
   } else {
     const ch = channels.find(c => c.id === currentVoiceChannelId);
     if (ch) channelName = ch.name;
@@ -55,7 +57,7 @@ export function MobileVoiceMiniBar() {
         <div className="min-w-0">
           <p className="text-xs font-medium text-accent-mint truncate">{channelName}</p>
           {participantCount > 0 && (
-            <p className="text-[10px] text-txt-tertiary">{participantCount} connected</p>
+            <p className="text-[10px] text-txt-tertiary">{t('connected_count').replace('{count}', String(participantCount))}</p>
           )}
         </div>
       </button>

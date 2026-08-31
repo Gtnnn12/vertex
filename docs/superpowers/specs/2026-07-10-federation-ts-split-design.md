@@ -129,10 +129,10 @@ No leaf imports upward, so no import cycles.
 
 ## Correctness / verification strategy
 
-- **Test net:** the full server suite (`pnpm --filter @backspace/server test`, ~30
+- **Test net:** the full server suite (`pnpm --filter @VERTEX/server test`, ~30
   federation test files / ~21.7k lines) runs after **each** module group is extracted.
   Green throughout = behavior preserved.
-- **Typecheck + build** (`pnpm -w typecheck && pnpm --filter @backspace/server build`)
+- **Typecheck + build** (`pnpm -w typecheck && pnpm --filter @VERTEX/server build`)
   after each group catches import/type regressions immediately.
 - **Move discipline:** functions are moved **verbatim**. The only permitted edits are
   (a) adding `import`/`export` statements, and (b) the barrel re-exports. No logic edits.

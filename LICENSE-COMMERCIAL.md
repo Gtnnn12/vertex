@@ -1,6 +1,6 @@
-# Backspace — Commercial License
+# VERTEX — Commercial License
 
-Backspace is **dual-licensed**:
+VERTEX is **dual-licensed**:
 
 1. **Open source** — the GNU Affero General Public License v3.0 (`AGPL-3.0-only`),
    in the [LICENSE](LICENSE) file. Free for everyone.
@@ -11,15 +11,15 @@ Backspace is **dual-licensed**:
 The AGPL-3.0 is a strong copyleft license. You likely need a commercial license
 if you want to:
 
-- embed or distribute Backspace (in whole or in part) inside a **closed-source or
+- embed or distribute VERTEX (in whole or in part) inside a **closed-source or
   proprietary** application;
-- offer Backspace to third parties as a **hosted or managed service without
+- offer VERTEX to third parties as a **hosted or managed service without
   releasing the complete corresponding source** of your modified version to your
   users (which AGPL § 13 would otherwise require);
-- use Backspace in an **organization that prohibits AGPL** software; or
+- use VERTEX in an **organization that prohibits AGPL** software; or
 - obtain **warranty, indemnity, or support** terms that the AGPL disclaims.
 
-If you self-host Backspace and are willing to comply with the AGPL — including
+If you self-host VERTEX and are willing to comply with the AGPL — including
 publishing the source of any modifications you run as a network service — you do
 **not** need a commercial license. The open-source license already covers you.
 
@@ -32,7 +32,7 @@ consolidated via the [Contributor License Agreement](CLA.md).
 
 ## Third-party components
 
-A commercial license covers only Backspace's **own** code. Bundled third-party
+A commercial license covers only VERTEX's **own** code. Bundled third-party
 components (see [NOTICE](NOTICE)) — including **libvips** (LGPL-3.0-or-later, via
 `sharp`) and the npm dependency tree — remain under their own licenses, and their
 obligations pass through to you. The maintainer cannot and does not license away
@@ -53,6 +53,6 @@ intended use. Terms are agreed in a separate, signed commercial agreement.
 
 ---
 
-Copyright © 2026 Jannis Braun. "Backspace", the Backspace logo, and app icons are
+Copyright © 2026 Jannis Braun. "VERTEX", the VERTEX logo, and app icons are
 trademarks of Jannis Braun; no trademark rights are granted by either the AGPL or
 the commercial license.

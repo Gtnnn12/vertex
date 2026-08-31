@@ -179,7 +179,7 @@ Outbound fetches use `safeFetch()` (`ssrf.ts`), which follows redirects **manual
 ### Flow
 
 1. `safeFetch(url)` — SSRF-validated fetch (initial URL + every redirect hop); throws on block, caught to return `null`
-2. Request sent with `User-Agent: BackspaceBot/1.0`, 5-second timeout via `AbortController`
+2. Request sent with `User-Agent: VERTEXBot/1.0`, 5-second timeout via `AbortController`
 3. **Content-Type detection** — if response is `image/*`, `video/*`, or `audio/*`, returns early with `contentType` field set (no HTML parsing)
 4. **Size guard** — rejects responses with `Content-Length > 512KB`
 5. **Stream-read with hard limit** — reads body via `ReadableStream`, stops at 512KB even for chunked (unknown-length) responses
@@ -294,7 +294,7 @@ Used for direct image URLs where dimensions are unknown (not provided by OG tags
 ### Headers
 
 ```
-User-Agent: BackspaceBot/1.0
+User-Agent: VERTEXBot/1.0
 Accept: image/*
 Range: bytes=0-32767
 ```
@@ -476,7 +476,7 @@ Exposes `fetchUrlMetadata()` directly as a REST endpoint. Returns the `UrlMetada
 | `PROBE_TIMEOUT_MS` | 3,000ms | `embedResolver.ts` |
 | Metadata fetch timeout | 5,000ms | `metadataFetcher.ts` |
 | HTML body size limit | 512,000 bytes (512KB) | `metadataFetcher.ts` |
-| User-Agent | `BackspaceBot/1.0` | both fetchers |
+| User-Agent | `VERTEXBot/1.0` | both fetchers |
 | Spotify iframe height | 152px | `RichEmbed.tsx` |
 | Default rich iframe height | 200px | `RichEmbed.tsx` |
 | YouTube thumbnail dimensions | 480x360 | `embedResolver.ts` |

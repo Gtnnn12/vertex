@@ -19,7 +19,7 @@ Source files:
 - **Friend & DM relay are S2S.** Sending a friend request to `alice@orbit.tld` does not require having a federated account on `orbit.tld`; the sender's home server queues the relay (see `social.md` §6 outbound flow). DM messages are similarly relayed server-to-server once the initial channel exists.
 - **Spaces are client-federated.** Joining a remote space still requires creating a federated account on that instance via the Connections UI.
 
-Backspace supports **client-side federation**: a single app session (web or desktop — both are feature-identical) can connect to multiple Backspace instances simultaneously. The user has a **home instance** (their primary identity) and zero or more **connected remote instances**.
+VERTEX supports **client-side federation**: a single app session (web or desktop — both are feature-identical) can connect to multiple VERTEX instances simultaneously. The user has a **home instance** (their primary identity) and zero or more **connected remote instances**.
 
 ```
 ┌─────────────────────────────────────────────────┐
@@ -121,7 +121,7 @@ interface ConnectedInstance {
   username: string;         // e.g., 'erin@nova.ddns.net'
   status: 'connected' | 'connecting' | 'disconnected' | 'error';
   error?: string;
-  api: BackspaceApiClient;  // Authenticated API client
+  api: VERTEXApiClient;  // Authenticated API client
 }
 
 interface InstanceState {
@@ -133,7 +133,7 @@ interface InstanceState {
 
 ### Token Caching
 
-Tokens are persisted to `localStorage` keyed by `backspace_instances_${userId}`. This allows automatic reconnection on app restart without re-entering passwords.
+Tokens are persisted to `localStorage` keyed by `VERTEX_instances_${userId}`. This allows automatic reconnection on app restart without re-entering passwords.
 
 ### Auto-Connect on Startup (`autoConnectAll`)
 
@@ -255,7 +255,7 @@ Source: `stores/spaceStore.ts` (state, `upsertUserView`, prune in `removeInstanc
 ### API Client Resolution
 
 ```typescript
-getApiForOrigin(origin: string): BackspaceApiClient
+getApiForOrigin(origin: string): VERTEXApiClient
 ```
 
 Returns the correct API client for the given origin. Uses a resolver pattern to break circular dependencies between stores:

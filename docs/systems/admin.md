@@ -55,7 +55,7 @@ Settings are split into two API surfaces:
 
 | Field | Type | DB Column | Validation | Notes |
 |-------|------|-----------|------------|-------|
-| instanceName | string | instanceName | 1-32 chars, trimmed | Default: `'Backspace'` |
+| instanceName | string | instanceName | 1-32 chars, trimmed | Default: `'VERTEX'` |
 | registrationOpen | boolean | registrationOpen | boolean | Local-account registration. DB null = use env `REGISTRATION_OPEN` (default true) |
 | federatedRegistrationOpen | boolean | federatedRegistrationOpen | boolean | Federated-account creation against this instance. NOT NULL DEFAULT 1. Controls whether remote users can create `username@thisInstance` accounts via Connections (see auth.md + client-federation.md) |
 | discoveryEnabled | boolean | discoveryEnabled | boolean | Controls space Explore page |
@@ -165,12 +165,12 @@ No authentication. Returns:
 
 ```typescript
 {
-  name: string;        // instanceSettings.instanceName ?? 'Backspace'
+  name: string;        // instanceSettings.instanceName ?? 'VERTEX'
   version: string;     // Hardcoded '1.0.0' in instance.ts
   registrationOpen: boolean;  // DB setting overrides env if non-null
   federatedRegistrationOpen: boolean;  // NOT NULL DEFAULT 1; gates federated-account creation
-  sourceCodeUrl: string;      // AGPL § 13; config.sourceCodeUrl (env BACKSPACE_SOURCE_URL)
-  commit: string | null;      // AGPL § 13; config.commit (env BACKSPACE_COMMIT, build-injected)
+  sourceCodeUrl: string;      // AGPL § 13; config.sourceCodeUrl (env VERTEX_SOURCE_URL)
+  commit: string | null;      // AGPL § 13; config.commit (env VERTEX_COMMIT, build-injected)
   instanceId: string;         // Persistent per-instance epoch (incarnation UUID); getInstanceId()
 }
 ```
@@ -181,7 +181,7 @@ Registration resolution order: `instance_settings.registrationOpen` (if not null
 
 `federatedRegistrationOpen` is consumed by the Connections UI (client-federation.md) to decide whether to surface the "create federated account on this instance" affordance.
 
-`sourceCodeUrl` / `commit` implement the **AGPL-3.0 § 13 network-use source offer**. `sourceCodeUrl` defaults to the upstream repo and is overridable via `BACKSPACE_SOURCE_URL` — operators running a modified build MUST point it at their fork so network users get the source of the version actually running. `commit` is injected at Docker build time (`deploy.sh` passes `--build-arg BACKSPACE_COMMIT=$(git rev-parse --short HEAD)` → Dockerfile `ARG`/`ENV` → `config.commit`); it is `null` in local dev. These are not admin-editable settings — they are deployment/config values, deliberately exposed on this unauthenticated endpoint for transparency to anonymous users and federated peers.
+`sourceCodeUrl` / `commit` implement the **AGPL-3.0 § 13 network-use source offer**. `sourceCodeUrl` defaults to the upstream repo and is overridable via `VERTEX_SOURCE_URL` — operators running a modified build MUST point it at their fork so network users get the source of the version actually running. `commit` is injected at Docker build time (`deploy.sh` passes `--build-arg VERTEX_COMMIT=$(git rev-parse --short HEAD)` → Dockerfile `ARG`/`ENV` → `config.commit`); it is `null` in local dev. These are not admin-editable settings — they are deployment/config values, deliberately exposed on this unauthenticated endpoint for transparency to anonymous users and federated peers.
 
 ### General Instance Settings
 

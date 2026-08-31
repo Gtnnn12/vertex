@@ -13,10 +13,12 @@ import { ConnectionsPanel } from './settingsPanels/ConnectionsPanel';
 import { DesktopPanel } from './settingsPanels/DesktopPanel';
 import { InstancePanel } from './settingsPanels/InstancePanel';
 import { KeybindsPanel } from './settingsPanels/KeybindsPanel';
+import { LanguagePanel } from './settingsPanels/LanguagePanel';
 import { isElectron } from '../../platform/platform';
 import { SettingsSectionsProvider, useSettingsSectionsContext } from './SettingsSectionsContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 
-type SettingsTab = 'account' | 'voice' | 'privacy' | 'connections' | 'keybinds' | 'desktop' | 'instance';
+type SettingsTab = 'account' | 'voice' | 'privacy' | 'connections' | 'keybinds' | 'desktop' | 'instance' | 'language';
 
 function SidebarSubLinks() {
   const ctx = useSettingsSectionsContext();
@@ -67,6 +69,7 @@ export function UserSettingsModal() {
   const [instanceInfo, setInstanceInfo] = useState<InstanceInfoResponse | null>(null);
 
   const isOpen = activeModal === 'userSettings';
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -81,7 +84,7 @@ export function UserSettingsModal() {
   useEffect(() => {
     if (isOpen) {
       const requested = modalData.tab as SettingsTab | undefined;
-      if (requested && ['account', 'voice', 'privacy', 'connections', 'keybinds', 'instance'].includes(requested)) {
+      if (requested && ['account', 'voice', 'privacy', 'connections', 'keybinds', 'instance', 'language'].includes(requested)) {
         // Only allow instance tab for admins
         if (requested === 'instance' && !isAdmin) {
           setTab('account');
@@ -134,22 +137,23 @@ export function UserSettingsModal() {
 
           {/* Nav list */}
           <div className="glass-bubble rounded-lg p-2 flex-1 flex flex-col">
-            <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-3 py-1">User Settings</div>
-            <button onClick={() => handleTabClick('account')} className={tabClass('account')}>Account</button>
-            <button onClick={() => handleTabClick('voice')} className={tabClass('voice')}>Voice &amp; Video</button>
-            <button onClick={() => handleTabClick('privacy')} className={tabClass('privacy')}>Privacy</button>
+            <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-3 py-1">{t('user_settings')}</div>
+            <button onClick={() => handleTabClick('account')} className={tabClass('account')}>{t('account')}</button>
+            <button onClick={() => handleTabClick('voice')} className={tabClass('voice')}>{t('voice_and_video')}</button>
+            <button onClick={() => handleTabClick('privacy')} className={tabClass('privacy')}>{t('privacy')}</button>
 
             <div className="border-t border-white/[0.04] my-2 mx-2" />
-            <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-3 py-1">App Settings</div>
-            <button onClick={() => handleTabClick('connections')} className={tabClass('connections')}>Connections</button>
-            <button onClick={() => handleTabClick('keybinds')} className={tabClass('keybinds')}>Keybinds</button>
-            {isElectron() && <button onClick={() => handleTabClick('desktop')} className={tabClass('desktop')}>Desktop</button>}
+            <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-3 py-1">{t('app_settings')}</div>
+            <button onClick={() => handleTabClick('connections')} className={tabClass('connections')}>{t('connections')}</button>
+            <button onClick={() => handleTabClick('keybinds')} className={tabClass('keybinds')}>{t('keybinds')}</button>
+            {isElectron() && <button onClick={() => handleTabClick('desktop')} className={tabClass('desktop')}>{t('desktop')}</button>}
+            <button onClick={() => handleTabClick('language')} className={tabClass('language')}>{t('language')}</button>
 
             {isAdmin && (
               <>
                 <div className="border-t border-white/[0.04] my-2 mx-2" />
-                <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-3 py-1">Administration</div>
-                <button onClick={() => handleTabClick('instance')} className={tabClass('instance')}>Instance</button>
+                <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-3 py-1">{t('administration')}</div>
+                <button onClick={() => handleTabClick('instance')} className={tabClass('instance')}>{t('instance')}</button>
                 {tab === 'instance' && <SidebarSubLinks />}
               </>
             )}
@@ -161,7 +165,7 @@ export function UserSettingsModal() {
               onClick={handleLogout}
               className="w-full text-left px-3 py-2 rounded-md text-sm text-txt-danger hover:bg-accent-rose/10 transition-colors"
             >
-              Log Out
+              {t('log_out')}
             </button>
 
             {instanceInfo && (
@@ -191,22 +195,23 @@ export function UserSettingsModal() {
             </div>
 
             <div className="glass-bubble rounded-lg p-2 space-y-0.5">
-              <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-3 py-1">User Settings</div>
-              <button onClick={() => handleTabClick('account')} className={tabClass('account')}>Account</button>
-              <button onClick={() => handleTabClick('voice')} className={tabClass('voice')}>Voice &amp; Video</button>
-              <button onClick={() => handleTabClick('privacy')} className={tabClass('privacy')}>Privacy</button>
+              <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-3 py-1">{t('user_settings')}</div>
+              <button onClick={() => handleTabClick('account')} className={tabClass('account')}>{t('account')}</button>
+              <button onClick={() => handleTabClick('voice')} className={tabClass('voice')}>{t('voice_and_video')}</button>
+              <button onClick={() => handleTabClick('privacy')} className={tabClass('privacy')}>{t('privacy')}</button>
 
               <div className="border-t border-white/[0.04] my-2 mx-2" />
-              <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-3 py-1">App Settings</div>
-              <button onClick={() => handleTabClick('connections')} className={tabClass('connections')}>Connections</button>
-              <button onClick={() => handleTabClick('keybinds')} className={tabClass('keybinds')}>Keybinds</button>
-              {isElectron() && <button onClick={() => handleTabClick('desktop')} className={tabClass('desktop')}>Desktop</button>}
+              <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-3 py-1">{t('app_settings')}</div>
+              <button onClick={() => handleTabClick('connections')} className={tabClass('connections')}>{t('connections')}</button>
+              <button onClick={() => handleTabClick('keybinds')} className={tabClass('keybinds')}>{t('keybinds')}</button>
+              {isElectron() && <button onClick={() => handleTabClick('desktop')} className={tabClass('desktop')}>{t('desktop')}</button>}
+              <button onClick={() => handleTabClick('language')} className={tabClass('language')}>{t('language')}</button>
 
               {isAdmin && (
                 <>
                   <div className="border-t border-white/[0.04] my-2 mx-2" />
-                  <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-3 py-1">Administration</div>
-                  <button onClick={() => handleTabClick('instance')} className={tabClass('instance')}>Instance</button>
+                  <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-3 py-1">{t('administration')}</div>
+                  <button onClick={() => handleTabClick('instance')} className={tabClass('instance')}>{t('instance')}</button>
                 </>
               )}
 
@@ -215,7 +220,7 @@ export function UserSettingsModal() {
                 onClick={handleLogout}
                 className="w-full text-left px-3 py-2 rounded-md text-sm text-txt-danger hover:bg-accent-rose/10 transition-colors"
               >
-                Log Out
+                {t('log_out')}
               </button>
 
               {instanceInfo && (
@@ -236,12 +241,12 @@ export function UserSettingsModal() {
                 <button
                   onClick={() => setMobileView('tabs')}
                   className="flex items-center gap-1.5 text-txt-tertiary hover:text-txt-secondary mb-4 text-sm"
-                  aria-label="Back to settings menu"
+                  aria-label={t('back')}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
                   </svg>
-                  Settings
+                  {t('settings')}
                 </button>
               )}
               {tab === 'account' && <AccountPanel />}
@@ -251,6 +256,7 @@ export function UserSettingsModal() {
               {tab === 'keybinds' && <KeybindsPanel />}
               {tab === 'desktop' && <DesktopPanel />}
               {tab === 'instance' && isAdmin && <InstancePanel />}
+              {tab === 'language' && <LanguagePanel />}
             </div>
           </SettingsScrollContainer>
         )}

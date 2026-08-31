@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-# Backspace — Electron Installer Build Script
+# VERTEX — Electron Installer Build Script
 # ============================================================
 # Builds Electron installers for all platforms/architectures
 # (macOS, Windows, Linux × arm64, x64) and copies the user-

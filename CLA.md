@@ -1,11 +1,11 @@
-# Backspace Contributor License Agreement
+# VERTEX Contributor License Agreement
 
-Thank you for your interest in contributing to Backspace ("the Project"), owned
+Thank you for your interest in contributing to VERTEX ("the Project"), owned
 and maintained by **Jannis Braun** ("the Maintainer", "I", "me", or "my").
 
 This Contributor License Agreement ("Agreement") governs the intellectual
 property rights in Contributions made by any person or entity ("You") to the
-Project. Backspace is a single-owner project: to keep the licensing of the
+Project. VERTEX is a single-owner project: to keep the licensing of the
 codebase unified in one hand, **You keep the copyright to your Contributions and
 grant the Maintainer a broad exclusive license** to them, and in return the
 Maintainer grants You a license to keep using your own work.

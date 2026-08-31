@@ -9,6 +9,7 @@ import { usePortalContainer } from '../../hooks/usePortalContainer';
 import { Toggle } from '../ui/Toggle';
 import { isElectron } from '../../platform/platform';
 import { RESOLUTION_LABELS } from '@backspace/shared/src/constants';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface ScreenShareSettingsPopoverProps {
   open: boolean;
@@ -16,25 +17,25 @@ interface ScreenShareSettingsPopoverProps {
   anchorRef: React.RefObject<HTMLElement | null>;
 }
 
-const MODES: { value: ScreenShareConfig['mode']; label: string }[] = [
-  { value: 'gaming', label: 'Gaming' },
-  { value: 'text', label: 'Text' },
+const MODES: { value: ScreenShareConfig['mode'] }[] = [
+  { value: 'gaming' },
+  { value: 'text' },
 ];
 
 const CODEC_OPTIONS = [
-  { value: 'vp9' as const, label: 'Standard', sub: 'VP9' },
-  { value: 'hw' as const, label: 'NVIDIA / Apple', sub: 'H.264' },
+  { value: 'vp9' as const, sub: 'VP9' },
+  { value: 'hw' as const, sub: 'H.264' },
 ];
 
 function formatBitrate(bps: number): string {
   return `${(bps / 1_000_000).toFixed(bps % 1_000_000 === 0 ? 0 : 1)} Mbps`;
 }
 
-function formatDegradation(pref: RTCDegradationPreference): string {
+function formatDegradation(pref: RTCDegradationPreference, t: (key: string) => string): string {
   switch (pref) {
-    case 'maintain-resolution': return 'hold resolution';
-    case 'maintain-framerate': return 'hold framerate';
-    case 'balanced': return 'balanced';
+    case 'maintain-resolution': return t('hold_resolution');
+    case 'maintain-framerate': return t('hold_framerate');
+    case 'balanced': return t('balanced');
     default: return pref;
   }
 }
@@ -46,6 +47,7 @@ function formatKbps(kbps: number): string {
 }
 
 export function ScreenShareSettingsPopover({ open, onClose, anchorRef }: ScreenShareSettingsPopoverProps) {
+  const { t } = useLanguage();
   const popoverRef = useRef<HTMLDivElement>(null);
   const portalContainer = usePortalContainer();
   const config = useVoiceStore((s) => s.screenShareConfig);
@@ -129,14 +131,14 @@ export function ScreenShareSettingsPopover({ open, onClose, anchorRef }: ScreenS
       className="w-[260px] glass rounded-lg overflow-hidden"
     >
       <div className="px-3 py-2 border-b border-border-hard">
-        <span className="text-[14px] font-bold text-txt-primary">Stream Settings</span>
+        <span className="text-[14px] font-bold text-txt-primary">{t('stream_settings')}</span>
       </div>
 
       <div className="px-3 py-3 flex flex-col gap-3">
         {/* Resolution */}
         <div>
           <div className="text-[11px] text-txt-tertiary font-semibold uppercase tracking-wider mb-1.5">
-            Resolution
+            {t('resolution')}
           </div>
           <div className="grid grid-cols-3 gap-1.5">
             {RESOLUTIONS.map((r) => (
@@ -154,7 +156,7 @@ export function ScreenShareSettingsPopover({ open, onClose, anchorRef }: ScreenS
         {/* Frame Rate */}
         <div>
           <div className="text-[11px] text-txt-tertiary font-semibold uppercase tracking-wider mb-1.5">
-            Frame Rate
+            {t('frame_rate')}
           </div>
           <div className="grid grid-cols-3 gap-1.5">
             {FRAME_RATES.map((f) => (
@@ -172,7 +174,7 @@ export function ScreenShareSettingsPopover({ open, onClose, anchorRef }: ScreenS
         {/* Content Mode */}
         <div>
           <div className="text-[11px] text-txt-tertiary font-semibold uppercase tracking-wider mb-1.5">
-            Content Mode
+            {t('content_mode')}
           </div>
           <div className="flex gap-1.5">
             {MODES.map((m) => (
@@ -181,7 +183,7 @@ export function ScreenShareSettingsPopover({ open, onClose, anchorRef }: ScreenS
                 onClick={() => setConfig({ mode: m.value })}
                 className={`${pillBase} ${config.mode === m.value ? pillSelected : pillUnselected}`}
               >
-                {m.label}
+                {t(m.value === 'gaming' ? 'gaming' : 'text')}
               </button>
             ))}
           </div>
@@ -190,7 +192,7 @@ export function ScreenShareSettingsPopover({ open, onClose, anchorRef }: ScreenS
         {/* Codec */}
         <div>
           <div className="text-[11px] text-txt-tertiary font-semibold uppercase tracking-wider mb-1.5">
-            Codec
+            {t('codec')}
           </div>
           <div className="flex gap-1.5">
             {CODEC_OPTIONS.map((c) => {
@@ -206,7 +208,7 @@ export function ScreenShareSettingsPopover({ open, onClose, anchorRef }: ScreenS
                       : (isHw ? 'bg-surface-elevated/50 text-txt-tertiary hover:bg-interactive-hover' : pillUnselected)
                   }`}
                 >
-                  <span>{c.label}</span>
+                  <span>{t(isHw ? 'codec_nvidia_apple' : 'codec_standard')}</span>
                   <span className="text-[10px] opacity-60">{c.sub}</span>
                 </button>
               );
@@ -214,7 +216,7 @@ export function ScreenShareSettingsPopover({ open, onClose, anchorRef }: ScreenS
           </div>
           {hwOverdrive && (
             <div className="text-[10px] text-accent-amber/80 mt-1">
-              GPU hardware encoder · resets when stream ends
+              {t('gpu_encoder_note')}
             </div>
           )}
         </div>
@@ -223,14 +225,14 @@ export function ScreenShareSettingsPopover({ open, onClose, anchorRef }: ScreenS
         <div>
           <div className="flex items-center justify-between mb-1.5">
             <div className="text-[11px] text-txt-tertiary font-semibold uppercase tracking-wider">
-              Bitrate
+              {t('bitrate')}
             </div>
             {limits?.allowCustomBitrate !== false && config.customBitrateKbps != null && (
               <button
                 onClick={() => setConfig({ customBitrateKbps: null })}
                 className="text-[11px] text-accent-primary hover:text-accent-lavender font-medium transition-colors"
               >
-                Reset to Auto
+                {t('reset_to_auto')}
               </button>
             )}
           </div>
@@ -255,7 +257,7 @@ export function ScreenShareSettingsPopover({ open, onClose, anchorRef }: ScreenS
               }`}>
                 {config.customBitrateKbps != null
                   ? formatKbps(config.customBitrateKbps)
-                  : `Auto`}
+                  : t('auto')}
               </span>
             </div>
           ) : (
@@ -264,7 +266,7 @@ export function ScreenShareSettingsPopover({ open, onClose, anchorRef }: ScreenS
                 {formatKbps(Math.round(result.publish.videoEncoding.maxBitrate / 1000))}
               </div>
               <div className="text-[10px] text-txt-tertiary mt-0.5">
-                Custom bitrate disabled by administrator
+                {t('custom_bitrate_disabled')}
               </div>
             </div>
           )}
@@ -275,11 +277,11 @@ export function ScreenShareSettingsPopover({ open, onClose, anchorRef }: ScreenS
           <div className="flex items-center justify-between">
             <div>
               <div className="text-[11px] text-txt-tertiary font-semibold uppercase tracking-wider">
-                System Audio
+                {t('system_audio')}
               </div>
               {isElectron() && config.shareAudio && (
                 <div className="text-[10px] text-accent-amber/80 mt-0.5">
-                  Use Chrome for echo-free audio
+                  {t('use_chrome_echo_free')}
                 </div>
               )}
             </div>
@@ -294,7 +296,7 @@ export function ScreenShareSettingsPopover({ open, onClose, anchorRef }: ScreenS
       {/* Footer — computed stats */}
       <div className="px-3 py-2 border-t border-border-hard">
         <span className="text-[12px] text-txt-tertiary">
-          {formatBitrate(result.publish.videoEncoding.maxBitrate)} · {formatDegradation(result.overdrive.degradationPreference)}
+          {formatBitrate(result.publish.videoEncoding.maxBitrate)} · {formatDegradation(result.overdrive.degradationPreference, t)}
         </span>
       </div>
     </div>,

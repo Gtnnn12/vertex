@@ -3,6 +3,7 @@ import { Avatar } from '../../ui/Avatar';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { useSpaceStore, getApiForOrigin } from '../../../stores/spaceStore';
 import { useAuthStore } from '../../../stores/authStore';
+import { useLanguage } from '../../../contexts/LanguageContext';
 import { parseFederatedUsername, isFederationGlobeApplicable } from '../../../utils/identity';
 import { useCanonicalUserView } from '../../../utils/userViewLookup';
 import { hasPermissionBit, PermissionBits } from '../../../utils/permissions';
@@ -46,6 +47,7 @@ function MembersPanelRow({
   const canonical = useCanonicalUserView(member.user);
   const isOwner = member.userId === ownerId;
   const displayName = canonical.displayName ?? canonical.username;
+  const { t } = useLanguage();
 
   return (
     <div>
@@ -75,7 +77,7 @@ function MembersPanelRow({
             <div className="flex items-center gap-1 flex-wrap">
               {isOwner && (
                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent-rose/20 text-txt-danger font-medium">
-                  Owner
+                  {t('owner')}
                 </span>
               )}
               {member.roles?.filter((r) => r.id !== spaceId).map((r) => (
@@ -88,7 +90,7 @@ function MembersPanelRow({
                 </span>
               ))}
               {!isOwner && (!member.roles || member.roles.filter((r) => r.id !== spaceId).length === 0) && (
-                <span className="text-[10px] text-txt-tertiary">No roles</span>
+                <span className="text-[10px] text-txt-tertiary">{t('no_roles')}</span>
               )}
             </div>
           </div>
@@ -100,7 +102,7 @@ function MembersPanelRow({
               onClick={(e) => { e.stopPropagation(); onPendingAction({ type: 'ban', userId: member.userId, displayName }); }}
               className="px-2 py-1 text-xs text-txt-danger hover:bg-accent-rose/10 rounded transition-colors"
             >
-              Ban
+              {t('ban')}
             </button>
           )}
           {canKick && member.userId !== currentUserId && !isOwner && (
@@ -108,7 +110,7 @@ function MembersPanelRow({
               onClick={(e) => { e.stopPropagation(); onPendingAction({ type: 'kick', userId: member.userId, displayName }); }}
               className="px-2 py-1 text-xs text-txt-danger hover:bg-accent-rose/10 rounded transition-colors"
             >
-              Kick
+              {t('kick')}
             </button>
           )}
           {expandable && (
@@ -150,13 +152,13 @@ function MembersPanelRow({
                 onClick={() => onSaveRoles(member.userId)}
                 className="px-2 py-0.5 text-xs bg-accent-primary hover:bg-accent-primary/80 text-white rounded transition-colors"
               >
-                Save
+                {t('save')}
               </button>
               <button
                 onClick={() => onCancelRoleChange(member.userId)}
                 className="px-2 py-0.5 text-xs text-txt-tertiary hover:text-txt-secondary transition-colors"
               >
-                Cancel
+                {t('cancel')}
               </button>
             </div>
           )}
@@ -177,6 +179,7 @@ export function MembersPanel({ spaceId }: MembersPanelProps) {
   const loadSpaceDetail = useSpaceStore((s) => s.loadSpaceDetail);
   const currentUser = useAuthStore((s) => s.user);
   const spacePermissions = useSpaceStore((s) => s.spacePermissions);
+  const { t } = useLanguage();
 
   const space = spaces.find((s) => s.id === spaceId);
   const spaceApi = getApiForOrigin(space?._instanceOrigin ?? '');
@@ -224,7 +227,7 @@ export function MembersPanel({ spaceId }: MembersPanelProps) {
       setExpandedMemberId(null);
       await loadSpaceDetail(spaceId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update roles');
+      setError(err instanceof Error ? err.message : t('failed_to_update_roles'));
     }
   };
 
@@ -241,7 +244,7 @@ export function MembersPanel({ spaceId }: MembersPanelProps) {
       await spaceApi.spaces.removeMember(spaceId, userId);
       await loadSpaceDetail(spaceId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to kick member');
+      setError(err instanceof Error ? err.message : t('failed_to_kick_member'));
     }
   };
 
@@ -250,7 +253,7 @@ export function MembersPanel({ spaceId }: MembersPanelProps) {
       await spaceApi.spaces.ban(spaceId, userId);
       await loadSpaceDetail(spaceId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to ban member');
+      setError(err instanceof Error ? err.message : t('failed_to_ban_member'));
     }
   };
 
@@ -259,15 +262,15 @@ export function MembersPanel({ spaceId }: MembersPanelProps) {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold text-txt-primary mb-6">Members</h2>
+      <h2 className="text-lg font-semibold text-txt-primary mb-6">{t('members')}</h2>
       {error && (
         <div className="p-2 bg-accent-rose/10 border border-accent-rose/30 rounded text-txt-danger text-sm">{error}</div>
       )}
-      <p className="text-xs text-txt-tertiary">Manage members of this space. Click a member to edit their roles.</p>
+      <p className="text-xs text-txt-tertiary">{t('members_hint')}</p>
 
       <div>
         <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">
-          Members ({members.length})
+          {t('members')} ({members.length})
         </div>
         <div className="rounded-lg bg-white/[0.02] p-2">
           <div className="space-y-0.5">
@@ -308,14 +311,14 @@ export function MembersPanel({ spaceId }: MembersPanelProps) {
           }
           setPendingAction(null);
         }}
-        title={pendingAction?.type === 'ban' ? `Ban ${pendingAction.displayName}` : `Kick ${pendingAction?.displayName ?? ''}`}
+        title={pendingAction?.type === 'ban' ? t('ban_user').replace('{name}', pendingAction.displayName) : t('kick_user').replace('{name}', pendingAction?.displayName ?? '')}
         description={
           pendingAction?.type === 'ban'
-            ? 'They will be permanently banned from this space until unbanned.'
-            : 'They can rejoin with an invite link.'
+            ? t('ban_member_desc')
+            : t('kick_member_desc')
         }
         variant={pendingAction?.type === 'ban' ? 'danger' : 'warning'}
-        confirmLabel={pendingAction?.type === 'ban' ? 'Ban' : 'Kick'}
+        confirmLabel={pendingAction?.type === 'ban' ? t('ban') : t('kick')}
       />
     </div>
   );

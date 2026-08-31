@@ -4,12 +4,13 @@ import { useVoiceStore } from '../../stores/voiceStore';
 import { useSpaceStore, getChannelOrigin } from '../../stores/spaceStore';
 import { wsSend } from '../../hooks/useWebSocket';
 import { hasPermissionBit, PermissionBits } from '../../utils/permissions';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 /**
  * Build moderation context menu items for a voice user.
  * Called imperatively at right-click time (not during render).
  */
-export function buildVoiceModMenuItems(targetUserId: string, channelId: string): ContextMenuItem[] {
+export function buildVoiceModMenuItems(targetUserId: string, channelId: string, t: (key: string) => string): ContextMenuItem[] {
   const { spacePermissions, channels, channelToSpaceMap } = useSpaceStore.getState();
   const { spaceMutedUserIds, spaceDeafenedUserIds } = useVoiceStore.getState();
 
@@ -36,7 +37,7 @@ export function buildVoiceModMenuItems(targetUserId: string, channelId: string):
     items.push({
       key: 'space-mute',
       type: 'action',
-      label: isSpaceMuted ? 'Space Unmute' : 'Space Mute',
+      label: isSpaceMuted ? t('space_unmute') : t('space_mute'),
       icon: React.createElement('svg', { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'currentColor', className: 'flex-shrink-0' },
         React.createElement('path', { d: 'M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z' }),
         React.createElement('path', { d: 'M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z' }),
@@ -52,7 +53,7 @@ export function buildVoiceModMenuItems(targetUserId: string, channelId: string):
     items.push({
       key: 'space-deafen',
       type: 'action',
-      label: isSpaceDeafened ? 'Space Undeafen' : 'Space Deafen',
+      label: isSpaceDeafened ? t('space_undeafen') : t('space_deafen'),
       icon: React.createElement('svg', { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'currentColor', className: 'flex-shrink-0' },
         React.createElement('path', { d: 'M12 3c-4.97 0-9 4.03-9 9v7c0 1.1.9 2 2 2h2v-7H5v-2c0-3.87 3.13-7 7-7s7 3.13 7 7v2h-2v7h2c1.1 0 2-.9 2-2v-7c0-4.97-4.03-9-9-9z' }),
         ...(isSpaceDeafened
@@ -68,7 +69,7 @@ export function buildVoiceModMenuItems(targetUserId: string, channelId: string):
     items.push({
       key: 'disconnect',
       type: 'action',
-      label: 'Disconnect',
+      label: t('disconnect'),
       danger: true,
       icon: React.createElement('svg', { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'currentColor', className: 'flex-shrink-0' },
         React.createElement('path', { d: 'M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.956.956 0 010-1.36C3.36 8.68 7.42 7 12 7s8.64 1.68 11.71 4.72c.18.18.29.44.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28a11.27 11.27 0 00-2.67-1.85.996.996 0 01-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z' }),
@@ -82,7 +83,7 @@ export function buildVoiceModMenuItems(targetUserId: string, channelId: string):
     items.push({
       key: 'move-to',
       type: 'submenu',
-      label: 'Move to',
+      label: t('move_to'),
       icon: React.createElement('svg', { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'currentColor', className: 'flex-shrink-0' },
         React.createElement('path', { d: 'M14 4l2.29 2.29-2.88 2.88 1.42 1.42 2.88-2.88L20 10V4h-6zM10 4H4v6l2.29-2.29 4.71 4.7V20h2v-8.41l-5.29-5.3L10 4z' }),
       ),
@@ -108,13 +109,14 @@ export function buildVoiceModMenuItems(targetUserId: string, channelId: string):
  * Must be a component (not a plain function) because it subscribes to store state.
  */
 export function VolumeSliderItem({ userId }: { userId: string }) {
+  const { t } = useLanguage();
   const volume = useVoiceStore((s) => s.participantVolumes.get(userId) ?? 100);
   const setParticipantVolume = useVoiceStore((s) => s.setParticipantVolume);
 
   return (
     <div className="p-3">
       <div className="text-xs text-txt-tertiary mb-2 font-medium uppercase tracking-wider">
-        User Volume
+        {t('user_volume')}
       </div>
       <div className="flex items-center gap-2">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-txt-tertiary flex-shrink-0">

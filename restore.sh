@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Restore the Backspace SQLite DB from a snapshot in data/backups/.
+# Restore the VERTEX SQLite DB from a snapshot in data/backups/.
 # Usage:
 #   ./restore.sh                 List available snapshots.
 #   ./restore.sh <snapshot.db>   Restore the named snapshot (path or basename).
@@ -7,7 +7,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 BACKUP_DIR="data/backups"
-DB="data/backspace.db"
+DB="data/VERTEX.db"
 
 if [[ ! -d "$BACKUP_DIR" ]]; then
   echo "No backups directory at $BACKUP_DIR." >&2
@@ -44,10 +44,10 @@ echo "This will REPLACE $DB. The current DB is saved first as a pre-restore snap
 read -rp "Continue? [y/N] " yn
 [[ "${yn,,}" == "y" ]] || { echo "Aborted."; exit 0; }
 
-echo "[1/3] Stopping backspace container..."
-docker compose stop backspace
+echo "[1/3] Stopping VERTEX container..."
+docker compose stop VERTEX
 
-# data/backspace.db and data/backups/ are container-owned (uid 1000, the non-root runtime
+# data/VERTEX.db and data/backups/ are container-owned (uid 1000, the non-root runtime
 # user). The host user cannot cp/rm them directly, so do the swap inside a throwaway root
 # container that mounts data/ (root can rewrite the uid-1000-owned files).
 # (youruser is in the docker group on both boxes — no sudo prompt.)
@@ -55,13 +55,13 @@ TS="$(date -u +%Y%m%dT%H%M%S)"
 echo "[2/3] Swapping DB inside a root container (pre-restore copy + WAL clear + install)..."
 docker run --rm -v "$(pwd)/data:/data" alpine sh -c '
   set -e
-  if [ -f /data/backspace.db ]; then
-    cp /data/backspace.db "/data/backups/backspace-$1-pre-restore.db"
+  if [ -f /data/VERTEX.db ]; then
+    cp /data/VERTEX.db "/data/backups/VERTEX-$1-pre-restore.db"
   fi
-  rm -f /data/backspace.db-wal /data/backspace.db-shm
-  cp "/data/backups/$2" /data/backspace.db
+  rm -f /data/VERTEX.db-wal /data/VERTEX.db-shm
+  cp "/data/backups/$2" /data/VERTEX.db
 ' sh "$TS" "$SNAP_NAME"
 
-echo "[3/3] Starting backspace container..."
-docker compose start backspace
-echo "Done. Watch health: docker compose logs -f backspace"
+echo "[3/3] Starting VERTEX container..."
+docker compose start VERTEX
+echo "Done. Watch health: docker compose logs -f VERTEX"

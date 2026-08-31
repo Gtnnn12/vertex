@@ -3,6 +3,7 @@ import { Track } from 'livekit-client';
 import { useVoiceStore } from '../../../stores/voiceStore';
 import { getActiveRoom } from '../../../hooks/useLiveKit';
 import { isElectron, getElectronAPI } from '../../../platform/platform';
+import { useLanguage } from '../../../contexts/LanguageContext';
 
 /**
  * Permission state machine for the Video section.
@@ -11,14 +12,14 @@ import { isElectron, getElectronAPI } from '../../../platform/platform';
  * - `granted`     : permission granted; dropdown is populated; tile is dormant
  *                   until user clicks (or attaches to an in-call LK track).
  * - `prompt`      : permission not yet decided; dropdown hidden; CTA card shown.
- * - `denied`      : permission denied; banner shown with "Try again".
- * - `hard-blocked`: a "Try again" attempt failed with NotAllowedError → escalate
+ * - `denied`      : permission denied; banner shown with "{t('try_again')}".
+ * - `hard-blocked`: a "{t('try_again')}" attempt failed with NotAllowedError → escalate
  *                   the banner to platform-specific recovery instructions.
  *
  * `permissions.query({ name: 'camera' })` is the ONLY mount-time camera API
  * call. It does not light the LED on any platform. `getUserMedia` is fired
  * exclusively from explicit user gestures (dormant-tile click, prompt CTA,
- * "Try again" button).
+ * "{t('try_again')}" button).
  */
 type PermissionStatus = 'unknown' | 'granted' | 'prompt' | 'denied' | 'hard-blocked';
 
@@ -26,19 +27,19 @@ function errorName(err: unknown): string {
   return err instanceof Error ? err.name : '';
 }
 
-function getHardBlockedCopy(): string {
+function getHardBlockedCopy(t: (key: string) => string): string {
   if (!isElectron()) {
-    return "Camera blocked at browser level. Click the camera icon in your browser's address bar, reset the permission, then click Try again.";
+    return t('camera_blocked_browser_instruction');
   }
   const platform = getElectronAPI()?.platform;
   if (platform === 'darwin') {
-    return 'Grant camera access in System Settings → Privacy & Security → Camera, then restart the app.';
+    return t('camera_blocked_mac_instruction');
   }
   if (platform === 'win32') {
-    return 'Grant camera access in Settings → Privacy & Security → Camera, then restart the app.';
+    return t('camera_blocked_windows_instruction');
   }
   // linux or unknown
-  return 'Camera permission was denied. Reset it in your browser/Chromium prompt and try again.';
+  return t('camera_blocked_generic_instruction');
 }
 
 /**
@@ -47,7 +48,7 @@ function getHardBlockedCopy(): string {
  * - Duplicate non-empty labels get `" (1)"`, `" (2)"` suffixes by enumeration order.
  *   Single occurrences stay unsuffixed.
  */
-function buildDisplayLabels(devices: MediaDeviceInfo[]): Map<string, string> {
+function buildDisplayLabels(devices: MediaDeviceInfo[], t: (key: string) => string): Map<string, string> {
   const counts = new Map<string, number>();
   for (const d of devices) {
     if (d.label) counts.set(d.label, (counts.get(d.label) ?? 0) + 1);
@@ -56,7 +57,7 @@ function buildDisplayLabels(devices: MediaDeviceInfo[]): Map<string, string> {
   const labels = new Map<string, string>();
   devices.forEach((d, i) => {
     if (!d.label) {
-      labels.set(d.deviceId, `Camera ${i + 1}`);
+      labels.set(d.deviceId, `${t('camera')} ${i + 1}`);
       return;
     }
     const total = counts.get(d.label) ?? 1;
@@ -99,6 +100,7 @@ export function VideoSection() {
   // Tracks whether the active in-flight preview-start request is still wanted
   // (cancellable by Stop preview, unmount, visibility change, or re-click).
   const startGenRef = useRef(0);
+  const { t } = useLanguage();
 
   // Stop the user-owned pre-call getUserMedia stream and release the camera
   // light. macOS holds the LED on for ~2s after release (hardware debounce).
@@ -337,12 +339,12 @@ export function VideoSection() {
       } catch (err) {
         if (gen !== startGenRef.current || !mountedRef.current) return;
         const name = errorName(err);
-        if (name === 'NotReadableError') setPreviewError('Camera is in use by another application.');
-        else if (name === 'OverconstrainedError') setPreviewError('Selected camera is unavailable.');
+        if (name === 'NotReadableError') setPreviewError(t('camera_in_use'));
+        else if (name === 'OverconstrainedError') setPreviewError(t('camera_unavailable'));
         else if (name === 'NotAllowedError') {
           setPermState('denied');
           setPreviewActive(false);
-        } else setPreviewError('Could not start camera preview.');
+        } else setPreviewError(t('camera_preview_start_failed'));
       }
     };
 
@@ -363,7 +365,7 @@ export function VideoSection() {
     };
   }, []);
 
-  const displayLabels = useMemo(() => buildDisplayLabels(devices), [devices]);
+  const displayLabels = useMemo(() => buildDisplayLabels(devices, t), [devices, t]);
 
   // Explicit user gesture: open getUserMedia for the selected device.
   // Called from (a) click on dormant tile, (b) "Enable camera preview" CTA,
@@ -399,17 +401,17 @@ export function VideoSection() {
       if (gen !== startGenRef.current || !mountedRef.current) return;
       const name = errorName(err);
       if (name === 'NotAllowedError') {
-        // First-prompt deny from `prompt` state, or "Try again" denial from `denied`.
+        // First-prompt deny from `prompt` state, or "{t('try_again')}" denial from `denied`.
         setPermState((prev) => (prev === 'denied' ? 'hard-blocked' : 'denied'));
         setPreviewActive(false);
       } else if (name === 'NotReadableError') {
-        setPreviewError('Camera is in use by another application.');
+        setPreviewError(t('camera_in_use'));
       } else if (name === 'OverconstrainedError') {
-        setPreviewError('Selected camera is unavailable.');
+        setPreviewError(t('camera_unavailable'));
       } else if (name === 'NotFoundError') {
-        setPreviewError('No camera detected.');
+        setPreviewError(t('no_camera_detected'));
       } else {
-        setPreviewError('Could not start camera preview.');
+        setPreviewError(t('camera_preview_start_failed'));
       }
     }
   };
@@ -428,10 +430,10 @@ export function VideoSection() {
     return (
       <div>
         <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">
-          Video
+          {t('video')}
         </div>
         <div className="rounded-lg bg-white/[0.03] border border-white/[0.04] p-3.5 text-sm text-txt-tertiary">
-          Checking camera access…
+          {t('checking_camera_access')}
         </div>
       </div>
     );
@@ -441,20 +443,20 @@ export function VideoSection() {
     return (
       <div>
         <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">
-          Video
+          {t('video')}
         </div>
         <div className="rounded-lg bg-white/[0.03] border border-white/[0.04] p-3.5 space-y-2">
-          <div className="text-sm text-txt-primary">⚠ Camera access denied</div>
+          <div className="text-sm text-txt-primary">⚠ {t('camera_access_denied')}</div>
           <div className="text-xs text-txt-tertiary">
             {permState === 'hard-blocked'
-              ? getHardBlockedCopy()
-              : 'Grant camera permission to choose a camera.'}
+              ? getHardBlockedCopy(t)
+              : t('grant_camera_permission_hint')}
           </div>
           <button
             onClick={startPreviewFromUser}
             className="text-xs px-3 py-1.5 rounded-md bg-surface-base hover:bg-interactive-hover text-txt-secondary transition-colors"
           >
-            Try again
+            {t('try_again')}
           </button>
         </div>
       </div>
@@ -465,7 +467,7 @@ export function VideoSection() {
     return (
       <div>
         <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">
-          Video
+          {t('video')}
         </div>
         <div className="rounded-lg bg-white/[0.03] border border-white/[0.04] p-3.5 space-y-3">
           <div className="aspect-video w-full rounded-lg bg-surface-base overflow-hidden relative flex flex-col items-center justify-center text-center px-6">
@@ -473,14 +475,14 @@ export function VideoSection() {
               <path d="M17 10.5V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-3.5l4 4v-11l-4 4z" />
             </svg>
             <div className="text-sm text-txt-secondary mb-1">
-              Camera permission needed to choose a camera and preview.
+              {t('camera_permission_needed')}
             </div>
           </div>
           <button
             onClick={startPreviewFromUser}
             className="w-full text-[13px] px-3 py-2 rounded-md bg-accent-primary hover:bg-accent-primary-hover active:bg-accent-primary-active text-white font-medium transition-colors"
-          >
-            Enable camera preview
+>
+            {t('enable_camera_preview')}
           </button>
         </div>
       </div>
@@ -490,8 +492,8 @@ export function VideoSection() {
   // permState === 'granted'
   const selectedLabel =
     cameraDeviceId === null
-      ? 'Auto (system default)'
-      : displayLabels.get(cameraDeviceId) ?? 'Auto (system default)';
+      ? t('auto_system_default')
+      : displayLabels.get(cameraDeviceId) ?? t('auto_system_default');
 
   const handleSelect = (id: string | null) => {
     setCameraDeviceId(id);
@@ -507,7 +509,7 @@ export function VideoSection() {
   return (
     <div>
       <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">
-        Video
+        {t('video')}
       </div>
       <div className="rounded-lg bg-white/[0.03] border border-white/[0.04] p-3.5">
         <div className="aspect-video w-full rounded-lg bg-surface-base overflow-hidden relative mb-3 group">
@@ -523,13 +525,13 @@ export function VideoSection() {
             <button
               type="button"
               onClick={startPreviewFromUser}
-              aria-label="Test camera"
+              aria-label={t('test_camera')}
               className="absolute inset-0 flex flex-col items-center justify-center text-txt-tertiary hover:text-txt-secondary hover:bg-white/[0.02] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
             >
               <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor" className="mb-2">
                 <path d="M8 5v14l11-7z" />
               </svg>
-              <span className="text-xs">Click to test camera</span>
+              <span className="text-xs">{t('click_to_test_camera')}</span>
             </button>
           )}
           {previewActive && !previewError && (
@@ -541,8 +543,8 @@ export function VideoSection() {
               className="absolute top-2 right-2 rounded-md bg-black/60 hover:bg-black/75 text-white/90 transition-colors focus-visible:opacity-100
                          min-h-[44px] min-w-[44px] px-3 py-2 text-xs flex items-center justify-center
                          md:min-h-0 md:min-w-0 md:text-[11px] md:px-2 md:py-1 md:opacity-0 md:group-hover:opacity-100"
-            >
-              Stop preview
+>
+              {t('stop_preview')}
             </button>
           )}
           {previewError && (
@@ -553,12 +555,12 @@ export function VideoSection() {
                 onClick={startPreviewFromUser}
                 className="text-[11px] px-2 py-1 rounded-md bg-surface-base hover:bg-interactive-hover text-txt-secondary transition-colors"
               >
-                Try again
+                {t('try_again')}
               </button>
             </div>
           )}
         </div>
-        <div className="text-[13px] font-medium text-txt-primary mb-1.5">Camera</div>
+        <div className="text-[13px] font-medium text-txt-primary mb-1.5">{t('camera')}</div>
         <div ref={dropdownRef}>
           <button
             type="button"
@@ -579,7 +581,7 @@ export function VideoSection() {
           {listOpen && (
             <div className="mt-1 rounded-md bg-surface-base border border-border-hard py-1">
               <DropdownItem
-                label="Auto (system default)"
+                label={t('auto_system_default')}
                 active={cameraDeviceId === null}
                 onClick={() => handleSelect(null)}
               />
@@ -600,12 +602,12 @@ export function VideoSection() {
           (() => {
             const m = devices.find((d) => d.deviceId === activeDeviceId);
             const label = m
-              ? displayLabels.get(activeDeviceId) ?? (m.label || 'detected camera')
-              : 'detected camera';
-            return <div className="text-xs text-txt-tertiary mt-1">Currently using: {label}</div>;
+              ? displayLabels.get(activeDeviceId) ?? (m.label || t('detected_camera'))
+              : t('detected_camera');
+            return <div className="text-xs text-txt-tertiary mt-1">{t('currently_using')}: {label}</div>;
           })()}
         {devices.length === 0 && (
-          <div className="text-xs text-txt-tertiary mt-1">No cameras detected.</div>
+          <div className="text-xs text-txt-tertiary mt-1">{t('no_cameras_detected')}</div>
         )}
       </div>
     </div>

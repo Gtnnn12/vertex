@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-# Backspace — Quick Deploy Script
+# VERTEX — Quick Deploy Script
 # ============================================================
 # Syncs code and rebuilds on remote server(s).
 #
@@ -27,10 +27,10 @@ BUILD_COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo '')"
 PI_USER="youruser"
 PI_LOCAL="192.168.1.10"
 PI_REMOTE="nova.ddns.net"
-PI_PATH="~/backspace"
+PI_PATH="~/VERTEX"
 
 BETA_HOST="orbit.ddns.net"
-BETA_PATH="~/backspace"
+BETA_PATH="~/VERTEX"
 
 # ── Local target override (gitignored) ──────────────────────
 # The values above are public placeholders. A maintainer can point this script
@@ -63,14 +63,14 @@ EXCLUDES=(
   --exclude='.claude'
   --exclude='.worktrees'
   --exclude='.playwright-mcp'
-  --exclude='Artworks-Backspace'
+  --exclude='Artworks-VERTEX'
   --exclude='Old Designs'
   --exclude='outdated trash'
   --exclude='docs/superpowers'
   --exclude='*.rtf'
   --exclude='*.rtfd'
   --exclude='ARCHITECTURE_AUDIT.md'
-  --exclude='Backspace-design-prototype.html'
+  --exclude='VERTEX-design-prototype.html'
   --exclude='assets/brand'
   --exclude='electronbuild.sh'
   --exclude='multi-platform-roadmap.md'
@@ -99,8 +99,8 @@ deploy() {
 
   # Rebuild
   echo "  [3/4] Building and restarting..."
-  # Clean up stale renamed containers left by failed recreates (e.g. "d420a6c00439_backspace")
-  ssh "$PI_USER@$host" "cd $path && docker rm -f \$(docker ps -aq --filter 'name=_backspace' 2>/dev/null) 2>/dev/null; BACKSPACE_COMMIT='$BUILD_COMMIT' docker compose up -d --build"
+  # Clean up stale renamed containers left by failed recreates (e.g. "d420a6c00439_VERTEX")
+  ssh "$PI_USER@$host" "cd $path && docker rm -f \$(docker ps -aq --filter 'name=_VERTEX' 2>/dev/null) 2>/dev/null; VERTEX_COMMIT='$BUILD_COMMIT' docker compose up -d --build"
 
   # Prune old images; keep build cache capped at 2GB for fast rebuilds
   echo "  [4/4] Pruning stale Docker data..."

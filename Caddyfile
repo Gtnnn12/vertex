@@ -1,4 +1,4 @@
-# Backspace — Caddy reverse proxy configuration
+# VERTEX — Caddy reverse proxy configuration
 # DOMAIN is read from the container environment (set via docker-compose.yml)
 
 {$DOMAIN} {
@@ -7,6 +7,6 @@
         reverse_proxy host.docker.internal:7880
     }
 
-    # Backspace API, WebSocket, and frontend — Docker DNS resolves "backspace"
-    reverse_proxy backspace:3000
+    # VERTEX API, WebSocket, and frontend — Docker DNS resolves "VERTEX"
+    reverse_proxy VERTEX:3000
 }

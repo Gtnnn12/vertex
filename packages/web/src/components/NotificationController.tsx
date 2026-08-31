@@ -4,12 +4,14 @@ import { useVoiceStore } from '../stores/voiceStore';
 import { useAuthStore } from '../stores/authStore';
 import { isElectron } from '../platform/platform';
 import { sendNotification, updateBadgeCount } from '../platform/notifications';
+import { useLanguage } from '../contexts/LanguageContext';
 
 /**
  * Headless component that bridges store events to native OS notifications and badge counts.
  * Renders nothing — lives alongside SoundController in AppLayout.
  */
 export function NotificationController() {
+  const { t } = useLanguage();
   const currentUser = useAuthStore((s) => s.user);
   const isInitialMount = useRef(true);
   const windowFocused = useRef(true);
@@ -60,7 +62,7 @@ export function NotificationController() {
             const displayName = message.user?.displayName || message.user?.username || 'Someone';
             const body = message.content
               ? message.content.replace(/[*_~`>#\-\[\]]/g, '').slice(0, 100)
-              : 'Sent an attachment';
+              : t('sent_an_attachment');
             sendNotification(displayName, body, {
               channelId: message.channelId,
             });
@@ -90,7 +92,7 @@ export function NotificationController() {
 
     const unsubscribe = useVoiceStore.subscribe((state) => {
       if (state.incomingCall && !prevIncoming && !windowFocused.current) {
-        sendNotification('Incoming Call', `${state.incomingCall.callerName} is calling you`);
+        sendNotification(t('incoming_call'), `${state.incomingCall.callerName} ${t('is_calling_you')}`);
       }
       prevIncoming = state.incomingCall;
     });

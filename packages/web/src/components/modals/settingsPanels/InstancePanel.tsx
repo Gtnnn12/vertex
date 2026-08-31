@@ -9,24 +9,26 @@ import { FederationPanel } from '../instanceSettingsPanels/FederationPanel';
 import { StreamingPanel } from '../instanceSettingsPanels/StreamingPanel';
 import { StoragePanel } from '../instanceSettingsPanels/StoragePanel';
 import { UsersPanel } from '../instanceSettingsPanels/UsersPanel';
+import { useLanguage } from '../../../contexts/LanguageContext';
 
 type SubTab = 'general' | 'registration' | 'federation' | 'streaming' | 'storage' | 'users';
 
 export function InstancePanel() {
   const fetchInstanceSettings = useSettingsStore((s) => s.fetchInstanceSettings);
   const fetchStreamingLimits = useSettingsStore((s) => s.fetchStreamingLimits);
+  const { t } = useLanguage();
 
   const [subTab, setSubTab] = useState<SubTab>('general');
   const [approvalCount, setApprovalCount] = useState(0);
 
   const sections = useMemo<SettingsSection[]>(() => [
-    { id: 'general', label: 'General' },
-    { id: 'registration', label: 'Registration' },
-    { id: 'federation', label: 'Federation', badgeCount: approvalCount },
-    { id: 'streaming', label: 'Streaming' },
-    { id: 'storage', label: 'Storage' },
-    { id: 'users', label: 'Users' },
-  ], [approvalCount]);
+    { id: 'general', label: t('general') },
+    { id: 'registration', label: t('registration') },
+    { id: 'federation', label: t('federation'), badgeCount: approvalCount },
+    { id: 'streaming', label: t('streaming') },
+    { id: 'storage', label: t('storage') },
+    { id: 'users', label: t('users') },
+  ], [approvalCount, t]);
 
   const handleNavigate = useCallback((id: string) => {
     setSubTab(id as SubTab);

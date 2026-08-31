@@ -4,6 +4,7 @@ import { useTrackStats, AudioTrackStat, VideoTrackStat } from '../../hooks/useTr
 import { getActiveRoom } from '../../hooks/useLiveKit';
 import { useFloatingPosition } from '../../hooks/useFloatingPosition';
 import { usePortalContainer } from '../../hooks/usePortalContainer';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface ConnectionInfoPopoverProps {
   open: boolean;
@@ -34,23 +35,23 @@ function jitterColor(ms: number): string {
   return 'text-txt-danger';
 }
 
-function sourceLabel(source: string): string {
+function sourceLabel(source: string, t: (key: string) => string): string {
   switch (source) {
-    case 'microphone': return 'Microphone';
-    case 'camera': return 'Camera';
-    case 'screen_share': return 'Screen';
-    case 'screen_share_audio': return 'Screen Audio';
-    default: return 'Unknown';
+    case 'microphone': return t('microphone');
+    case 'camera': return t('camera');
+    case 'screen_share': return t('screen');
+    case 'screen_share_audio': return t('screen_audio');
+    default: return t('unknown');
   }
 }
 
-function trackLabel(direction: 'send' | 'recv', source: string, participantName: string | null): string {
+function trackLabel(direction: 'send' | 'recv', source: string, participantName: string | null, t: (key: string) => string): string {
   const arrow = direction === 'send' ? '\u2191' : '\u2193';
   if (direction === 'send') {
-    return `${sourceLabel(source)} ${arrow}`;
+    return `${sourceLabel(source, t)} ${arrow}`;
   }
-  const name = participantName ?? 'Remote';
-  return `${name} ${sourceLabel(source)} ${arrow}`;
+  const name = participantName ?? t('remote');
+  return `${name} ${sourceLabel(source, t)} ${arrow}`;
 }
 
 const Row = ({ label, value, colorClass }: { label: string; value: string; colorClass?: string }) => (
@@ -68,8 +69,8 @@ const SectionHeader = ({ title }: { title: string }) => (
   </div>
 );
 
-function AudioTrackRow({ track }: { track: AudioTrackStat }) {
-  const label = trackLabel(track.direction, track.source, track.participantName);
+function AudioTrackRow({ track, t }: { track: AudioTrackStat; t: (key: string) => string }) {
+  const label = trackLabel(track.direction, track.source, track.participantName, t);
   return (
     <div className="flex items-center justify-between py-[3px]">
       <span className="text-[12px] text-txt-tertiary truncate mr-2">{label}</span>
@@ -81,8 +82,8 @@ function AudioTrackRow({ track }: { track: AudioTrackStat }) {
   );
 }
 
-function VideoTrackRow({ track }: { track: VideoTrackStat }) {
-  const label = trackLabel(track.direction, track.source, track.participantName);
+function VideoTrackRow({ track, t }: { track: VideoTrackStat; t: (key: string) => string }) {
+  const label = trackLabel(track.direction, track.source, track.participantName, t);
   const resolution = (track.width && track.height) ? `${track.width}\u00d7${track.height}` : null;
 
   return (
@@ -118,6 +119,7 @@ function VideoTrackRow({ track }: { track: VideoTrackStat }) {
 }
 
 export function ConnectionInfoPopover({ open, onClose, anchorRef }: ConnectionInfoPopoverProps) {
+  const { t } = useLanguage();
   const popoverRef = useRef<HTMLDivElement>(null);
   const portalContainer = usePortalContainer();
   const stats = useTrackStats(open);
@@ -151,36 +153,36 @@ export function ConnectionInfoPopover({ open, onClose, anchorRef }: ConnectionIn
       className="w-[300px] glass rounded-lg overflow-hidden"
     >
       <div className="px-3 py-2 border-b border-border-hard">
-        <span className="text-[14px] font-bold text-txt-primary">Connection Info</span>
+        <span className="text-[14px] font-bold text-txt-primary">{t('connection_info')}</span>
       </div>
 
       <div className="px-3 py-2 max-h-[calc(100vh-32px)] overflow-y-auto scrollbar-thin">
         {!room ? (
-          <div className="text-[12px] text-txt-tertiary py-2 text-center">Not connected</div>
+          <div className="text-[12px] text-txt-tertiary py-2 text-center">{t('not_connected')}</div>
         ) : !stats ? (
-          <div className="text-[12px] text-txt-tertiary py-2 text-center">Gathering stats...</div>
+          <div className="text-[12px] text-txt-tertiary py-2 text-center">{t('gathering_stats')}</div>
         ) : (
           <>
             {/* Network */}
-            <SectionHeader title="Network" />
+            <SectionHeader title={t('network')} />
             <Row
-              label="Ping"
+              label={t('ping')}
               value={stats.network.ping !== null ? `${stats.network.ping} ms` : '\u2014'}
               colorClass={stats.network.ping !== null ? pingColor(stats.network.ping) : undefined}
             />
             <Row
-              label="Packet Loss"
+              label={t('packet_loss')}
               value={stats.network.packetLoss !== null ? `${stats.network.packetLoss.toFixed(1)}%` : '\u2014'}
               colorClass={stats.network.packetLoss !== null ? lossColor(stats.network.packetLoss) : undefined}
             />
             <Row
-              label="Jitter"
+              label={t('jitter')}
               value={stats.network.jitter !== null ? `${stats.network.jitter} ms` : '\u2014'}
               colorClass={stats.network.jitter !== null ? jitterColor(stats.network.jitter) : undefined}
             />
-            <Row label="Server" value={stats.network.serverAddress ?? '\u2014'} />
+            <Row label={t('server')} value={stats.network.serverAddress ?? '\u2014'} />
             <Row
-              label="Protocol"
+              label={t('protocol')}
               value={
                 stats.network.protocol
                   ? `${stats.network.protocol}${stats.network.candidateType ? ` (${stats.network.candidateType})` : ''}`
@@ -192,9 +194,9 @@ export function ConnectionInfoPopover({ open, onClose, anchorRef }: ConnectionIn
             {stats.audioTracks.length > 0 && (
               <>
                 <Divider />
-                <SectionHeader title="Audio" />
-                {stats.audioTracks.map((t) => (
-                  <AudioTrackRow key={t.key} track={t} />
+                <SectionHeader title={t('audio')} />
+                {stats.audioTracks.map((t2) => (
+                  <AudioTrackRow key={t2.key} track={t2} t={t} />
                 ))}
               </>
             )}
@@ -203,9 +205,9 @@ export function ConnectionInfoPopover({ open, onClose, anchorRef }: ConnectionIn
             {stats.videoTracks.length > 0 && (
               <>
                 <Divider />
-                <SectionHeader title="Video" />
-                {stats.videoTracks.map((t) => (
-                  <VideoTrackRow key={t.key} track={t} />
+                <SectionHeader title={t('video')} />
+                {stats.videoTracks.map((v2) => (
+                  <VideoTrackRow key={v2.key} track={v2} t={t} />
                 ))}
               </>
             )}

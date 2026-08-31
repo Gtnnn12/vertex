@@ -10,18 +10,19 @@ import { getPrimaryActivity } from '@backspace/shared/src/activities.js';
 import { parseFederatedUsername, isFederationGlobeApplicable } from '../../utils/identity';
 import { useCanonicalUserView } from '../../utils/userViewLookup';
 import { useDelayedLoading } from '../../hooks/useDelayedLoading';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 /**
  * Derives the display group for a member based on their highest-positioned role
  * or owner status. Returns { key, label, color, position }.
  */
-function getMemberGroup(member: MemberWithUser, ownerId: string | undefined) {
+function getMemberGroup(member: MemberWithUser, ownerId: string | undefined, t: (k: string) => string) {
   if (ownerId && member.userId === ownerId) {
     // Owner always sorts first — position Infinity so it's above all roles
     const ownerRole = member.roles?.find(r => r.position > 0);
     return {
       key: '__owner__',
-      label: 'OWNER',
+      label: t('owner'),
       color: ownerRole?.color ?? 'rgb(var(--accent-rose))',
       position: Infinity,
     };
@@ -40,7 +41,7 @@ function getMemberGroup(member: MemberWithUser, ownerId: string | undefined) {
   // No explicit roles — just @everyone
   return {
     key: '__online__',
-    label: 'ONLINE',
+    label: t('online'),
     color: undefined,
     position: -1,
   };
@@ -106,6 +107,7 @@ function MemberSidebarRow({
 }
 
 export function MemberSidebar() {
+  const { t } = useLanguage();
   const members = useSpaceStore((s) => s.members);
   const spaces = useSpaceStore((s) => s.spaces);
   const currentSpaceId = useSpaceStore((s) => s.currentSpaceId);
@@ -124,7 +126,7 @@ export function MemberSidebar() {
     // Group online members by their highest role
     const groups = new Map<string, { label: string; color: string | undefined; position: number; members: MemberWithUser[] }>();
     for (const m of online) {
-      const group = getMemberGroup(m, ownerId);
+      const group = getMemberGroup(m, ownerId, t);
       if (!groups.has(group.key)) {
         groups.set(group.key, { label: group.label, color: group.color, position: group.position, members: [] });
       }
@@ -137,7 +139,7 @@ export function MemberSidebar() {
     );
 
     return { roleGroups: sorted, offlineMembers: offline };
-  }, [members, ownerId]);
+  }, [members, ownerId, t]);
 
   const isLoadingSpace = !!loadingSpaceId && loadingSpaceId === currentSpaceId;
   const showMemberSkeleton = useDelayedLoading(isLoadingSpace);
@@ -183,7 +185,7 @@ export function MemberSidebar() {
   return (
     <div className="w-60 bg-surface-members flex-shrink-0 overflow-y-auto select-none no-scrollbar hidden md:block border-l border-border-hard">
       {showMemberSkeleton ? (
-        <div className="px-3 pt-4" role="status" aria-label="Loading members">
+        <div className="px-3 pt-4" role="status" aria-label={t('loading_members')}>
           {/* Role group 1 */}
           <div className="skeleton skeleton-bar h-2 w-[40%] mb-3" style={{ animationDelay: '0s' }} />
           {Array.from({ length: 2 }, (_, i) => (
@@ -217,7 +219,7 @@ export function MemberSidebar() {
         {offlineMembers.length > 0 && (
           <div>
             <h3 className="text-[10.5px] font-bold text-txt-tertiary uppercase tracking-[0.06em] px-2 mb-1">
-              OFFLINE — {offlineMembers.length}
+              {t('offline')} — {offlineMembers.length}
             </h3>
             {offlineMembers.map((m) => renderMember(m, true))}
           </div>

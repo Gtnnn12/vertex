@@ -11,17 +11,18 @@ import { parseFederatedUsername, isFederationGlobeApplicable } from '../../utils
 import { useCanonicalUserView } from '../../utils/userViewLookup';
 import { MobileScreenHeader } from './MobileScreenHeader';
 import { useDelayedLoading } from '../../hooks/useDelayedLoading';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 /**
  * Derives the display group for a member based on their highest-positioned role
  * or owner status. Returns { key, label, color, position }.
  */
-function getMemberGroup(member: MemberWithUser, ownerId: string | undefined) {
+function getMemberGroup(member: MemberWithUser, ownerId: string | undefined, t: (k: string) => string) {
   if (ownerId && member.userId === ownerId) {
     const ownerRole = member.roles?.find(r => r.position > 0);
     return {
       key: '__owner__',
-      label: 'OWNER',
+      label: t('owner'),
       color: ownerRole?.color ?? 'rgb(var(--accent-rose))',
       position: Infinity,
     };
@@ -38,7 +39,7 @@ function getMemberGroup(member: MemberWithUser, ownerId: string | undefined) {
   }
   return {
     key: '__online__',
-    label: 'ONLINE',
+    label: t('online'),
     color: undefined,
     position: -1,
   };
@@ -107,6 +108,7 @@ interface MobileMembersScreenProps {
 }
 
 export function MobileMembersScreen({ params }: MobileMembersScreenProps) {
+  const { t } = useLanguage();
   const members = useSpaceStore((s) => s.members);
   const spaces = useSpaceStore((s) => s.spaces);
   const currentSpaceId = useSpaceStore((s) => s.currentSpaceId);
@@ -129,7 +131,7 @@ export function MobileMembersScreen({ params }: MobileMembersScreenProps) {
 
     const groups = new Map<string, { label: string; color: string | undefined; position: number; members: MemberWithUser[] }>();
     for (const m of online) {
-      const group = getMemberGroup(m, ownerId);
+      const group = getMemberGroup(m, ownerId, t);
       if (!groups.has(group.key)) {
         groups.set(group.key, { label: group.label, color: group.color, position: group.position, members: [] });
       }
@@ -141,7 +143,7 @@ export function MobileMembersScreen({ params }: MobileMembersScreenProps) {
     );
 
     return { roleGroups: sorted, offlineMembers: offline };
-  }, [members, ownerId]);
+  }, [members, ownerId, t]);
 
   const totalCount = members.length;
 
@@ -184,10 +186,10 @@ export function MobileMembersScreen({ params }: MobileMembersScreenProps) {
 
   return (
     <div className="flex flex-col h-full bg-surface-base">
-      <MobileScreenHeader title={totalCount > 0 ? `Members — ${totalCount}` : 'Members'} />
+      <MobileScreenHeader title={totalCount > 0 ? `${t('members')} — ${totalCount}` : t('members')} />
       <div className="flex-1 overflow-y-auto p-3">
         {showMemberSkeleton ? (
-          <div className="px-2 pt-2" role="status" aria-label="Loading members">
+          <div className="px-2 pt-2" role="status" aria-label={t('loading_members')}>
             {/* Role group 1 — match real row geometry: w-9 h-9 avatar +
                 gap-2.5 + py-2.5 → ~52px row height. */}
             <div
@@ -238,7 +240,7 @@ export function MobileMembersScreen({ params }: MobileMembersScreenProps) {
           </div>
         ) : onlineCount === 0 && offlineMembers.length === 0 ? (
           <div className="flex items-center justify-center h-40 text-txt-tertiary text-sm">
-            No members found
+            {t('no_members_found')}
           </div>
         ) : (
           <>
@@ -254,7 +256,7 @@ export function MobileMembersScreen({ params }: MobileMembersScreenProps) {
             {offlineMembers.length > 0 && (
               <div>
                 <h3 className="text-[10.5px] font-bold text-txt-tertiary uppercase tracking-[0.06em] px-2 mb-1">
-                  OFFLINE — {offlineMembers.length}
+                  {t('offline')} — {offlineMembers.length}
                 </h3>
                 {offlineMembers.map((m) => renderMember(m, true))}
               </div>

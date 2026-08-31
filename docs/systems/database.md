@@ -366,7 +366,7 @@ The user INSERT, `usedCount` increment, and redemption row INSERT all run in a s
 | Column | Type | Default | Notes |
 |--------|------|---------|-------|
 | id | integer PK | 1 | |
-| instanceName | text | `'Backspace'` | |
+| instanceName | text | `'VERTEX'` | |
 | workerId | integer | | Snowflake worker ID |
 | instanceId | text | | Persistent instance epoch (incarnation UUID). Minted once per DB by `ensureDefaults` and guaranteed non-null after boot. Discriminator that lets peers detect this instance was factory-reset (new DB → new epoch on same origin). See [federation.md → Instance-Epoch Self-Healing]. |
 | discoveryEnabled | integer NOT NULL | 1 | |
