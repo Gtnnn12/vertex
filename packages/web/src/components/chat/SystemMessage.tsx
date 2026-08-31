@@ -1,5 +1,6 @@
 import type { DmChannel, MessageWithUser, SpaceInviteSystemPayload, User } from '@backspace/shared';
 import { SpaceInviteCard } from './SpaceInviteCard';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface SystemMessageProps {
   message: MessageWithUser;
@@ -32,6 +33,7 @@ function resolveActorName(message: MessageWithUser, dm?: Pick<DmChannel, 'member
  * Exported so unit tests can render it directly without mounting MessageList.
  */
 export function SystemMessage({ message, dm }: SystemMessageProps) {
+  const { t } = useLanguage();
   let data: Record<string, unknown> = {};
   try { data = JSON.parse(message.content ?? '{}'); } catch { /* fall through to default branch */ }
 
@@ -51,32 +53,38 @@ export function SystemMessage({ message, dm }: SystemMessageProps) {
   switch (data.event) {
     case 'member_added':
       icon = '→'; // →
-      text = `${actorName} added ${data.targetDisplayName} to the group`;
+      text = t('added_to_group')
+        .replace('{actor}', actorName)
+        .replace('{target}', String(data.targetDisplayName ?? ''));
       break;
     case 'member_removed':
       if (data.reason === 'leave') {
         icon = '←'; // ←
-        text = `${data.targetDisplayName} left the group`;
+        text = t('left_the_group').replace('{target}', String(data.targetDisplayName ?? ''));
       } else {
         icon = '←';
-        text = `${actorName} removed ${data.targetDisplayName} from the group`;
+        text = t('removed_target_from_group')
+          .replace('{actor}', actorName)
+          .replace('{target}', String(data.targetDisplayName ?? ''));
       }
       break;
     case 'owner_changed':
       icon = '♛'; // ♛
-      text = `${data.newOwnerDisplayName} is now the group owner`;
+      text = t('new_group_owner').replace('{name}', String(data.newOwnerDisplayName ?? ''));
       break;
     case 'name_changed':
       icon = '✎'; // ✎
       // newName === null is a meaningful "cleared" state — distinct from a
       // missing field — so we test for a non-empty string explicitly.
       text = typeof data.newName === 'string' && data.newName.length > 0
-        ? `${actorName} renamed the group to "${data.newName}"`
-        : `${actorName} cleared the group name`;
+        ? t('renamed_group_to')
+            .replace('{actor}', actorName)
+            .replace('{name}', data.newName)
+        : t('cleared_group_name').replace('{actor}', actorName);
       break;
     case 'icon_changed':
       icon = '\u{1F5BC}'; // 🖼
-      text = `${actorName} updated the group icon`;
+      text = t('updated_group_icon').replace('{actor}', actorName);
       break;
     default:
       text = message.content ?? '';

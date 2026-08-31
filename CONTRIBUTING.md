@@ -1,6 +1,6 @@
-# Contributing to Backspace
+# Contributing to VERTEX
 
-Thanks for considering a contribution! Backspace is free and open source software
+Thanks for considering a contribution! VERTEX is free and open source software
 (GNU AGPL-3.0, with a commercial dual-license option), and contributions of all
 sizes are welcome: bug reports, fixes, features, documentation, and design.
 
@@ -20,7 +20,7 @@ sizes are welcome: bug reports, fixes, features, documentation, and design.
 Before your first contribution can be merged, you must sign the project's
 [Contributor License Agreement](CLA.md).
 
-Backspace is a single-owner project. Under the CLA **you keep the copyright to
+VERTEX is a single-owner project. Under the CLA **you keep the copyright to
 your contribution** and grant the maintainer (Jannis Braun) an exclusive,
 sublicensable license to it, which is what lets the project be offered under both
 the AGPL and a commercial license. In return, you receive a perpetual license to

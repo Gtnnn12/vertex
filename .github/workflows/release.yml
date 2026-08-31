@@ -85,7 +85,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build shared package
-        run: pnpm --filter @backspace/shared build
+        run: pnpm --filter @VERTEX/shared build
 
       - name: Compile desktop TypeScript
         working-directory: packages/desktop

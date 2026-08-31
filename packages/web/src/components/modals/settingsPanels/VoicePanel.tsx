@@ -3,6 +3,7 @@ import { Toggle } from '../../ui/Toggle';
 import { VideoSection } from './VideoSection';
 import { AudioInputSection } from './AudioInputSection';
 import { AudioOutputSection } from './AudioOutputSection';
+import { useLanguage } from '../../../contexts/LanguageContext';
 
 export function VoicePanel() {
   const echoCancellation = useVoiceStore((s) => s.echoCancellation);
@@ -15,22 +16,23 @@ export function VoicePanel() {
   const setSoundEffectVolume = useVoiceStore((s) => s.setSoundEffectVolume);
   const messageSoundAllChannels = useVoiceStore((s) => s.messageSoundAllChannels);
   const setMessageSoundAllChannels = useVoiceStore((s) => s.setMessageSoundAllChannels);
+  const { t } = useLanguage();
 
   return (
     <div className="space-y-5">
-      <h2 className="text-lg font-semibold text-txt-primary mb-6">Voice &amp; Video</h2>
+      <h2 className="text-lg font-semibold text-txt-primary mb-6">{t('voice_and_video')}</h2>
 
       <AudioInputSection />
       <AudioOutputSection />
 
       <div>
         <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">
-          Volume
+          {t('volume')}
         </div>
         <div className="rounded-lg bg-white/[0.03] border border-white/[0.04] p-3.5">
           <div className="py-1">
             <div className="flex items-center justify-between mb-2">
-              <div className="text-sm text-txt-primary">Sound Effects Volume</div>
+              <div className="text-sm text-txt-primary">{t('sound_effects_volume')}</div>
               <div className="text-xs text-txt-tertiary tabular-nums">{soundEffectVolume}%</div>
             </div>
             <input
@@ -47,9 +49,9 @@ export function VoicePanel() {
           </div>
           <div className="flex items-center justify-between py-2">
             <div>
-              <div className="text-sm text-txt-primary">Play sound for every message</div>
+              <div className="text-sm text-txt-primary">{t('play_sound_for_every_message')}</div>
               <div className="text-xs text-txt-tertiary">
-                Off (default): only DMs and messages that mention you. On: every channel.
+                {t('message_sound_mode_description')}
               </div>
             </div>
             <Toggle enabled={messageSoundAllChannels} onChange={setMessageSoundAllChannels} />
@@ -61,29 +63,29 @@ export function VoicePanel() {
 
       <div>
         <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">
-          Voice Processing
+          {t('voice_processing')}
         </div>
         <div className="rounded-lg bg-white/[0.03] border border-white/[0.04] p-3.5">
           <div className="flex items-center justify-between py-2">
             <div>
-              <div className="text-sm text-txt-primary">AI Noise Suppression</div>
-              <div className="text-xs text-txt-tertiary">ML-based noise removal (RNNoise) — filters keyboard, fans, and background noise</div>
+              <div className="text-sm text-txt-primary">{t('ai_noise_suppression')}</div>
+              <div className="text-xs text-txt-tertiary">{t('ai_noise_suppression_description')}</div>
             </div>
             <Toggle enabled={rnnoiseEnabled} onChange={setRnnoiseEnabled} />
           </div>
 
           <div className="flex items-center justify-between py-2">
             <div>
-              <div className="text-sm text-txt-primary">Echo Cancellation</div>
-              <div className="text-xs text-txt-tertiary">Cancels echo from your speakers feeding back into the mic. Always on for voice channels and calls.</div>
+              <div className="text-sm text-txt-primary">{t('echo_cancellation')}</div>
+              <div className="text-xs text-txt-tertiary">{t('echo_cancellation_description')}</div>
             </div>
             <Toggle enabled={echoCancellation} onChange={setEchoCancellation} />
           </div>
 
           <div className="flex items-center justify-between py-2">
             <div>
-              <div className="text-sm text-txt-primary">Auto Gain Control</div>
-              <div className="text-xs text-txt-tertiary">Auto-adjusts mic volume — can cause voice ducking during streams</div>
+              <div className="text-sm text-txt-primary">{t('auto_gain_control')}</div>
+              <div className="text-xs text-txt-tertiary">{t('auto_gain_control_description')}</div>
             </div>
             <Toggle enabled={autoGainControl} onChange={setAutoGainControl} />
           </div>

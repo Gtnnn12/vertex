@@ -17,4 +17,4 @@ is involved).
 
 ## Supported versions
 
-Backspace 1.x receives security fixes. Always run the latest release.
+VERTEX 1.x receives security fixes. Always run the latest release.

@@ -106,7 +106,7 @@ CMD ["node", "--import", "tsx/esm", "src/index.ts"]
 
 The runtime stage runs its own `pnpm install --prod` (Dockerfile:61), so better-sqlite3/sharp install **per arch**. This host is Apple Silicon (arm64), which is ALSO the Raspberry Pi's arch — the main self-host target — so build the real image **natively for arm64** (fast; a `--platform linux/amd64` build here would emulate the whole Vite build via Rosetta and likely time out). This build both produces the image for the Step 5 boot test AND exercises the arm64 runtime install:
 ```bash
-docker buildx build --platform linux/arm64 --load -t backspace:hardening-test --build-arg BACKSPACE_COMMIT=test .
+docker buildx build --platform linux/arm64 --load -t VERTEX:hardening-test --build-arg VERTEX_COMMIT=test .
 ```
 Watch the better-sqlite3 output: it must use a prebuilt binary (`prebuild-install`), NOT `node-gyp`/compilation. This build may take a few minutes (pnpm install + Vite) — give it an ample timeout or run it in the background so it isn't killed mid-build.
 
@@ -126,7 +126,7 @@ Expected: the native arm64 image builds (better-sqlite3 prebuilt), AND the amd64
 Run:
 ```bash
 mkdir -p /tmp/bkspace-data
-docker run -d --name bkspace-htest -e JWT_SECRET=testsecret_at_least_32_chars_long_xx -p 3999:3000 -v /tmp/bkspace-data:/app/data backspace:hardening-test
+docker run -d --name bkspace-htest -e JWT_SECRET=testsecret_at_least_32_chars_long_xx -p 3999:3000 -v /tmp/bkspace-data:/app/data VERTEX:hardening-test
 sleep 12
 echo "--- health ---"; curl -fsS http://localhost:3999/api/health && echo " OK"
 # IMPORTANT: check PID 1 (the actual server), NOT `docker exec ... id`. `docker exec`
@@ -146,7 +146,7 @@ Expected: `/api/health` returns ok; `Uid:` line shows `1000 1000 1000 1000` (ser
 Run:
 ```bash
 docker rm -f bkspace-htest; rm -rf /tmp/bkspace-data
-docker rmi backspace:hardening-test 2>/dev/null || true
+docker rmi VERTEX:hardening-test 2>/dev/null || true
 ```
 
 - [ ] **Step 7: Commit**
@@ -193,9 +193,9 @@ Then replace the single `Build and push (linux/amd64, linux/arm64)` step (curren
           platforms: linux/amd64
           load: true
           push: false
-          tags: backspace:scan
+          tags: VERTEX:scan
           build-args: |
-            BACKSPACE_COMMIT=${{ steps.meta_commit.outputs.commit }}
+            VERTEX_COMMIT=${{ steps.meta_commit.outputs.commit }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -204,7 +204,7 @@ Then replace the single `Build and push (linux/amd64, linux/arm64)` step (curren
         continue-on-error: true # report-only; enforcement flipped on in Plan E
         with:
           scan-type: image
-          image-ref: backspace:scan
+          image-ref: VERTEX:scan
           ignore-unfixed: true
           format: sarif
           output: trivy-image.sarif
@@ -228,7 +228,7 @@ Then replace the single `Build and push (linux/amd64, linux/arm64)` step (curren
           tags: ${{ steps.docker_meta.outputs.tags }}
           labels: ${{ steps.docker_meta.outputs.labels }}
           build-args: |
-            BACKSPACE_COMMIT=${{ steps.meta_commit.outputs.commit }}
+            VERTEX_COMMIT=${{ steps.meta_commit.outputs.commit }}
           sbom: true
           provenance: true
           cache-from: type=gha
@@ -255,9 +255,9 @@ Expected: `All actions pinned to SHA`.
 
 This proves the new build→load→scan logic works without publishing anything (requires Docker daemon + local Trivy: `brew install trivy` if absent). Build native (arm64) here to avoid emulation — the scan mechanism is arch-independent; CI scans the amd64 image natively on GitHub's runners:
 ```bash
-docker buildx build --platform linux/arm64 --load -t backspace:scan --build-arg BACKSPACE_COMMIT=test .
-trivy image --severity HIGH,CRITICAL --ignore-unfixed backspace:scan | tail -25
-docker rmi backspace:scan
+docker buildx build --platform linux/arm64 --load -t VERTEX:scan --build-arg VERTEX_COMMIT=test .
+trivy image --severity HIGH,CRITICAL --ignore-unfixed VERTEX:scan | tail -25
+docker rmi VERTEX:scan
 ```
 Expected: the image builds + loads, and Trivy scans it and prints a summary (findings are fine — the scan is report-only; we just need it to RUN). Note accurately in the report: only the **amd64** image is Trivy-scanned; the published **arm64** image ships unscanned (acceptable for this plan). The multi-arch push + SBOM/provenance path cannot be exercised without publishing — it is verified by review + a maintainer `workflow_dispatch` run; the amd64 layers are gha-cache reused on the push, but the **arm64 layers build cold** there (so the push is not "free").
 
@@ -320,7 +320,7 @@ longer root-owned):
   `writes it to `data/seed-admin-rotated.txt` (mode `0600`, root-owned via the bind-mount)`
   → `... (mode `0600`, owned by the container's runtime user uid 1000 via the bind-mount)`.
 - The Restore intro (around `deployment.md:252`): change
-  `Because `data/` (including `backspace.db` and `data/backups/`) is **container-owned (root)** via the bind-mount`
+  `Because `data/` (including `VERTEX.db` and `data/backups/`) is **container-owned (root)** via the bind-mount`
   → `... is **container-owned (uid 1000)** via the bind-mount`. (The throwaway
   root `alpine` container still performs the swap — root can rewrite uid-1000
   files — so the mechanism description after it stays correct.)

@@ -561,3 +561,44 @@
 /* ── Electron window drag regions ── */
 .titlebar-drag { -webkit-app-region: drag; }
 .titlebar-no-drag { -webkit-app-region: no-drag; }
+
+/* ===== ANIMACIONES CYBERPUNK DE VERTEX ===== */
+
+/* Pulso ne�n en botones */
+@keyframes neonPulse {
+    0% { box-shadow: 0 0 10px #a855f7; }
+    50% { box-shadow: 0 0 30px #ff00cc; }
+    100% { box-shadow: 0 0 10px #a855f7; }
+}
+.btn-primary, .btn-enter, .btn-voice {
+    animation: neonPulse 2s infinite;
+}
+
+/* Flotaci�n suave para avatares */
+@keyframes floatAvatar {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-6px); }
+    100% { transform: translateY(0px); }
+}
+.avatar, .user-avatar {
+    animation: floatAvatar 3s ease-in-out infinite;
+}
+
+/* Brillo de entrada (fade-in con brillo) */
+@keyframes fadeInGlow {
+    from { opacity: 0; filter: blur(4px); }
+    to { opacity: 1; filter: blur(0); }
+}
+.glass-panel, .message, .server-item {
+    animation: fadeInGlow 0.6s ease forwards;
+}
+
+/* Barra de estado con destello */
+@keyframes statusGlow {
+    0% { text-shadow: 0 0 5px #a855f7; }
+    50% { text-shadow: 0 0 20px #ff00cc; }
+    100% { text-shadow: 0 0 5px #a855f7; }
+}
+.status-online {
+    animation: statusGlow 1.5s infinite;
+}

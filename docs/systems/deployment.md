@@ -1,10 +1,10 @@
 # Deployment & Operations
 
-Operator- and contributor-facing reference for hosting Backspace: the Docker build pipeline, admin bootstrap, database backup/restore, image pinning, and the relevant environment variables.
+Operator- and contributor-facing reference for hosting VERTEX: the Docker build pipeline, admin bootstrap, database backup/restore, image pinning, and the relevant environment variables.
 
 Source files:
 - `Dockerfile` -- multi-stage build (builder → runtime)
-- `docker-compose.yml` -- base stack: `backspace` + `caddy` (+ optional `livekit`) services, healthcheck
+- `docker-compose.yml` -- base stack: `VERTEX` + `caddy` (+ optional `livekit`) services, healthcheck
 - `docker-compose.proxy.yml` -- proxy/tunnel overlay: publishes the app on `127.0.0.1:APP_PORT` and drops Caddy
 - `.github/workflows/docker-publish.yml` -- multi-arch (amd64+arm64) GHCR image publish
 - `Caddyfile` -- reverse proxy / auto-HTTPS config (All-in-One mode only)
@@ -27,17 +27,17 @@ Source files:
 
 ## 1. Pipeline Overview
 
-Backspace ships as a single application container. In the default **All-in-One** deployment it is fronted by the bundled Caddy (automatic HTTPS); behind an operator's own reverse proxy or a tunnel, Caddy is dropped and the container is published on a host loopback port instead (see [Deployment modes](#deployment-modes) below). The application image is a **prebuilt multi-architecture image published to GHCR** — `docker compose pull` (install.sh's default path) fetches `ghcr.io/thezwiss/backspace` for `linux/amd64` or `linux/arm64`, so weak/ARM hosts skip the heavy local build; a from-source build is the fallback when the image can't be pulled.
+VERTEX ships as a single application container. In the default **All-in-One** deployment it is fronted by the bundled Caddy (automatic HTTPS); behind an operator's own reverse proxy or a tunnel, Caddy is dropped and the container is published on a host loopback port instead (see [Deployment modes](#deployment-modes) below). The application image is a **prebuilt multi-architecture image published to GHCR** — `docker compose pull` (install.sh's default path) fetches `ghcr.io/thezwiss/VERTEX` for `linux/amd64` or `linux/arm64`, so weak/ARM hosts skip the heavy local build; a from-source build is the fallback when the image can't be pulled.
 
 ### Prebuilt image (GHCR)
 
-`.github/workflows/docker-publish.yml` builds and pushes the application image to `ghcr.io/thezwiss/backspace` on every `v*` tag (and on manual `workflow_dispatch`). It is deliberately **separate from** the desktop-installer workflow (`release.yml`): the two share the `v*` tag trigger but build entirely different artifacts and must not be entangled.
+`.github/workflows/docker-publish.yml` builds and pushes the application image to `ghcr.io/thezwiss/VERTEX` on every `v*` tag (and on manual `workflow_dispatch`). It is deliberately **separate from** the desktop-installer workflow (`release.yml`): the two share the `v*` tag trigger but build entirely different artifacts and must not be entangled.
 
 - **Multi-arch.** `docker/setup-qemu-action` + `buildx` build `linux/amd64,linux/arm64` in one push, so a Raspberry Pi pulls a native image instead of cross-building (the Vite build OOMs small ARM boxes).
 - **Tags.** `docker/metadata-action` derives `{version}`, `{major}.{minor}`, `latest` (on `v*` tags), and `sha-<short>`. A `workflow_dispatch` with an extra `tag` input publishes that tag too (e.g. `latest` without cutting a release).
-- **AGPL § 13 commit stamping is preserved.** The workflow resolves `git rev-parse --short HEAD` and passes it as `--build-arg BACKSPACE_COMMIT=…`, exactly like `install.sh`/`deploy.sh`, plus OCI labels (`source`, `licenses=AGPL-3.0-only`, `revision`). The pulled image therefore advertises its exact source version via `GET /api/instance/info`.
+- **AGPL § 13 commit stamping is preserved.** The workflow resolves `git rev-parse --short HEAD` and passes it as `--build-arg VERTEX_COMMIT=…`, exactly like `install.sh`/`deploy.sh`, plus OCI labels (`source`, `licenses=AGPL-3.0-only`, `revision`). The pulled image therefore advertises its exact source version via `GET /api/instance/info`.
 - **Auth.** The push authenticates with the built-in `GITHUB_TOKEN` (`permissions: packages: write`). The GHCR package must be set **public** once for unauthenticated `docker pull` to work.
-- **Compose wiring.** `docker-compose.yml` declares **both** `image: ${BACKSPACE_IMAGE:-ghcr.io/thezwiss/backspace}:${BACKSPACE_IMAGE_TAG:-latest}` **and** `build: .`. `pull`/`up` uses the image; `up --build` (deploy.sh, or install.sh's fallback) builds from source and tags the result under the same ref. Operators pin a version or point at a fork's registry via `BACKSPACE_IMAGE` / `BACKSPACE_IMAGE_TAG`.
+- **Compose wiring.** `docker-compose.yml` declares **both** `image: ${VERTEX_IMAGE:-ghcr.io/thezwiss/VERTEX}:${VERTEX_IMAGE_TAG:-latest}` **and** `build: .`. `pull`/`up` uses the image; `up --build` (deploy.sh, or install.sh's fallback) builds from source and tags the result under the same ref. Operators pin a version or point at a fork's registry via `VERTEX_IMAGE` / `VERTEX_IMAGE_TAG`.
 
 ### Deployment modes
 
@@ -45,11 +45,11 @@ One installer, three modes, recorded as `DEPLOY_MODE` in `.env`. `install.sh` au
 
 | Mode | Ports 80/443 | Topology | TLS | Voice |
 |------|--------------|----------|-----|-------|
-| `allinone` (default) | must be free | base `docker-compose.yml`: `backspace` + `caddy` (+ `livekit`) | bundled Caddy (Let's Encrypt) | ✅ with UDP media ports open |
-| `proxy` | already taken | base **+** `docker-compose.proxy.yml`: `backspace` on `127.0.0.1:APP_PORT`, no Caddy | operator's reverse proxy | ✅ if operator proxies `/livekit` and opens media ports |
+| `allinone` (default) | must be free | base `docker-compose.yml`: `VERTEX` + `caddy` (+ `livekit`) | bundled Caddy (Let's Encrypt) | ✅ with UDP media ports open |
+| `proxy` | already taken | base **+** `docker-compose.proxy.yml`: `VERTEX` on `127.0.0.1:APP_PORT`, no Caddy | operator's reverse proxy | ✅ if operator proxies `/livekit` and opens media ports |
 | `tunnel` | already taken | same overlay as `proxy` | tunnel provider (Cloudflare, Tailscale…) | ❌ WebRTC/UDP can't traverse a tunnel |
 
-**The overlay (`docker-compose.proxy.yml`).** Layered on top of the base file it (1) publishes `backspace` on `127.0.0.1:${APP_PORT:-8080}:${PORT:-3000}` — loopback only, so nothing is exposed on a public interface — and (2) parks `caddy` in an inert profile (`_proxy_mode_no_caddy`) that is never activated, so Caddy does not start. The base file is unchanged, so All-in-One (`docker-compose.yml` alone) behaves exactly as before.
+**The overlay (`docker-compose.proxy.yml`).** Layered on top of the base file it (1) publishes `VERTEX` on `127.0.0.1:${APP_PORT:-8080}:${PORT:-3000}` — loopback only, so nothing is exposed on a public interface — and (2) parks `caddy` in an inert profile (`_proxy_mode_no_caddy`) that is never activated, so Caddy does not start. The base file is unchanged, so All-in-One (`docker-compose.yml` alone) behaves exactly as before.
 
 **`COMPOSE_FILE` wiring.** In proxy/tunnel mode install.sh writes `COMPOSE_FILE=docker-compose.yml:docker-compose.proxy.yml` into `.env`. Docker Compose reads `COMPOSE_FILE` from `.env`, so **every** later `docker compose …` command in the directory transparently uses both files — the operator (and the update commands) never need `-f` flags. All-in-One leaves `COMPOSE_FILE` unset (defaults to `docker-compose.yml`).
 
@@ -61,17 +61,17 @@ One installer, three modes, recorded as `DEPLOY_MODE` in `.env`. `install.sh` au
 
 `Dockerfile` has two stages:
 
-1. **`builder`** (`node:20-slim`) — enables pnpm via corepack, installs the full workspace with `pnpm install --frozen-lockfile`, copies `shared`/`server`/`web` source, and runs `pnpm --filter @backspace/web build` to produce the static frontend (`packages/web/dist`).
+1. **`builder`** (`node:20-slim`) — enables pnpm via corepack, installs the full workspace with `pnpm install --frozen-lockfile`, copies `shared`/`server`/`web` source, and runs `pnpm --filter @VERTEX/web build` to produce the static frontend (`packages/web/dist`).
 2. **`runtime`** (`node:20-slim`) — installs `ffmpeg` (media) + `gosu` (privilege drop) only — **no C toolchain**, since `better-sqlite3`/`sharp` load prebuilt binaries — installs production-only deps with `pnpm install --prod --frozen-lockfile` (`tsx` is a server runtime dependency), copies `shared` + `server` source and the prebuilt `web/dist`, creates `/app/data/uploads`, and runs the server **as the non-root `node` user** via `docker-entrypoint.sh` (which chowns `/app/data` as root, then `exec gosu node`) with `node --import tsx/esm src/index.ts` from `/app/packages/server`.
 
 The server is run through `tsx` (no separate transpile step); TypeScript is executed directly at runtime.
 
-**AGPL § 13 commit injection.** The runtime stage declares `ARG BACKSPACE_COMMIT` + `ENV BACKSPACE_COMMIT=$BACKSPACE_COMMIT` so the running build's git commit is baked into the image and read by `config.commit` (exposed via `GET /api/instance/info`). `docker-compose.yml` also declares it under `build.args: { BACKSPACE_COMMIT: ${BACKSPACE_COMMIT:-} }` (so a bare `docker compose build` picks it up from the environment). Both first-party build paths capture `git rev-parse --short HEAD` and feed it to the build:
+**AGPL § 13 commit injection.** The runtime stage declares `ARG VERTEX_COMMIT` + `ENV VERTEX_COMMIT=$VERTEX_COMMIT` so the running build's git commit is baked into the image and read by `config.commit` (exposed via `GET /api/instance/info`). `docker-compose.yml` also declares it under `build.args: { VERTEX_COMMIT: ${VERTEX_COMMIT:-} }` (so a bare `docker compose build` picks it up from the environment). Both first-party build paths capture `git rev-parse --short HEAD` and feed it to the build:
 
-- **`install.sh`** (the public first-time path) reads the commit from the checkout the operator cloned and passes it explicitly as `docker compose build --build-arg BACKSPACE_COMMIT=<sha>`. `--build-arg` is used instead of an exported env var because it survives the sudo/non-sudo `$COMPOSE` split (an exported var would be stripped by `sudo`). A tarball install (no `.git`) yields an empty arg → `null`.
+- **`install.sh`** (the public first-time path) reads the commit from the checkout the operator cloned and passes it explicitly as `docker compose build --build-arg VERTEX_COMMIT=<sha>`. `--build-arg` is used instead of an exported env var because it survives the sudo/non-sudo `$COMPOSE` split (an exported var would be stripped by `sudo`). A tarball install (no `.git`) yields an empty arg → `null`.
 - **`deploy.sh`** captures the commit locally (the remote has no `.git` after rsync) and exports it inline before the remote `docker compose up -d --build`.
 
-Empty/unset → `config.commit` is `null` (local dev, tarball install, or git unavailable). The source URL itself is `config.sourceCodeUrl` (env `BACKSPACE_SOURCE_URL`, default upstream) — operators running a modified build MUST set it to their fork.
+Empty/unset → `config.commit` is `null` (local dev, tarball install, or git unavailable). The source URL itself is `config.sourceCodeUrl` (env `VERTEX_SOURCE_URL`, default upstream) — operators running a modified build MUST set it to their fork.
 
 ### Container hardening (non-root)
 
@@ -115,17 +115,17 @@ not representative of Linux behaviour).
 
 | Service | Image / Build | Role |
 |---------|---------------|------|
-| `backspace` | `build: .` | The application server. Binds `./data:/app/data` (DB + uploads + backups), reads `.env`, sets `DB_PATH=/app/data/backspace.db` and `UPLOAD_DIR=/app/data/uploads`. `restart: unless-stopped`. |
-| `caddy` | `caddy:2.11.1-alpine` | Reverse proxy with automatic HTTPS. Owns ports 80/443. `depends_on: backspace` with `condition: service_healthy`. |
+| `VERTEX` | `build: .` | The application server. Binds `./data:/app/data` (DB + uploads + backups), reads `.env`, sets `DB_PATH=/app/data/VERTEX.db` and `UPLOAD_DIR=/app/data/uploads`. `restart: unless-stopped`. |
+| `caddy` | `caddy:2.11.1-alpine` | Reverse proxy with automatic HTTPS. Owns ports 80/443. `depends_on: VERTEX` with `condition: service_healthy`. |
 | `livekit` | `livekit/livekit-server:v1.9.11` | Voice/video SFU. `network_mode: host`. Activated only when `COMPOSE_PROFILES=voice`. |
 
-**Health-gated startup.** The `backspace` service declares a healthcheck that polls `/api/health` (a route registered in `packages/server/src/index.ts`) every 30 s with a 30 s `start_period`. Caddy does not start proxying until the app reports healthy, so a deploy never routes traffic to a half-initialized server. The same healthcheck is duplicated in the `Dockerfile` `HEALTHCHECK` directive so the container reports health even when run outside Compose.
+**Health-gated startup.** The `VERTEX` service declares a healthcheck that polls `/api/health` (a route registered in `packages/server/src/index.ts`) every 30 s with a 30 s `start_period`. Caddy does not start proxying until the app reports healthy, so a deploy never routes traffic to a half-initialized server. The same healthcheck is duplicated in the `Dockerfile` `HEALTHCHECK` directive so the container reports health even when run outside Compose.
 
 ### Caddy
 
 `Caddyfile` reads `{$DOMAIN}` from the container environment (injected by Compose from `.env`) and:
 - Strips a `/livekit/*` prefix and reverse-proxies LiveKit signaling to `host.docker.internal:7880` (LiveKit runs in host networking).
-- Reverse-proxies everything else — API, WebSocket, and the static frontend — to `backspace:3000` over Docker's internal network.
+- Reverse-proxies everything else — API, WebSocket, and the static frontend — to `VERTEX:3000` over Docker's internal network.
 
 Caddy provisions and renews TLS certificates automatically for `DOMAIN`; the persisted ACME state lives in the `caddy-data` / `caddy-config` named volumes.
 
@@ -135,7 +135,7 @@ Caddy provisions and renews TLS certificates automatically for `DOMAIN`; the per
 
 **Mode selection.** Before configuring, it determines the deployment mode (precedence: explicit `DEPLOY_MODE` env → existing `.env` → auto-detect + prompt). Auto-detection checks whether ports 80/443 are free — and does so **Docker-aware**: it consults both `ss` *and* `docker ps` published ports, because a host running Docker with the userland proxy disabled DNATs 80/443 via iptables with **no listening socket for `ss` to see** (a box whose Caddy already owns those ports would otherwise be misread as "ports free"). When 80/443 are free it offers All-in-One (default); when taken it never dead-ends — it explains what holds them and steers to `proxy`/`tunnel`. In proxy/tunnel mode it auto-picks a free loopback `APP_PORT` (scanning past commonly-taken 3000/8080), force-lowers `MAX_UPLOAD_SIZE` to 90 MB for `tunnel` (Cloudflare's 100 MB body cap), and force-disables voice for `tunnel`.
 
-**Image acquisition.** By default it pulls the prebuilt image (`docker compose pull backspace`). If the pull fails but a usable image is already present on the host (a prior run, an air-gapped `docker load`, or a previous from-source build tagged under the ref) it uses that copy rather than forcing a needless rebuild; only if neither pull nor a local image is available does it fall back to `docker compose build` (or when `BACKSPACE_BUILD=true` forces a source build, e.g. a fork). The commit is captured from the checkout and passed as `--build-arg BACKSPACE_COMMIT=<sha>` on the build path.
+**Image acquisition.** By default it pulls the prebuilt image (`docker compose pull VERTEX`). If the pull fails but a usable image is already present on the host (a prior run, an air-gapped `docker load`, or a previous from-source build tagged under the ref) it uses that copy rather than forcing a needless rebuild; only if neither pull nor a local image is available does it fall back to `docker compose build` (or when `VERTEX_BUILD=true` forces a source build, e.g. a fork). The commit is captured from the checkout and passed as `--build-arg VERTEX_COMMIT=<sha>` on the build path.
 
 **Reverse-proxy / tunnel output.** In proxy/tunnel mode the post-deploy check verifies the app answers on `127.0.0.1:APP_PORT` (TLS is the operator's edge's job, not ours to test), and the summary prints paste-ready nginx / Caddy / Traefik snippets (proxy) or a `cloudflared` ingress rule (tunnel), each with WebSocket upgrade, `X-Forwarded-*`, and a body-size cap matching `MAX_UPLOAD_SIZE` already correct — plus the `/livekit` route and media ports when voice is on.
 
@@ -194,7 +194,7 @@ If the instance ever ends up with **no admins** (e.g. the sole admin deleted the
 Instances installed **before** the no-seed-admin change still carry a local `admin` account whose password may be the old default `admin123`. That account cannot simply be deleted — the seeded admin **owns the default space**, so removing it would orphan the space. Instead, rotate its password with the remediation script:
 
 ```bash
-docker exec -w /app/packages/server backspace \
+docker exec -w /app/packages/server VERTEX \
   node --import tsx/esm src/scripts/remediate-seed-admin.ts
 ```
 
@@ -213,7 +213,7 @@ Remediation applies only to pre-change instances; newly installed instances neve
 
 ## 3. Database Backups
 
-Backspace takes **DB-only** SQLite snapshots via `VACUUM INTO`, which produces a consistent, fully-checkpointed copy of the live database without locking it for the duration of a file copy. Snapshots live in `data/backups/` (configurable). Uploads and other files under `data/` are **not** included — see the same-disk limitation below.
+VERTEX takes **DB-only** SQLite snapshots via `VACUUM INTO`, which produces a consistent, fully-checkpointed copy of the live database without locking it for the duration of a file copy. Snapshots live in `data/backups/` (configurable). Uploads and other files under `data/` are **not** included — see the same-disk limitation below.
 
 ### Triggers
 
@@ -223,20 +223,20 @@ Backspace takes **DB-only** SQLite snapshots via `VACUUM INTO`, which produces a
 | **Scheduled** | `packages/server/src/utils/backupWorker.ts` (`startBackupWorker`) | `scheduled` | Every `BACKUP_INTERVAL_HOURS`, via an `unref`'d `setInterval`. |
 | **Manual** | `./backup.sh` → `src/scripts/snapshot.ts` | `manual` | On demand by the operator. |
 
-Snapshot filenames encode a millisecond-precision UTC timestamp and the reason tag — `backspace-<ts>-<reason>.db` — so they sort chronologically and never collide (`createSnapshot` disambiguates with a counter on the rare same-millisecond collision, since `VACUUM INTO` refuses to overwrite an existing file).
+Snapshot filenames encode a millisecond-precision UTC timestamp and the reason tag — `VERTEX-<ts>-<reason>.db` — so they sort chronologically and never collide (`createSnapshot` disambiguates with a counter on the rare same-millisecond collision, since `VACUUM INTO` refuses to overwrite an existing file).
 
 ### Pre-migration snapshot: gated and fail-closed
 
 The pre-migration snapshot is deliberately conservative:
 
 - **Gated on a pending migration.** `initDatabase` snapshots only when **(a)** the DB file already existed before this boot (captured *before* opening the handle, since opening creates the file — a post-open check would snapshot an empty 0-row DB on first boot) **and (b)** `hasPendingMigrations(sqlite, migrationsFolder)` returns true. `hasPendingMigrations` (`db/pendingMigrations.ts`) compares the applied-migration count in `__drizzle_migrations` against the journal's entry count; a missing table (pre-drizzle / empty DB) counts as pending. Because schema history is stable across most restarts, this avoids churning the pre-migration retention with identical copies on every reboot.
-- **Fail-closed: a snapshot failure aborts startup by design.** If the snapshot throws (e.g. **disk full**), `initDatabase` logs and **re-throws — the migration does not run and the server does not start.** The box stays on the *old* code with its data intact until the operator frees space and restarts. **Backspace never migrates the schema without first securing a backup.** This is intentional: a failed-but-applied migration on an unbacked-up DB is the one unrecoverable scenario, so we refuse to enter it.
+- **Fail-closed: a snapshot failure aborts startup by design.** If the snapshot throws (e.g. **disk full**), `initDatabase` logs and **re-throws — the migration does not run and the server does not start.** The box stays on the *old* code with its data intact until the operator frees space and restarts. **VERTEX never migrates the schema without first securing a backup.** This is intentional: a failed-but-applied migration on an unbacked-up DB is the one unrecoverable scenario, so we refuse to enter it.
 
 `BACKUP_DISABLED=true` turns off both the pre-migration snapshot **and** the scheduled worker (the gate at the top of `initDatabase` and the early return in `startBackupWorker`). Use it only when an external backup system owns `data/`.
 
 ### WAL checkpoint on shutdown
 
-On `SIGINT`/`SIGTERM` the server calls `closeDatabase()` (`index.ts` shutdown handler), which checkpoints the WAL so the on-disk `backspace.db` is a complete, self-contained file. This keeps host-side copies of `data/backspace.db` consistent even without going through `VACUUM INTO` (e.g. an off-box host backup of the whole `data/` directory taken while the container is stopped).
+On `SIGINT`/`SIGTERM` the server calls `closeDatabase()` (`index.ts` shutdown handler), which checkpoints the WAL so the on-disk `VERTEX.db` is a complete, self-contained file. This keeps host-side copies of `data/VERTEX.db` consistent even without going through `VACUUM INTO` (e.g. an off-box host backup of the whole `data/` directory taken while the container is stopped).
 
 ### Configuration
 
@@ -266,9 +266,9 @@ BACKUP_OFFSITE_CMD='rclone copy --quiet'        # → rclone copy --quiet "<snap
 BACKUP_OFFSITE_CMD='aws s3 cp'                   # → aws s3 cp "<snapshot>"            (append the bucket, see below)
 
 # When you need to control the destination, reference "$1" yourself:
-BACKUP_OFFSITE_CMD='rclone copyto -- "$1" remote:backspace/$(basename "$1")'
-BACKUP_OFFSITE_CMD='aws s3 cp -- "$1" s3://my-bucket/backspace/'
-BACKUP_OFFSITE_CMD='rsync -a -- "$1" backup-host:/srv/backspace-backups/'
+BACKUP_OFFSITE_CMD='rclone copyto -- "$1" remote:VERTEX/$(basename "$1")'
+BACKUP_OFFSITE_CMD='aws s3 cp -- "$1" s3://my-bucket/VERTEX/'
+BACKUP_OFFSITE_CMD='rsync -a -- "$1" backup-host:/srv/VERTEX-backups/'
 ```
 
 ### Same-disk limitation (important)
@@ -286,7 +286,7 @@ They do **not** protect against **hardware loss** (disk failure, the box being d
 
 ## 4. Restore
 
-Restores are driven by `./restore.sh` from the host. Because `data/` (including `backspace.db` and `data/backups/`) is **container-owned (uid 1000)** via the bind-mount, the host user cannot rewrite those files directly — so the actual swap runs inside a throwaway root `alpine` container that mounts `data/`.
+Restores are driven by `./restore.sh` from the host. Because `data/` (including `VERTEX.db` and `data/backups/`) is **container-owned (uid 1000)** via the bind-mount, the host user cannot rewrite those files directly — so the actual swap runs inside a throwaway root `alpine` container that mounts `data/`.
 
 ### List snapshots
 
@@ -304,12 +304,12 @@ Lists every `*.db` in `data/backups/` newest-first with its size, and prints the
 
 The argument is reduced to a basename — restore is always **from** `data/backups/`. After a `y/N` confirmation, the script performs:
 
-1. **`[1/3]` Stop the `backspace` container** (`docker compose stop backspace`) so nothing is writing to the DB.
+1. **`[1/3]` Stop the `VERTEX` container** (`docker compose stop VERTEX`) so nothing is writing to the DB.
 2. **`[2/3]` Swap inside a root `alpine` container** (`docker run --rm -v ./data:/data alpine sh -c …`):
-   - **Pre-restore copy** — if `data/backspace.db` exists, copy it to `data/backups/backspace-<ts>-pre-restore.db` so the pre-restore state is recoverable.
-   - **Clear WAL/SHM** — `rm -f data/backspace.db-wal data/backspace.db-shm` so stale sidecar files don't corrupt the restored DB.
-   - **Install** — copy the chosen snapshot over `data/backspace.db`.
-3. **`[3/3]` Start the container** (`docker compose start backspace`). On boot the server checkpoints/opens the restored DB and the healthcheck reports status (`docker compose logs -f backspace`).
+   - **Pre-restore copy** — if `data/VERTEX.db` exists, copy it to `data/backups/VERTEX-<ts>-pre-restore.db` so the pre-restore state is recoverable.
+   - **Clear WAL/SHM** — `rm -f data/VERTEX.db-wal data/VERTEX.db-shm` so stale sidecar files don't corrupt the restored DB.
+   - **Install** — copy the chosen snapshot over `data/VERTEX.db`.
+3. **`[3/3]` Start the container** (`docker compose start VERTEX`). On boot the server checkpoints/opens the restored DB and the healthcheck reports status (`docker compose logs -f VERTEX`).
 
 The pre-restore copy means a mistaken restore is itself undoable: the previous DB is preserved as a `*-pre-restore.db` snapshot in `data/backups/`.
 
@@ -328,7 +328,7 @@ The third-party images are **pinned to explicit tags** in `docker-compose.yml`, 
 
 Pinning makes deploys reproducible — a rebuild pulls the exact same proxy/SFU version every time, so an upstream release can't silently change behavior under you.
 
-The `backspace` image itself defaults to `ghcr.io/thezwiss/backspace:latest` (`BACKSPACE_IMAGE` / `BACKSPACE_IMAGE_TAG`). `latest` is chosen for a frictionless first install, but it is a **moving** tag: operators who want reproducible upgrades should pin `BACKSPACE_IMAGE_TAG` to a released version (e.g. `1.0.0`) in `.env` and bump it deliberately. On the source-build paths (`deploy.sh`, `install.sh`'s fallback) the image is built from the `Dockerfile`, which pins the `node:20-slim` base.
+The `VERTEX` image itself defaults to `ghcr.io/thezwiss/VERTEX:latest` (`VERTEX_IMAGE` / `VERTEX_IMAGE_TAG`). `latest` is chosen for a frictionless first install, but it is a **moving** tag: operators who want reproducible upgrades should pin `VERTEX_IMAGE_TAG` to a released version (e.g. `1.0.0`) in `.env` and bump it deliberately. On the source-build paths (`deploy.sh`, `install.sh`'s fallback) the image is built from the `Dockerfile`, which pins the `node:20-slim` base.
 
 **Upgrade procedure:** bump the tag in `docker-compose.yml` → test the new version (locally or on one box) → redeploy. Concretely:
 
@@ -345,7 +345,7 @@ Never pin to a floating tag like `latest` or a bare major — it defeats reprodu
 These are accepted constraints of the current deploy model, documented so operators aren't surprised:
 
 - **`deploy.sh` still builds on each target host.** The public `install.sh` path now defaults to the prebuilt GHCR image (multi-arch, so a Pi pulls a native image), but `deploy.sh` — Heidi's rsync-then-`up -d --build` helper for `nova`/`orbit` — deliberately builds from the rsynced working tree on the box (it caps the build cache and prunes old images to compensate). A native-module or toolchain regression can still surface on ARM but not x86, or vice-versa, on that path; the CI multi-arch build catches most such regressions before release.
-- **A deploy causes brief downtime + WebSocket reconnect.** `docker compose up -d --build` rebuilds and recreates the `backspace` container; while it restarts, the server is briefly unavailable and every connected client's WebSocket drops and must reconnect. There is no rolling/zero-downtime deploy. Clients reconnect automatically, but in-flight requests during the swap can fail.
+- **A deploy causes brief downtime + WebSocket reconnect.** `docker compose up -d --build` rebuilds and recreates the `VERTEX` container; while it restarts, the server is briefly unavailable and every connected client's WebSocket drops and must reconnect. There is no rolling/zero-downtime deploy. Clients reconnect automatically, but in-flight requests during the swap can fail.
 - **`deploy.sh all` can mask one host failing.** The `all` target runs both deploys in parallel (`deploy … & deploy … & wait`). The visible "Deployment complete." is printed regardless of whether one host's build failed mid-stream; the failure scrolls by in the interleaved output. After an `all` deploy, **confirm `/api/health` on both boxes** rather than trusting the final line. For a high-stakes change, deploy to one box at a time.
 
 ---
@@ -364,5 +364,5 @@ These are accepted constraints of the current deploy model, documented so operat
 | Take a manual snapshot | `./backup.sh` |
 | List snapshots | `./restore.sh` |
 | Restore a snapshot | `./restore.sh <snapshot-filename>` |
-| Rotate legacy seed admin | `docker exec -w /app/packages/server backspace node --import tsx/esm src/scripts/remediate-seed-admin.ts` |
+| Rotate legacy seed admin | `docker exec -w /app/packages/server VERTEX node --import tsx/esm src/scripts/remediate-seed-admin.ts` |
 | Grant first admin (fresh instance) | Register the first account; it becomes admin automatically. |

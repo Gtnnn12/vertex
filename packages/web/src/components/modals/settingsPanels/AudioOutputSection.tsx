@@ -3,6 +3,7 @@ import { useVoiceStore } from '../../../stores/voiceStore';
 import { AudioManager } from '../../../audio/AudioManager';
 import { useAudioDevices } from '../../../hooks/useAudioDevices';
 import { SectionShell, DropdownItem } from './_shared/SettingsPickerPrimitives';
+import { useLanguage } from '../../../contexts/LanguageContext';
 
 /**
  * Feature-detect per-element output routing support. iOS Safari has zero
@@ -55,6 +56,7 @@ function AudioOutputSectionInner() {
   // "browser doesn't support setSinkId" fallback that never recovers.
   const [audioCtxGen, setAudioCtxGen] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { t } = useLanguage();
 
   // Click-outside-to-close. Listens for both mousedown and touchstart so the
   // popover dismisses with a single tap on touch devices (iOS Safari does not
@@ -98,8 +100,8 @@ function AudioOutputSectionInner() {
 
   if (permState === 'unknown') {
     return (
-      <SectionShell title="Output Device">
-        <div className="text-sm text-txt-tertiary">Checking audio access…</div>
+      <SectionShell title={t('output_device')}>
+        <div className="text-sm text-txt-tertiary">{t('checking_audio_access')}</div>
       </SectionShell>
     );
   }
@@ -109,8 +111,8 @@ function AudioOutputSectionInner() {
   // current default, but the picker is hidden.
   const showPicker = permState === 'granted' && supportsSinkId;
   const selectedLabel = outputDeviceId === 'default'
-    ? 'System Default'
-    : outputLabels.get(outputDeviceId) ?? 'System Default';
+    ? t('system_default')
+    : outputLabels.get(outputDeviceId) ?? t('system_default');
 
   const handleSelect = (id: string) => {
     setOutputDevice(id);
@@ -123,7 +125,7 @@ function AudioOutputSectionInner() {
   };
 
   return (
-    <SectionShell title="Output Device">
+    <SectionShell title={t('output_device')}>
       <div className="space-y-3">
         {showPicker ? (
           <div ref={dropdownRef}>
@@ -140,7 +142,7 @@ function AudioOutputSectionInner() {
             </button>
             {listOpen && (
               <div className="mt-1 rounded-md bg-surface-base border border-border-hard py-1 max-h-64 overflow-y-auto">
-                <DropdownItem label="System Default" active={outputDeviceId === 'default'} onClick={() => handleSelect('default')} />
+                <DropdownItem label={t('system_default')} active={outputDeviceId === 'default'} onClick={() => handleSelect('default')} />
                 {outputs.filter(d => d.deviceId !== 'default').map((d) => (
                   <DropdownItem
                     key={d.deviceId}
@@ -154,25 +156,25 @@ function AudioOutputSectionInner() {
           </div>
         ) : permState === 'granted' && !supportsSinkId ? (
           <div className="text-xs text-txt-tertiary">
-            This browser doesn't support choosing an output device. Audio plays to the system default.
+            {t('no_output_device_support')}
           </div>
         ) : (
           <div className="space-y-2">
             <div className="text-xs text-txt-tertiary">
-              Grant microphone permission to list output devices (browsers gate output names behind microphone access).
+              {t('grant_mic_permission_for_output_devices')}
             </div>
             <button
               onClick={() => { requestPermission().catch(() => {}); }}
               className="text-[13px] px-3 py-2 rounded-md bg-accent-primary hover:bg-accent-primary-hover text-white font-medium transition-colors"
             >
-              Enable audio access
+              {t('enable_audio_access')}
             </button>
           </div>
         )}
 
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <div className="text-[13px] font-medium text-txt-primary">Output Volume</div>
+            <div className="text-[13px] font-medium text-txt-primary">{t('output_volume')}</div>
             <div className="text-xs text-txt-tertiary tabular-nums">{outputVolume}%</div>
           </div>
           <input
@@ -195,7 +197,7 @@ function AudioOutputSectionInner() {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
             <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z" />
           </svg>
-          Play test sound
+          {t('play_test_sound')}
         </button>
       </div>
     </SectionShell>

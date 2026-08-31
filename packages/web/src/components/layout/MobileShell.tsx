@@ -28,6 +28,21 @@ import { FederationPanel } from '../modals/instanceSettingsPanels/FederationPane
 import { StreamingPanel } from '../modals/instanceSettingsPanels/StreamingPanel';
 import { StoragePanel } from '../modals/instanceSettingsPanels/StoragePanel';
 import { UsersPanel } from '../modals/instanceSettingsPanels/UsersPanel';
+import { useLanguage } from '../../contexts/LanguageContext';
+
+/**
+ * Shared chrome for instance sub-panel screens: a MobileScreenHeader (with
+ * back + translation of the panel title) over a scrollable panel body.
+ */
+function InstanceSubPanel({ titleKey, children }: { titleKey: string; children: React.ReactNode }) {
+  const { t } = useLanguage();
+  return (
+    <div className="flex flex-col h-full bg-surface-base">
+      <MobileScreenHeader title={t(titleKey)} rightActions={<TransferIndicator />} />
+      <div className="flex-1 overflow-y-auto p-4">{children}</div>
+    </div>
+  );
+}
 
 /**
  * Wrapper for the Federation sub-panel that forwards FederationPanel's
@@ -38,12 +53,9 @@ import { UsersPanel } from '../modals/instanceSettingsPanels/UsersPanel';
 function MobileFederationPanelWrapper() {
   const setApprovalCount = useUIStore((s) => s.setFederationApprovalCount);
   return (
-    <div className="flex flex-col h-full bg-surface-base">
-      <MobileScreenHeader title="Federation" rightActions={<TransferIndicator />} />
-      <div className="flex-1 overflow-y-auto p-4">
-        <FederationPanel onApprovalCountChange={setApprovalCount} />
-      </div>
-    </div>
+    <InstanceSubPanel titleKey="federation">
+      <FederationPanel onApprovalCountChange={setApprovalCount} />
+    </InstanceSubPanel>
   );
 }
 
@@ -59,35 +71,20 @@ const screenMap: Record<string, (params?: Record<string, string>) => React.React
   'settings-desktop': () => <MobileSettingsScreen initialPanel="desktop" />,
   'settings-instance': () => <MobileInstancePanel />,
   'settings-instance-general': () => (
-    <div className="flex flex-col h-full bg-surface-base">
-      <MobileScreenHeader title="General" rightActions={<TransferIndicator />} />
-      <div className="flex-1 overflow-y-auto p-4"><GeneralPanel /></div>
-    </div>
+    <InstanceSubPanel titleKey="general"><GeneralPanel /></InstanceSubPanel>
   ),
   'settings-instance-registration': () => (
-    <div className="flex flex-col h-full bg-surface-base">
-      <MobileScreenHeader title="Registration" rightActions={<TransferIndicator />} />
-      <div className="flex-1 overflow-y-auto p-4"><RegistrationPanel /></div>
-    </div>
+    <InstanceSubPanel titleKey="registration"><RegistrationPanel /></InstanceSubPanel>
   ),
   'settings-instance-federation': () => <MobileFederationPanelWrapper />,
   'settings-instance-streaming': () => (
-    <div className="flex flex-col h-full bg-surface-base">
-      <MobileScreenHeader title="Streaming" rightActions={<TransferIndicator />} />
-      <div className="flex-1 overflow-y-auto p-4"><StreamingPanel /></div>
-    </div>
+    <InstanceSubPanel titleKey="streaming"><StreamingPanel /></InstanceSubPanel>
   ),
   'settings-instance-storage': () => (
-    <div className="flex flex-col h-full bg-surface-base">
-      <MobileScreenHeader title="Storage" rightActions={<TransferIndicator />} />
-      <div className="flex-1 overflow-y-auto p-4"><StoragePanel /></div>
-    </div>
+    <InstanceSubPanel titleKey="storage"><StoragePanel /></InstanceSubPanel>
   ),
   'settings-instance-users': () => (
-    <div className="flex flex-col h-full bg-surface-base">
-      <MobileScreenHeader title="Users" rightActions={<TransferIndicator />} />
-      <div className="flex-1 overflow-y-auto p-4"><UsersPanel /></div>
-    </div>
+    <InstanceSubPanel titleKey="users"><UsersPanel /></InstanceSubPanel>
   ),
   'members': (params) => <MobileMembersScreen params={params} />,
   'group-dm-info': (params) => <MobileGroupDmInfo params={params} />,

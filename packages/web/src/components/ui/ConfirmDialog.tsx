@@ -1,6 +1,7 @@
 import React, { useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { usePortalContainer } from '../../hooks/usePortalContainer';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -20,11 +21,15 @@ export function ConfirmDialog({
   onConfirm,
   title,
   description,
-  confirmLabel = 'Confirm',
-  cancelLabel = 'Cancel',
+  confirmLabel,
+  cancelLabel,
   variant = 'danger',
   loading = false,
 }: ConfirmDialogProps) {
+  const { t } = useLanguage();
+  const resolvedConfirmLabel = confirmLabel ?? t('confirm');
+  const resolvedCancelLabel = cancelLabel ?? t('cancel');
+
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === 'Escape' && !loading) {
       e.stopPropagation();
@@ -64,14 +69,14 @@ export function ConfirmDialog({
               disabled={loading}
               className="flex-1 py-2.5 text-sm font-medium text-txt-secondary bg-interactive-hover hover:bg-interactive-selected rounded-lg transition-colors disabled:opacity-50"
             >
-              {cancelLabel}
+              {resolvedCancelLabel}
             </button>
             <button
               onClick={onConfirm}
               disabled={loading}
               className={`flex-1 py-2.5 ${confirmBg} text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50`}
             >
-              {loading ? 'Please wait...' : confirmLabel}
+              {loading ? t('please_wait') : resolvedConfirmLabel}
             </button>
           </div>
         </div>

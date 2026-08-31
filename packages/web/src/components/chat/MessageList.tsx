@@ -23,6 +23,7 @@ import { formatDmHeaderName } from '../../utils/dmFormatters';
 import { useDelayedLoading } from '../../hooks/useDelayedLoading';
 import type { MessageWithUser } from '@backspace/shared';
 import { SystemMessage } from './SystemMessage';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const EMPTY_MESSAGES: MessageWithUser[] = [];
 const EMPTY_PENDING_BUBBLES: PendingBubble[] = [];
@@ -65,6 +66,7 @@ function shouldShowDateDivider(prev: MessageWithUser | undefined, curr: MessageW
 }
 
 export function MessageList({ channelId, jumpToMessageId, onJumpComplete }: MessageListProps) {
+  const { t } = useLanguage();
   const messages = useChatStore((s) => s.messages.get(channelId)) ?? EMPTY_MESSAGES;
   const loadMessages = useChatStore((s) => s.loadMessages);
   const loadMoreMessages = useChatStore((s) => s.loadMoreMessages);
@@ -659,7 +661,7 @@ export function MessageList({ channelId, jumpToMessageId, onJumpComplete }: Mess
   if (!canReadHistory) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <span className="text-txt-tertiary text-[14px]">You do not have permission to view message history in this channel</span>
+        <span className="text-txt-tertiary text-[14px]">{t('no_permission_view_history')}</span>
       </div>
     );
   }
@@ -685,7 +687,7 @@ export function MessageList({ channelId, jumpToMessageId, onJumpComplete }: Mess
         {hasMore && (
           <div style={{ height: PAGINATION_SLOT_HEIGHT_PX }}>
             {showPaginationSkeleton && (
-              <div className="px-4 pt-4" role="status" aria-label="Loading older messages">
+              <div className="px-4 pt-4" role="status" aria-label={t('loading_older_messages')}>
                 {Array.from({ length: 3 }, (_, i) => (
                   <div
                     key={i}
@@ -761,7 +763,7 @@ export function MessageList({ channelId, jumpToMessageId, onJumpComplete }: Mess
         <div
           className="absolute inset-0 z-10 bg-surface-chat flex flex-col justify-end px-4 pb-6 pointer-events-none"
           role="status"
-          aria-label="Loading messages"
+          aria-label={t('loading_messages')}
         >
           {Array.from({ length: 7 }, (_, i) => (
             <div key={i} className="flex gap-3 mb-5" style={{ animationDelay: `${i * 0.15}s` }}>
@@ -789,7 +791,7 @@ export function MessageList({ channelId, jumpToMessageId, onJumpComplete }: Mess
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
             <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z" />
           </svg>
-          <span className="text-[13px] font-medium">Jump to Present</span>
+          <span className="text-[13px] font-medium">{t('jump_to_present')}</span>
         </button>
       )}
     </div>
@@ -797,6 +799,7 @@ export function MessageList({ channelId, jumpToMessageId, onJumpComplete }: Mess
 }
 
 function WelcomeHeader({ channelId }: { channelId: string }) {
+  const { t } = useLanguage();
   const dmChannels = useSpaceStore((s) => s.dmChannels);
   const authUser = useAuthStore((s) => s.user);
   const removeFriend = useSocialStore((s) => s.removeFriend);
@@ -815,7 +818,7 @@ function WelcomeHeader({ channelId }: { channelId: string }) {
     if (isGroupDm) {
       const groupName = formatDmHeaderName(dm, authUser);
       const ownerMember = dm.members.find(m => m.id === dm.ownerId);
-      const ownerName = ownerMember?.displayName ?? ownerMember?.username ?? 'Unknown';
+      const ownerName = ownerMember?.displayName ?? ownerMember?.username ?? t('unknown');
       const hasFederated = dm.members.some(m => m.homeInstance);
 
       const handleLeaveGroup = async () => {
@@ -843,10 +846,10 @@ function WelcomeHeader({ channelId }: { channelId: string }) {
           </div>
           <h3 className="text-[32px] leading-10 font-bold text-txt-primary mt-2">{groupName}</h3>
           <p className="text-txt-secondary text-[14px] mt-1">
-            This is the beginning of your group conversation.
+            {t('group_beginning_message')}
           </p>
           <p className="text-xs text-txt-tertiary mt-1">
-            Owner:{' '}
+            {t('owner')}:{' '}
             {ownerMember ? (
               <button
                 type="button"
@@ -861,7 +864,7 @@ function WelcomeHeader({ channelId }: { channelId: string }) {
           </p>
           {hasFederated && (
             <p className="text-xs text-txt-tertiary mt-1">
-              Messages are stored on your and your recipients' home instances. They are not end-to-end encrypted.
+              {t('group_federation_notice')}
             </p>
           )}
           <div className="mt-4 flex items-center gap-2">
@@ -869,13 +872,13 @@ function WelcomeHeader({ channelId }: { channelId: string }) {
               onClick={handleOpenSettings}
               className="px-4 py-1.5 bg-accent-primary hover:bg-accent-primary/80 text-white text-[14px] font-medium rounded-[3px] transition-colors"
             >
-              Open Group Settings
+              {t('open_group_settings')}
             </button>
             <button
               onClick={handleLeaveGroup}
               className="px-4 py-1.5 bg-surface-elevated hover:bg-interactive-hover text-[14px] font-medium text-txt-primary rounded-[3px] transition-colors"
             >
-              Leave Group
+              {t('leave_group')}
             </button>
           </div>
           <div className="mt-6 border-b border-interactive-muted" />
@@ -886,7 +889,7 @@ function WelcomeHeader({ channelId }: { channelId: string }) {
     // 1-on-1 DM welcome header
     const otherUser = otherMembers[0];
     const { baseName } = parseFederatedUsername(otherUser?.username ?? '');
-    const displayName = otherUser?.displayName ?? (baseName || 'Direct Message');
+    const displayName = otherUser?.displayName ?? (baseName || t('direct_message'));
     const mentionName = otherUser?.displayName ?? baseName;
     const isFriend = otherUser ? friends.some(f => f.id === otherUser.id) : false;
 
@@ -897,11 +900,11 @@ function WelcomeHeader({ channelId }: { channelId: string }) {
         </div>
         <h3 className="text-[32px] leading-10 font-bold text-txt-primary">{displayName}</h3>
         <p className="text-txt-secondary text-[14px] mt-1">
-          This is the beginning of your direct message history with <strong>@{mentionName}</strong>.
+          {t('dm_history_beginning')} <strong>@{mentionName}</strong>.
         </p>
         {otherUser?.homeInstance && (
           <p className="text-xs text-txt-tertiary mt-1">
-            Messages are stored on your and your recipient's home instances. They are not end-to-end encrypted.
+            {t('dm_federation_notice')}
           </p>
         )}
         {isFriend && otherUser && (
@@ -910,7 +913,7 @@ function WelcomeHeader({ channelId }: { channelId: string }) {
               onClick={() => removeFriend(otherUser.id)}
               className="px-4 py-1.5 bg-surface-elevated hover:bg-surface-elevated text-[14px] font-medium text-txt-primary rounded-[3px] transition-colors"
             >
-              Remove Friend
+              {t('remove_friend')}
             </button>
           </div>
         )}
@@ -926,8 +929,8 @@ function WelcomeHeader({ channelId }: { channelId: string }) {
           <path d="M5.88657 21C5.57547 21 5.3399 20.7189 5.39427 20.4126L6.00001 17H2.59511C2.28449 17 2.04905 16.7198 2.10259 16.4138L2.27759 15.4138C2.31946 15.1746 2.52722 15 2.77011 15H6.35001L7.41001 9H4.00511C3.69449 9 3.45905 8.71977 3.51259 8.41381L3.68759 7.41381C3.72946 7.17456 3.93722 7 4.18011 7H7.76001L8.39677 3.41262C8.43914 3.17391 8.64664 3 8.88907 3H9.87344C10.1845 3 10.4201 3.28107 10.3657 3.58738L9.76001 7H15.76L16.3968 3.41262C16.4391 3.17391 16.6466 3 16.8891 3H17.8734C18.1845 3 18.4201 3.28107 18.3657 3.58738L17.76 7H21.1649C21.4755 7 21.711 7.28023 21.6574 7.58619L21.4824 8.58619C21.4406 8.82544 21.2328 9 20.9899 9H17.41L16.35 15H19.7549C20.0655 15 20.301 15.2802 20.2474 15.5862L20.0724 16.5862C20.0306 16.8254 19.8228 17 19.5799 17H16L15.3632 20.5874C15.3209 20.8261 15.1134 21 14.8709 21H13.8866C13.5755 21 13.3399 20.7189 13.3943 20.4126L14 17H8.00001L7.36325 20.5874C7.32088 20.8261 7.11337 21 6.87094 21H5.88657ZM9.41001 9L8.35001 15H14.35L15.41 9H9.41001Z" />
         </svg>
       </div>
-      <h3 className="text-[32px] leading-10 font-bold text-txt-primary">Welcome to the channel!</h3>
-      <p className="text-txt-secondary text-[16px] mt-2">This is the start of the conversation.</p>
+      <h3 className="text-[32px] leading-10 font-bold text-txt-primary">{t('welcome_channel')}</h3>
+      <p className="text-txt-secondary text-[16px] mt-2">{t('channel_start_message')}</p>
       <div className="mt-6 border-b border-interactive-muted" />
     </div>
   );

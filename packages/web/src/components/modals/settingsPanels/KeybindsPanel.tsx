@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useKeybindStore, BINDABLE_ACTIONS, Keybind } from '../../../stores/keybindStore';
 import { isElectron, isElectronMac } from '../../../platform/platform';
+import { useLanguage } from '../../../contexts/LanguageContext';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -50,6 +51,7 @@ interface KeybindRowProps {
 }
 
 function KeybindRow({ actionId, label, keybind, isRecording, recordingDisplay, onStartRecording, onDelete, rowRef }: KeybindRowProps) {
+  const { t } = useLanguage();
   return (
     <div
       ref={rowRef}
@@ -64,12 +66,12 @@ function KeybindRow({ actionId, label, keybind, isRecording, recordingDisplay, o
         <div className="text-xs text-txt-tertiary mt-0.5">
           {isRecording ? (
             <span className="text-accent-mint animate-pulse">
-              {recordingDisplay || 'Press a key combo...'}
+              {recordingDisplay || t('press_a_key_combo')}
             </span>
           ) : keybind ? (
             keybind.displayLabel
           ) : (
-            'Not bound'
+            t('not_bound')
           )}
         </div>
       </div>
@@ -80,20 +82,20 @@ function KeybindRow({ actionId, label, keybind, isRecording, recordingDisplay, o
               onClick={onStartRecording}
               className="text-xs px-2.5 py-1 rounded text-txt-tertiary hover:text-txt-primary hover:bg-white/[0.06] transition-colors"
             >
-              {keybind ? 'Edit' : 'Record'}
+              {keybind ? t('edit') : t('record')}
             </button>
             {keybind && (
               <button
                 onClick={onDelete}
                 className="text-xs px-2.5 py-1 rounded text-txt-tertiary hover:text-rose-400 hover:bg-rose-400/10 transition-colors"
               >
-                Delete
+                {t('delete')}
               </button>
             )}
           </>
         )}
         {isRecording && (
-          <span className="text-[10px] text-txt-tertiary">ESC to cancel</span>
+          <span className="text-[10px] text-txt-tertiary">{t('esc_to_cancel')}</span>
         )}
       </div>
     </div>
@@ -116,6 +118,7 @@ interface ConflictInfo {
 
 export function KeybindsPanel() {
   const { keybinds, setKeybind, removeKeybind, findConflict } = useKeybindStore();
+  const { t } = useLanguage();
 
   const [recordingActionId, setRecordingActionId] = useState<string | null>(null);
   const [recordingDisplay, setRecordingDisplay] = useState('');
@@ -286,13 +289,13 @@ export function KeybindsPanel() {
 
   return (
     <div className="space-y-5">
-      <h2 className="text-lg font-semibold text-txt-primary mb-6">Keybinds</h2>
+      <h2 className="text-lg font-semibold text-txt-primary mb-6">{t('keybinds')}</h2>
       {/* macOS Accessibility Warning */}
       {isElectronMac() && accessibilityTrusted === false && (
         <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3.5">
-          <div className="text-sm text-amber-200 font-medium">Accessibility Permission Required</div>
+          <div className="text-sm text-amber-200 font-medium">{t('accessibility_permission_required')}</div>
           <div className="text-xs text-amber-200/70 mt-1">
-            Backspace needs Accessibility permission for global shortcuts to work outside the app.
+            {t('accessibility_permission_description')}
           </div>
           <button
             onClick={() => {
@@ -300,7 +303,7 @@ export function KeybindsPanel() {
             }}
             className="mt-2 text-xs px-3 py-1.5 rounded bg-amber-500/20 text-amber-200 hover:bg-amber-500/30 transition-colors"
           >
-            Grant Permission
+            {t('grant_permission')}
           </button>
         </div>
       )}
@@ -308,9 +311,9 @@ export function KeybindsPanel() {
       {/* Linux hook error warning */}
       {isElectron() && hookError && (
         <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3.5">
-          <div className="text-sm text-amber-200 font-medium">Global Shortcuts Unavailable</div>
+          <div className="text-sm text-amber-200 font-medium">{t('global_shortcuts_unavailable')}</div>
           <div className="text-xs text-amber-200/70 mt-1">
-            Failed to start input listener. On Linux, your user may need to be in the <code className="bg-black/20 px-1 rounded">input</code> group.
+            {t('linux_hook_error_left')} <code className="bg-black/20 px-1 rounded">input</code> {t('linux_hook_error_right')}
           </div>
         </div>
       )}
@@ -318,14 +321,14 @@ export function KeybindsPanel() {
       {/* Web limitation note */}
       {!isElectron() && (
         <div className="text-xs text-txt-tertiary px-1">
-          Shortcuts work while this tab is focused. For global shortcuts that work in other apps, use the desktop app.
+          {t('keybinds_web_limitation')}
         </div>
       )}
 
       {/* Keybind rows */}
       <div>
         <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">
-          Voice Shortcuts
+          {t('voice_shortcuts')}
         </div>
         <div className="space-y-1.5">
           {BINDABLE_ACTIONS.map((action) => (
@@ -351,24 +354,24 @@ export function KeybindsPanel() {
       {conflict && (
         <div className="rounded-lg bg-surface-elevated border border-white/[0.06] p-3.5">
           <div className="text-sm text-txt-primary">
-            <span className="font-medium">{conflict.pendingKeybind.displayLabel}</span> is already bound to{' '}
+            <span className="font-medium">{conflict.pendingKeybind.displayLabel}</span> {t('is_already_bound_to')}{' '}
             <span className="font-medium">
               {BINDABLE_ACTIONS.find((a) => a.id === conflict.existingKeybind.actionId)?.label}
             </span>
-            . Overwrite?
+            . {t('overwrite_question')}
           </div>
           <div className="flex gap-2 mt-2.5">
             <button
               onClick={confirmConflict}
               className="text-xs px-3 py-1.5 rounded bg-accent-mint/20 text-accent-mint hover:bg-accent-mint/30 transition-colors"
             >
-              Overwrite
+              {t('overwrite')}
             </button>
             <button
               onClick={cancelConflict}
               className="text-xs px-3 py-1.5 rounded bg-white/[0.06] text-txt-secondary hover:bg-white/[0.1] transition-colors"
             >
-              Cancel
+              {t('cancel')}
             </button>
           </div>
         </div>

@@ -850,7 +850,27 @@ export function useLiveKit() {
       }
       
       updateParticipants();
-    } catch (err) { if (gen === _connectGeneration) { setConnectionError('Failed to connect'); useVoiceStore.getState().setConnectionError('Failed to connect'); useVoiceStore.getState().leaveVoice(); } }
+    } catch (err) {
+      if (gen === _connectGeneration) {
+        setConnectionError('Failed to connect');
+        useVoiceStore.getState().setConnectionError('Failed to connect');
+        // For space voice channels, presence is WS-authoritative and must NOT
+        // depend on the LiveKit media handshake. If the media layer is down
+        // (LiveKit not configured/unreachable) we still surface the user as
+        // inside the channel: register presence with the WS server and keep
+        // them in the voiceUsers map (the optimistic addVoiceUser from
+        // joinVoiceChannel) instead of calling leaveVoice(), which would erase
+        // them and pop currentVoiceChannelId back to null. DM calls have no
+        // non-media presence semantics, so those still tear down fully.
+        if (isDm) {
+          useVoiceStore.getState().leaveVoice();
+        } else {
+          try {
+            registerWithServer();
+          } catch { /* WS registration is best-effort here */ }
+        }
+      }
+    }
     finally { if (gen === _connectGeneration) setIsConnecting(false); }
   }, [updateParticipants, handleDataReceived]);
 

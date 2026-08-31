@@ -4,6 +4,7 @@ import type { InviteLinkSummary, InviteRedemption, InviteStatus } from '@backspa
 import { api } from '../../../api/client';
 import { useSettingsStore } from '../../../stores/settingsStore';
 import { useUIStore } from '../../../stores/uiStore';
+import { useLanguage } from '../../../contexts/LanguageContext';
 import { Toggle } from '../../ui/Toggle';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { Modal } from '../../ui/Modal';
@@ -13,34 +14,34 @@ interface RegistrationDraft {
   federatedRegistrationOpen: boolean;
 }
 
-function formatRelative(ms: number): string {
+function formatRelative(ms: number, t: (k: string) => string): string {
   const diff = Date.now() - ms;
   const days = Math.floor(diff / 86_400_000);
-  if (days >= 1) return `${days}d ago`;
+  if (days >= 1) return t('days_ago').replace('{n}', String(days));
   const hours = Math.floor(diff / 3_600_000);
-  if (hours >= 1) return `${hours}h ago`;
+  if (hours >= 1) return t('hours_ago').replace('{n}', String(hours));
   const mins = Math.floor(diff / 60_000);
-  if (mins >= 1) return `${mins}m ago`;
-  return 'just now';
+  if (mins >= 1) return t('minutes_ago').replace('{n}', String(mins));
+  return t('just_now');
 }
 
-function formatExpiry(invite: InviteLinkSummary): string {
+function formatExpiry(invite: InviteLinkSummary, t: (k: string) => string): string {
   if (invite.status === 'revoked' && invite.revokedAt) {
-    return `Revoked ${new Date(invite.revokedAt).toLocaleDateString()}`;
+    return t('revoked_at_date').replace('{date}', new Date(invite.revokedAt).toLocaleDateString());
   }
   if (invite.status === 'expired' && invite.expiresAt) {
-    return `Expired ${new Date(invite.expiresAt).toLocaleDateString()}`;
+    return t('expired_at_date').replace('{date}', new Date(invite.expiresAt).toLocaleDateString());
   }
   if (invite.status === 'exhausted') {
-    return 'Exhausted';
+    return t('status_exhausted');
   }
-  if (invite.expiresAt === null) return 'No expiration';
+  if (invite.expiresAt === null) return t('no_expiration');
   const remaining = invite.expiresAt - Date.now();
-  if (remaining <= 0) return `Expired ${new Date(invite.expiresAt).toLocaleDateString()}`;
+  if (remaining <= 0) return t('expired_at_date').replace('{date}', new Date(invite.expiresAt).toLocaleDateString());
   const days = Math.floor(remaining / 86_400_000);
-  if (days >= 1) return `Expires in ${days} day${days === 1 ? '' : 's'}`;
+  if (days >= 1) return t('expires_in_days').replace('{n}', String(days));
   const hours = Math.floor(remaining / 3_600_000);
-  return `Expires in ${hours}h`;
+  return t('expires_in_hours').replace('{n}', String(hours));
 }
 
 function inviteStatusDotColor(status: InviteStatus): string {
@@ -61,12 +62,12 @@ function inviteStatusPillColor(status: InviteStatus): string {
   }
 }
 
-function inviteStatusLabel(status: InviteStatus): string {
+function inviteStatusLabel(status: InviteStatus, t: (k: string) => string): string {
   switch (status) {
-    case 'active':    return 'Active';
-    case 'expired':   return 'Expired';
-    case 'exhausted': return 'Exhausted';
-    case 'revoked':   return 'Revoked';
+    case 'active':    return t('status_active');
+    case 'expired':   return t('status_expired');
+    case 'exhausted': return t('status_exhausted');
+    case 'revoked':   return t('status_revoked');
   }
 }
 
@@ -143,19 +144,20 @@ function FilterDropdown({
   onArchivedStatusToggle,
 }: FilterDropdownProps) {
   const [open, setOpen] = useState(false);
+  const { t } = useLanguage();
 
   const activeSortOptions: Array<{ key: ActiveSort; label: string }> = [
-    { key: 'recent', label: 'Most recent' },
-    { key: 'oldest', label: 'Oldest' },
-    { key: 'name', label: 'Name (A–Z)' },
-    { key: 'mostUsed', label: 'Most used' },
-    { key: 'expiringSoonest', label: 'Expiring soonest' },
+    { key: 'recent', label: t('sort_most_recent') },
+    { key: 'oldest', label: t('sort_oldest') },
+    { key: 'name', label: t('sort_name_az') },
+    { key: 'mostUsed', label: t('sort_most_used') },
+    { key: 'expiringSoonest', label: t('sort_expiring_soonest') },
   ];
 
   const archivedSortOptions: Array<{ key: ArchivedSort; label: string }> = [
-    { key: 'recent', label: 'Most recent' },
-    { key: 'oldest', label: 'Oldest' },
-    { key: 'name', label: 'Name (A–Z)' },
+    { key: 'recent', label: t('sort_most_recent') },
+    { key: 'oldest', label: t('sort_oldest') },
+    { key: 'name', label: t('sort_name_az') },
   ];
 
   const archivedStatusOptions: ArchivedStatus[] = ['expired', 'exhausted', 'revoked'];
@@ -176,7 +178,7 @@ function FilterDropdown({
         <svg width="12" height="12" viewBox="0 0 16 16" fill="none" className="opacity-60">
           <path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
         </svg>
-        Filter
+        {t('filter')}
         <span className="text-[10px]">▾</span>
       </button>
 
@@ -187,7 +189,7 @@ function FilterDropdown({
             {view === 'archived' && (
               <>
                 <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-2 py-1">
-                  Status
+                  {t('status')}
                 </div>
                 {archivedStatusOptions.map((s) => (
                   <button
@@ -201,14 +203,14 @@ function FilterDropdown({
                     } hover:bg-white/[0.06] transition-colors`}
                   >
                     <div className={`w-2 h-2 rounded-full ${inviteStatusDotColor(s)}`} />
-                    <span>{inviteStatusLabel(s)}</span>
+                    <span>{inviteStatusLabel(s, t)}</span>
                   </button>
                 ))}
                 <div className="h-px bg-white/[0.06] my-1" />
               </>
             )}
             <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-2 py-1">
-              Sort by
+              {t('sort_by')}
             </div>
             {view === 'active'
               ? activeSortOptions.map((opt) => (
@@ -251,15 +253,15 @@ type ExpiryPresetId = '1h' | '24h' | '7d' | '30d' | 'never' | 'custom';
 /** Edit modal additionally supports a 'keep' option (don't change expiry on PATCH). */
 type EditExpiryId = 'keep' | ExpiryPresetId;
 
-const EXPIRY_PRESETS: ReadonlyArray<{ id: ExpiryPresetId; label: string; ms: number | null }> = [
-  { id: '1h', label: '1 hour', ms: 3_600_000 },
-  { id: '24h', label: '24 hours', ms: 86_400_000 },
-  { id: '7d', label: '7 days', ms: 7 * 86_400_000 },
-  { id: '30d', label: '30 days', ms: 30 * 86_400_000 },
-  { id: 'never', label: 'Never', ms: null },
+const EXPIRY_PRESETS: ReadonlyArray<{ id: ExpiryPresetId; labelKey: string; ms: number | null }> = [
+  { id: '1h', labelKey: 'expiry_1h', ms: 3_600_000 },
+  { id: '24h', labelKey: 'expiry_24h', ms: 86_400_000 },
+  { id: '7d', labelKey: 'expiry_7d', ms: 7 * 86_400_000 },
+  { id: '30d', labelKey: 'expiry_30d', ms: 30 * 86_400_000 },
+  { id: 'never', labelKey: 'expiry_never', ms: null },
   // Custom uses a free-form datetime input rendered below the preset row;
   // ms is intentionally null and ignored for this id.
-  { id: 'custom', label: 'Custom…', ms: null },
+  { id: 'custom', labelKey: 'expiry_custom', ms: null },
 ];
 
 /**
@@ -293,6 +295,7 @@ interface ExpirySelectorProps {
  *   preset   → expiresAt: Date.now() + preset.ms
  */
 function ExpirySelector({ value, customDateTime, onChange, showKeep, disabled }: ExpirySelectorProps) {
+  const { t } = useLanguage();
   return (
     <div>
       <div className="flex items-center gap-2 flex-wrap">
@@ -307,7 +310,7 @@ function ExpirySelector({ value, customDateTime, onChange, showKeep, disabled }:
                 : 'bg-surface-input text-txt-tertiary hover:text-txt-secondary'
             }`}
           >
-            Keep current
+            {t('keep_current')}
           </button>
         )}
         {EXPIRY_PRESETS.map((p) => (
@@ -322,7 +325,7 @@ function ExpirySelector({ value, customDateTime, onChange, showKeep, disabled }:
                 : 'bg-surface-input text-txt-tertiary hover:text-txt-secondary'
             }`}
           >
-            {p.label}
+            {t(p.labelKey)}
           </button>
         ))}
       </div>

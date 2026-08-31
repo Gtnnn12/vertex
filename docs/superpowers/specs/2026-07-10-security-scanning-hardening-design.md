@@ -2,18 +2,18 @@
 
 **Date:** 2026-07-10
 **Status:** Approved (design); pending implementation plan
-**Author:** Lead Developer (Backspace)
+**Author:** Lead Developer (VERTEX)
 
 ---
 
 ## 1. Motivation
 
-A prospective self-hoster declined to run Backspace with the objection:
+A prospective self-hoster declined to run VERTEX with the objection:
 
 > "Security testing: You've made a web app. I am not installing a new webapp that
 > is expected to touch the internet without some level of security scanning."
 
-The objection is valid. Investigation of the current state shows Backspace has
+The objection is valid. Investigation of the current state shows VERTEX has
 solid security **engineering** but no security **assurance infrastructure**:
 
 **Already present (good):**
@@ -218,7 +218,7 @@ workflow files can be scaffolded earlier).
   - **Prune mechanics (precise):** the builder runs a *full* `pnpm install
     --frozen-lockfile` (Dockerfile:25) whose `node_modules` is a symlinked `.pnpm`
     virtual store — a plain `COPY --from=builder node_modules` is **not**
-    self-contained. Use `pnpm --filter @backspace/server deploy --prod
+    self-contained. Use `pnpm --filter @VERTEX/server deploy --prod
     /app/deploy` in the builder to produce a dereferenced/hoisted prod tree, then
     `COPY --from=builder /app/deploy` into the runtime stage. This replaces the
     runtime stage's own `pnpm install --prod`, letting `python3 make g++` be dropped
@@ -337,9 +337,9 @@ Steps:
 - **`dast.yml` (ZAP baseline):** stands up an ephemeral instance and runs ZAP
   baseline (advisory). **CI env override required** — the production compose won't
   come up unmodified: Caddy uses `{$DOMAIN}` + ACME auto-HTTPS (hangs in CI without
-  public DNS), `backspace` requires `JWT_SECRET`, livekit is profile-gated. Use a CI
+  public DNS), `VERTEX` requires `JWT_SECRET`, livekit is profile-gated. Use a CI
   compose override that sets a test `JWT_SECRET`/`DOMAIN` and **points ZAP directly at
-  the `backspace` container `:3000`, bypassing Caddy** (or Caddy `internal`/local
+  the `VERTEX` container `:3000`, bypassing Caddy** (or Caddy `internal`/local
   TLS). This is the same two-instance-capable rig WS3 needs for CSP/CORS validation.
 - README: CodeQL, OpenSSF Scorecard, and security-policy badges; a "Security &
   supply chain" section describing what runs on every change and where results are
@@ -400,8 +400,8 @@ Steps:
 | CSP too strict for a federated, arbitrary-content app | CSP built **dynamically** from `config.livekit.url` + peer registry; `img/media/connect` permissive; constrain only script/object/base/frame-ancestors; report-only → enforce. |
 | CORS allowlist breaks federated uploads + desktop `file://` picker | Dynamic `origin` callback backed by the **live peer registry**; keep `/api/instance/info` CORS-open; "log-and-allow" phase before rejecting. |
 | Electron fuses overwrite the existing `afterPack` (native-module cleanup) | Use top-level `electronFuses:` key or call `flipFuses()` inside the existing `scripts/afterPack.js`; compute asar-integrity hashes after afterPack mutations. |
-| pnpm symlinked `.pnpm` store makes a plain `node_modules` copy non-self-contained | Use `pnpm --filter @backspace/server deploy --prod`; verify `tsx` + `better-sqlite3` prebuilt land per-arch; keep `ffmpeg`; boot test. |
-| DAST/compose won't come up in CI (ACME/DOMAIN/JWT_SECRET) | CI compose override with test env; point ZAP at `backspace:3000`, bypass Caddy. |
+| pnpm symlinked `.pnpm` store makes a plain `node_modules` copy non-self-contained | Use `pnpm --filter @VERTEX/server deploy --prod`; verify `tsx` + `better-sqlite3` prebuilt land per-arch; keep `ffmpeg`; boot test. |
+| DAST/compose won't come up in CI (ACME/DOMAIN/JWT_SECRET) | CI compose override with test env; point ZAP at `VERTEX:3000`, bypass Caddy. |
 | harden-runner block mode false-positives the Docker build | Start in `audit`; graduate to block only on lightweight jobs. |
 | Scorecard badge / CodeQL free tier assume a public repo | Documented as an explicit precondition in the maintainer checklist. |
 

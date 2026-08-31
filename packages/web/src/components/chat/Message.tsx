@@ -27,6 +27,7 @@ import {
   type PendingAttachmentView,
 } from '../../stores/pendingMessageStore';
 import { useTransferStore } from '../../stores/transferStore';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface MessageProps {
   message: MessageWithUser | PendingMessageView;
@@ -119,6 +120,7 @@ function getImageEmbedSourceUrl(content: string | null, embeds: Embed[]): string
 }
 
 export function Message({ message, isCompact, isFirstInGroup, previousMessageId }: MessageProps) {
+  const { t } = useLanguage();
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content ?? '');
   const [isHovered, setIsHovered] = useState(false);
@@ -324,6 +326,7 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
       canAddReactions,
       canSendMessages,
       canManageMessages,
+      t,
       onReply: () => setReplyTo(message),
       onEdit: () => {
         setEditContent(message.content ?? '');
@@ -478,13 +481,13 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
               autoFocus
             />
             <p className="text-[12px] text-txt-tertiary mt-1.5 ml-1">
-              escape to <button onClick={() => setIsEditing(false)} className="text-txt-link hover:underline">cancel</button>
+              escape to <button onClick={() => setIsEditing(false)} className="text-txt-link hover:underline">{t('cancel')}</button>
               {' '}&bull; enter to <button onClick={() => {
                 if (editContent.trim()) {
                   editMessage(message.id, editContent.trim(), channelKey);
                   setIsEditing(false);
                 }
-              }} className="text-txt-link hover:underline">save</button>
+              }} className="text-txt-link hover:underline">{t('save')}</button>
             </p>
           </div>
         ) : (
@@ -509,7 +512,7 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
                   </div>
                 )}
                 {message.editedAt && (
-                  <span className="text-[10px] text-txt-tertiary select-none font-medium">(edited)</span>
+                  <span className="text-[10px] text-txt-tertiary select-none font-medium">{t('edited')}</span>
                 )}
               </>
             ) : (
@@ -518,7 +521,7 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
                   <div className="text-txt-message text-[15px] leading-[1.5] break-words whitespace-pre-wrap selection:bg-accent-primary/30">
                     <MarkdownRenderer content={message.content} />
                     {message.editedAt && (
-                      <span className="text-[10px] text-txt-tertiary ml-1 select-none font-medium">(edited)</span>
+                      <span className="text-[10px] text-txt-tertiary ml-1 select-none font-medium">{t('edited')}</span>
                     )}
                   </div>
                 )}
@@ -554,7 +557,7 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
                   <svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                     <path fillRule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 4a.875.875 0 01.875.875v4a.875.875 0 11-1.75 0v-4A.875.875 0 0110 6zm0 8.25a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
                   </svg>
-                  Upload failed
+                  {t('upload_failed')}
                 </span>
                 <span className="w-px h-3.5 bg-accent-rose/25" aria-hidden="true" />
                 {canRetry && (
@@ -574,7 +577,7 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
                     }}
                     className="px-2 py-0.5 rounded-md text-[11.5px] font-medium text-accent-mint bg-accent-mint/10 hover:bg-accent-mint/20 transition-colors"
                   >
-                    Retry
+                    {t('retry')}
                   </button>
                 )}
                 <button
@@ -599,7 +602,7 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
                   }}
                   className="px-2 py-0.5 rounded-md text-[11.5px] font-medium text-txt-secondary bg-surface-channel/50 hover:bg-accent-rose/15 hover:text-accent-rose transition-colors"
                 >
-                  Discard
+                  {t('discard')}
                 </button>
               </div>
             )}
@@ -676,7 +679,7 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
                 className={`p-1 hover:bg-interactive-hover rounded transition-colors text-[14px] leading-none ${
                   showReactionPicker ? 'text-accent-primary' : 'text-txt-tertiary hover:text-txt-secondary'
                 }`}
-                title="Add reaction"
+                title={t('add_reaction')}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm1-13h-2v4H7v2h4v4h2v-4h4v-2h-4V7z" />
@@ -687,7 +690,7 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
           <button
             onClick={() => setReplyTo(message)}
             className="px-2 h-full text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover transition-all flex items-center justify-center"
-            title="Reply"
+            title={t('reply')}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
               <path d="M10 9V5L3 12L10 19V14.9C15 14.9 18.5 16.5 21 20C20 15 17 10 10 9Z" />
@@ -700,7 +703,7 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
                 setIsEditing(true);
               }}
               className="px-2 h-full text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover transition-all flex items-center justify-center"
-              title="Edit"
+              title={t('edit')}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
@@ -722,7 +725,7 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
                   ? 'bg-green-500/20 text-green-400'
                   : 'text-txt-tertiary hover:text-txt-danger hover:bg-interactive-hover'
               }`}
-              title={confirmingDelete ? 'Confirm delete' : 'Delete'}
+              title={confirmingDelete ? t('confirm_delete') : t('delete')}
             >
               {/* Trash icon */}
               <svg

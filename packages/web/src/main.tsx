@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { App } from './App';
 import { startPendingMessageOrchestrator } from './stores/pendingMessageRehydrate';
+import { LanguageProvider } from './contexts/LanguageContext';
 import './styles/globals.css';
 
 class ErrorBoundary extends React.Component<
@@ -121,7 +122,9 @@ ReactDOM.createRoot(root).render(
   <React.StrictMode>
     <ErrorBoundary>
       <BrowserRouter>
-        <App />
+        <LanguageProvider>
+          <App />
+        </LanguageProvider>
       </BrowserRouter>
     </ErrorBoundary>
   </React.StrictMode>

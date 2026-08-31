@@ -1,5 +1,6 @@
 import type { Activity } from '@backspace/shared';
 import { getPrimaryActivity } from '@backspace/shared/src/activities.js';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface ActivityCardProps {
   activities: Activity[];
@@ -36,6 +37,7 @@ export function hasRichActivity(activities: Activity[]): boolean {
  * The glass card wrapper is applied by the parent row container.
  */
 export function ActivityCard({ activities, fallbackCustomStatus }: ActivityCardProps) {
+  const { t } = useLanguage();
   const primary = getPrimaryActivity(activities);
 
   if (!primary) {
@@ -58,7 +60,7 @@ export function ActivityCard({ activities, fallbackCustomStatus }: ActivityCardP
       </div>
       {primary.timestamps?.start && (
         <div className="text-[10px] leading-[1.3] text-txt-tertiary">
-          {formatElapsed(primary.timestamps.start)} elapsed
+          {formatElapsed(primary.timestamps.start)} {t('elapsed')}
         </div>
       )}
     </>

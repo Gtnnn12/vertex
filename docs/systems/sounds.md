@@ -105,7 +105,7 @@ Mirrors the envelope already used by `playTestTone`.
 
 LiveKit JS 2.17 does **not** expose per-subscriber events on the publisher
 side: `LocalTrackSubscribed` only fires for the *first* subscriber and has no
-unsubscribe twin; there is no public `numSubscribers` API. Backspace uses a
+unsubscribe twin; there is no public `numSubscribers` API. VERTEX uses a
 small data-channel ping instead, mirroring the existing `deafen` pattern in
 `useLiveKit.ts`.
 
@@ -191,4 +191,4 @@ of them is a future change that requires sourcing new audio:
 - Moderator move-to-channel / kick-from-voice (the LK disconnect already plays
   `disconnect.ogg` for forced disconnects)
 - Friend request received / accepted
-- Mention-everyone / @here (Backspace doesn't currently parse these)
+- Mention-everyone / @here (VERTEX doesn't currently parse these)

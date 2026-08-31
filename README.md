@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="packages/web/public/icons/logo.png" alt="Backspace" width="160" />
+<img src="packages/web/public/icons/logo.png" alt="VERTEX" width="160" />
 
-# Backspace
+# VERTEX
 
 **A self-hosted communication platform you own. Text, voice, video, and federation.**
 
@@ -15,10 +15,10 @@
 
 ---
 
-Backspace is a self-hosted, open-source Discord alternative: a Discord-style chat
+VERTEX is a self-hosted, open-source Discord alternative: a Discord-style chat
 platform you run on your own hardware. Spaces, channels, roles, voice and video,
 screen sharing, direct messages, friends, file sharing, and message search. On top
-of that, **server-to-server federation** lets independent Backspace instances talk
+of that, **server-to-server federation** lets independent VERTEX instances talk
 to each other while each stays under its own control.
 
 It is **free and open source** under the **GNU AGPL-3.0**, and dual-licensed: a
@@ -26,15 +26,15 @@ commercial license is available if the AGPL doesn't fit your use. See
 [License](#license) for the details.
 
 > **Project status** <a name="project-status"></a>
-> Backspace 1.0. Stable, self-hostable, and actively developed.
+> VERTEX 1.0. Stable, self-hostable, and actively developed.
 
-## What makes Backspace different
+## What makes VERTEX different
 
 Self-hosted chat usually forces a trade-off: gaming-grade voice and video, *or* a
 polished Discord-style experience, *or* federation between independent servers.
 Rarely all three, and rarely with the fine-grained media controls people expect.
 
-Backspace does all three at once:
+VERTEX does all three at once:
 
 - **Voice and video with a real control surface.** This goes past a screen-share
   button. Choose resolution, frame rate, codec (VP9 or hardware H.264), and
@@ -162,7 +162,7 @@ You own the server, the data, and the network it federates into.
 
 ## Installation
 
-The intended way to deploy Backspace is the **interactive installer**. It
+The intended way to deploy VERTEX is the **interactive installer**. It
 configures everything (`.env`, secrets, HTTPS, optional voice) and brings the
 stack up for you. It **auto-detects your environment** and picks one of three
 deployment modes. The default "All-in-One" (below) needs nothing but a host and
@@ -188,8 +188,8 @@ source automatically if the image can't be pulled.
 ### 1. Run the installer
 
 ```bash
-git clone https://github.com/TheZwiss/backspace.git
-cd backspace
+git clone https://github.com/TheZwiss/VERTEX.git
+cd VERTEX
 ./install.sh
 ```
 
@@ -249,8 +249,8 @@ by hand, you can skip it and drive Docker Compose directly, but then DNS,
 responsibility:
 
 ```bash
-git clone https://github.com/TheZwiss/backspace.git
-cd backspace
+git clone https://github.com/TheZwiss/VERTEX.git
+cd VERTEX
 
 cp .env.example .env
 # Set DOMAIN, and generate a secret:
@@ -263,13 +263,13 @@ The stack runs three services via Docker Compose:
 
 | Service     | Role                                              |
 |-------------|---------------------------------------------------|
-| `backspace` | The app (API + WebSocket + built web client) on internal port `3000` |
+| `VERTEX` | The app (API + WebSocket + built web client) on internal port `3000` |
 | `caddy`     | Reverse proxy with automatic HTTPS for your `DOMAIN` (ports `80`/`443`) |
 | `livekit`   | Voice/video server; optional, enabled with `COMPOSE_PROFILES=voice` |
 
 ## Deployment modes
 
-Homelabs differ. Backspace supports three deployment modes from **one installer**,
+Homelabs differ. VERTEX supports three deployment modes from **one installer**,
 which auto-detects which one fits and, in non-obvious cases, asks. The mode is
 recorded as `DEPLOY_MODE` in `.env`; you can also set it up front for a
 non-interactive install (`DEPLOY_MODE=proxy ./install.sh`).
@@ -359,13 +359,13 @@ chat.example.com {
 ```yaml
 http:
   routers:
-    backspace:
+    VERTEX:
       rule: "Host(`chat.example.com`)"
       entryPoints: [websecure]
-      service: backspace
+      service: VERTEX
       tls: { certResolver: letsencrypt }
   services:
-    backspace:
+    VERTEX:
       loadBalancer:
         servers:
           - url: "http://127.0.0.1:8080"
@@ -455,13 +455,13 @@ git pull                              # refresh compose files / install.sh / doc
 # Prebuilt-image installs (the default):
 docker compose pull && docker compose up -d
 
-# From-source installs (a fork, or BACKSPACE_BUILD=true):
+# From-source installs (a fork, or VERTEX_BUILD=true):
 docker compose up -d --build
 ```
 
 Because `COMPOSE_FILE` lives in `.env`, these commands automatically use the
 right compose files in every mode, with no `-f` flags to remember. A redeploy
-briefly restarts the `backspace` container (clients reconnect automatically).
+briefly restarts the `VERTEX` container (clients reconnect automatically).
 
 ## Development
 
@@ -529,7 +529,7 @@ The most important:
 | `HOST`               | no       | `0.0.0.0`   | Bind address |
 | `REGISTRATION_OPEN`  | no       | `true`      | Set `false` to close signups after setup |
 | `MAX_UPLOAD_SIZE`    | no       | `104857600` | Max upload size in bytes (100 MB; 90 MB in `tunnel` mode) |
-| `BACKSPACE_IMAGE` / `BACKSPACE_IMAGE_TAG` | no | `ghcr.io/thezwiss/backspace` / `latest` | Prebuilt image to pull; pin a tag or point at your fork's registry |
+| `VERTEX_IMAGE` / `VERTEX_IMAGE_TAG` | no | `ghcr.io/thezwiss/VERTEX` / `latest` | Prebuilt image to pull; pin a tag or point at your fork's registry |
 | `LIVEKIT_URL` / `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` | no | none | Enable voice/video |
 | `COMPOSE_PROFILES`   | no       | none        | Set to `voice` to start the bundled LiveKit service |
 
@@ -553,7 +553,7 @@ uploads, search); only voice/video channels won't connect.
 
 ## Federation
 
-Backspace instances can peer with each other so users on different servers can
+VERTEX instances can peer with each other so users on different servers can
 become friends, DM, and call across instances, while each instance stays
 independently owned and operated. Peering is mutual and authenticated with
 HMAC-signed requests; identities are addressed as `username@instance`. Manage
@@ -569,16 +569,16 @@ notifications, global keybinds, and activity detection.
 ### Download
 
 Grab the installer for your platform from the
-[**latest release**](https://github.com/TheZwiss/backspace/releases/latest):
+[**latest release**](https://github.com/TheZwiss/VERTEX/releases/latest):
 
 | Platform | File | Notes |
 |----------|------|-------|
-| Windows | `Backspace-<version>.exe` | Universal installer (x64 + arm64). SmartScreen may warn on first run; choose "More info" → "Run anyway". Auto-updates. |
-| macOS | `Backspace-<version>-arm64.dmg` (Apple Silicon) / `Backspace-<version>-x64.dmg` (Intel) | Builds are currently **unsigned**: on first launch, right-click the app → **Open** → **Open**. Auto-update is not available on macOS yet, so check the releases page for new versions. |
-| Linux | `Backspace-<version>-x86_64.AppImage` / `-arm64.AppImage`, or `.deb` (`amd64` / `arm64`) | AppImage auto-updates; `.deb` installs update via new releases. |
+| Windows | `VERTEX-<version>.exe` | Universal installer (x64 + arm64). SmartScreen may warn on first run; choose "More info" → "Run anyway". Auto-updates. |
+| macOS | `VERTEX-<version>-arm64.dmg` (Apple Silicon) / `VERTEX-<version>-x64.dmg` (Intel) | Builds are currently **unsigned**: on first launch, right-click the app → **Open** → **Open**. Auto-update is not available on macOS yet, so check the releases page for new versions. |
+| Linux | `VERTEX-<version>-x86_64.AppImage` / `-arm64.AppImage`, or `.deb` (`amd64` / `arm64`) | AppImage auto-updates; `.deb` installs update via new releases. |
 
 On first launch the app asks for your instance URL. Enter the address of the
-Backspace server you use (e.g. `https://chat.example.com`).
+VERTEX server you use (e.g. `https://chat.example.com`).
 
 ### Building from source
 
@@ -594,7 +594,7 @@ Cross-platform builds are produced for Windows, macOS, and Linux. See
 
 ## Mobile
 
-Backspace works on mobile today. Just open your instance in a phone browser.
+VERTEX works on mobile today. Just open your instance in a phone browser.
 The UI has a dedicated touch layout (bottom navigation, swipe gestures, and
 full-screen views), and because it ships as an installable **PWA** you can use
 your browser's **Add to Home Screen** to install it as a standalone app: its own
@@ -603,11 +603,11 @@ reconnect.
 
 Native **iOS and Android app-store apps are planned**, once the project gains
 traction and the funding for the developer-program licenses is secured. Until
-then, the installable PWA is the supported way to run Backspace on a phone.
+then, the installable PWA is the supported way to run VERTEX on a phone.
 
 ## Architecture
 
-Backspace is a TypeScript monorepo managed with pnpm workspaces.
+VERTEX is a TypeScript monorepo managed with pnpm workspaces.
 
 ```
 packages/
@@ -631,19 +631,19 @@ packages/
 Every subsystem has a dedicated specification under
 [`docs/systems/`](docs/systems/): database schema, REST API, WebSocket
 protocol, federation, permissions, voice, the design system, and more. **These
-are the reference for how Backspace works**; start there if you want to
+are the reference for how VERTEX works**; start there if you want to
 understand or extend a subsystem.
 
 ## FAQ
 
-**Is Backspace a self-hosted Discord alternative?**
+**Is VERTEX a self-hosted Discord alternative?**
 Yes. It gives you a Discord-style experience (spaces, channels, roles, voice,
 video, screen sharing, DMs, friends) that you run entirely on your own server, so
 you own the data and set the rules.
 
 **How is it different from Revolt, Spacebar, Matrix, or Mumble?**
 See the full [comparison](docs/comparison.md), including where each of those is the
-better choice. In short: Backspace pairs a Discord-style client with a serious
+better choice. In short: VERTEX pairs a Discord-style client with a serious
 voice and screen-share control surface and optional server-to-server federation.
 
 **Does it have screen sharing and high-quality video?**
@@ -665,18 +665,18 @@ Yes, as an installable PWA with a dedicated touch layout. Native iOS and Android
 apps are planned.
 
 **What does "federation" mean here?**
-Independent Backspace instances can peer with each other so users on different
+Independent VERTEX instances can peer with each other so users on different
 servers can be friends, DM, and call across instances, while each server stays
 independently owned. Requests between servers are HMAC-authenticated.
 
 ## Contributing
 
 Contributions are welcome. Please read [`CONTRIBUTING.md`](CONTRIBUTING.md)
-first. Backspace is a single-owner project, so all contributors sign a
+first. VERTEX is a single-owner project, so all contributors sign a
 [Contributor License Agreement](CLA.md), a one-time comment on your pull
 request, handled automatically by a bot. **You keep the copyright to your
 contribution** and grant the maintainer (Jannis Braun) an exclusive license to
-it, which is what lets Backspace be offered under both the AGPL and a commercial
+it, which is what lets VERTEX be offered under both the AGPL and a commercial
 license. You also receive a perpetual license to reuse the specific code you
 wrote in your own other projects.
 
@@ -689,7 +689,7 @@ disclosure.
 
 ## License
 
-Backspace is **free and open source software**, licensed under the
+VERTEX is **free and open source software**, licensed under the
 **[GNU Affero General Public License v3.0](LICENSE)** (`AGPL-3.0-only`).
 
 In plain terms:
@@ -697,18 +697,18 @@ In plain terms:
 - Yes: self-host, run, study, and modify it, including commercially and inside a business.
 - Yes: redistribute it and your changes under the same AGPL-3.0 license.
 - Note: if you run a **modified** version as a network service, you must offer your
-  users its complete corresponding source (AGPL § 13). Backspace makes this easy:
-  set `BACKSPACE_SOURCE_URL` to your fork so the in-app "Source code" link points
+  users its complete corresponding source (AGPL § 13). VERTEX makes this easy:
+  set `VERTEX_SOURCE_URL` to your fork so the in-app "Source code" link points
   at what you actually run.
 - Note: preserve the copyright and license notices.
 
-**Commercial license.** If the AGPL doesn't fit (embedding Backspace in a
+**Commercial license.** If the AGPL doesn't fit (embedding VERTEX in a
 closed-source product, offering it as a managed service without publishing your
 modifications, or an organization that can't use AGPL software), a separate
 commercial license is available on request. See
 [`LICENSE-COMMERCIAL.md`](LICENSE-COMMERCIAL.md).
 
-> **Our open-source commitment.** Every released version of Backspace is, and
+> **Our open-source commitment.** Every released version of VERTEX is, and
 > will remain, available under the AGPL-3.0. The Contributor License Agreement
 > exists to enable a commercial license and optional enterprise add-ons, **not**
 > to take the open-source edition private. If this project is ever abandoned, or
@@ -717,10 +717,10 @@ commercial license is available on request. See
 
 Copyright © 2026 Jannis Braun. Contributions are made under the
 [Contributor License Agreement](CLA.md): you keep your copyright and grant the
-maintainer an exclusive license, which is what lets Backspace be offered under
+maintainer an exclusive license, which is what lets VERTEX be offered under
 both the AGPL and a commercial license.
 
-"Backspace", the Backspace logo, and app icons are trademarks of Jannis Braun and
+"VERTEX", the VERTEX logo, and app icons are trademarks of Jannis Braun and
 are not licensed under either the AGPL or the commercial license. Bundled
 third-party components retain their own licenses; see [`NOTICE`](NOTICE).
 

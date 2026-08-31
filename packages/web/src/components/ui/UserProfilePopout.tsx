@@ -12,6 +12,7 @@ import { parseFederatedUsername } from '../../utils/identity';
 import { useCanonicalUserView } from '../../utils/userViewLookup';
 import { loadFederatedMutuals } from '../../utils/mutuals';
 import { computeFloatingPosition, type AnchorRect, type Placement } from '../../hooks/useFloatingPosition';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 /** Gap between the card and the element it was opened from. */
 const ANCHOR_OFFSET = 8;
@@ -25,6 +26,7 @@ interface UserProfilePopoutProps {
 }
 
 export function UserProfilePopout({ user: propUser, onClose, anchor, placement = 'right' }: UserProfilePopoutProps) {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const addDmChannel = useSpaceStore((s) => s.addDmChannel);
   const openModal = useUIStore((s) => s.openModal);
@@ -187,7 +189,7 @@ export function UserProfilePopout({ user: propUser, onClose, anchor, placement =
             <div className="border-t border-white/[0.06] my-3" />
             <div>
               <span className="text-[11px] uppercase tracking-wide font-semibold text-txt-tertiary">
-                About Me
+                {t('about_me')}
               </span>
               <div className="text-[13px] text-txt-secondary mt-1 whitespace-pre-wrap break-words leading-relaxed [&_strong]:font-semibold [&_strong]:text-txt-primary [&_em]:italic [&_a]:text-accent-primary [&_a]:underline">
                 <ReactMarkdown
@@ -212,7 +214,7 @@ export function UserProfilePopout({ user: propUser, onClose, anchor, placement =
         <div className="space-y-1.5">
           <div>
             <span className="text-[11px] uppercase tracking-wide font-semibold text-txt-tertiary">
-              Member Since
+              {t('member_since')}
             </span>
             <span className="text-[12px] text-txt-secondary ml-2">
               {new Date(user.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -221,13 +223,13 @@ export function UserProfilePopout({ user: propUser, onClose, anchor, placement =
           {mutualCounts && (mutualCounts.friends > 0 || mutualCounts.spaces > 0) && (
             <div className="text-[12px] text-txt-tertiary">
               {mutualCounts.friends > 0 && (
-                <span>{mutualCounts.friends} mutual friend{mutualCounts.friends !== 1 ? 's' : ''}</span>
+                <span>{mutualCounts.friends} {mutualCounts.friends === 1 ? t('mutual_friend') : t('mutual_friends')}</span>
               )}
               {mutualCounts.friends > 0 && mutualCounts.spaces > 0 && (
                 <span className="mx-1">&middot;</span>
               )}
               {mutualCounts.spaces > 0 && (
-                <span>{mutualCounts.spaces} mutual space{mutualCounts.spaces !== 1 ? 's' : ''}</span>
+                <span>{mutualCounts.spaces} {mutualCounts.spaces === 1 ? t('mutual_space') : t('mutual_spaces')}</span>
               )}
             </div>
           )}
@@ -238,13 +240,13 @@ export function UserProfilePopout({ user: propUser, onClose, anchor, placement =
           onClick={handleSendMessage}
           className="w-full mt-3 py-2 rounded-lg text-[13px] font-medium text-txt-primary bg-white/[0.06] hover:bg-white/[0.10] border border-white/[0.08] transition-colors"
         >
-          Send Message
+          {t('send_message')}
         </button>
         <button
           onClick={handleViewFullProfile}
           className="w-full mt-1.5 py-2 rounded-lg text-[13px] font-medium text-txt-tertiary hover:text-txt-secondary bg-transparent hover:bg-white/[0.04] transition-colors"
         >
-          View Full Profile
+          {t('view_full_profile')}
         </button>
       </div>
     </div>

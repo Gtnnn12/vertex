@@ -13,6 +13,8 @@ import { getAvatarGradient, adjustColor, mutedGradient, AVATAR_GRADIENT_MAP, BAN
 import { AVATAR_COLORS } from '@backspace/shared';
 import type { User, UserStatus, AvatarColor } from '@backspace/shared';
 import type { FederationOpResult } from '../../../utils/federationOps';
+import { useLanguage } from '../../../contexts/LanguageContext';
+
 export function AccountPanel() {
   const user = useAuthStore((s) => s.user);
   const updateProfile = useAuthStore((s) => s.updateProfile);
@@ -42,6 +44,7 @@ export function AccountPanel() {
   const addToast = useUIStore((s) => s.addToast);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (user) {
@@ -115,9 +118,9 @@ export function AccountPanel() {
       // server; refetch the home DM list so the split conversation collapses
       // without a reload.
       try { await useSpaceStore.getState().reloadDmsForOrigin(''); } catch { /* non-fatal */ }
-      addToast(`Account re-linked with ${homeConnection.username}`, 'success', 3000);
+      addToast(`${t('account_relinked_with')} ${homeConnection.username}`, 'success', 3000);
     } catch (err) {
-      setReattachError(err instanceof Error ? err.message : 'Re-attach failed');
+      setReattachError(err instanceof Error ? err.message : t('reattach_failed'));
     } finally {
       setReattaching(false);
       setReattachArmed(false);
@@ -193,7 +196,7 @@ export function AccountPanel() {
       const { filename } = await waitForTransferAttachment(tid);
       setAvatarFilename(filename);
     } catch {
-      setError('Failed to upload avatar');
+      setError(t('failed_to_upload_avatar'));
       setAvatarPreview(null);
       URL.revokeObjectURL(previewUrl);
     } finally {
@@ -213,7 +216,7 @@ export function AccountPanel() {
       const { filename } = await waitForTransferAttachment(tid);
       setBannerFilename(filename);
     } catch {
-      setError('Failed to upload banner');
+      setError(t('failed_to_upload_banner'));
       setBannerPreview(null);
       URL.revokeObjectURL(previewUrl);
     } finally {
@@ -248,9 +251,9 @@ export function AccountPanel() {
       if (bannerFilename !== null) updates.banner = bannerFilename;
 
       await updateProfile(updates as Parameters<typeof updateProfile>[0]);
-      addToast('Profile updated', 'success', 2000);
+      addToast(t('profile_updated'), 'success', 2000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update profile');
+      setError(err instanceof Error ? err.message : t('failed_to_update_profile'));
     } finally {
       setIsLoading(false);
     }
@@ -261,18 +264,18 @@ export function AccountPanel() {
     setPasswordResults(null);
 
     if (newPassword.length < 8) {
-      setPasswordError('New password must be at least 8 characters');
+      setPasswordError(t('password_min_length_error'));
       return;
     }
     if (newPassword !== confirmNewPassword) {
-      setPasswordError('Passwords do not match');
+      setPasswordError(t('passwords_do_not_match'));
       return;
     }
 
     setPasswordLoading(true);
     try {
       const results = await changePassword(currentPassword, newPassword);
-      addToast('Password changed', 'success', 2000);
+      addToast(t('password_changed'), 'success', 2000);
       setCurrentPassword('');
       setNewPassword('');
       setConfirmNewPassword('');
@@ -285,7 +288,7 @@ export function AccountPanel() {
         setPasswordResults(null);
       }, 5000);
     } catch (err) {
-      setPasswordError(err instanceof Error ? err.message : 'Failed to change password');
+      setPasswordError(err instanceof Error ? err.message : t('failed_to_change_password'));
     } finally {
       setPasswordLoading(false);
     }
@@ -310,16 +313,15 @@ export function AccountPanel() {
 
   return (
     <div className="space-y-5">
-      <h2 className="text-lg font-semibold text-txt-primary mb-6">My Account</h2>
+      <h2 className="text-lg font-semibold text-txt-primary mb-6">{t('my_account')}</h2>
       {user?.federationHomeOrphaned && user?.homeInstance && (
         <div className="rounded-lg bg-accent-amber/10 border border-accent-amber/25 px-3.5 py-3 text-xs text-txt-secondary leading-relaxed mb-4">
-          <span className="font-medium text-txt-primary">This account is detached from its home instance.</span>{' '}
-          {user.homeInstance} was reset or is no longer available, so this account now operates locally on
-          this instance — your profile and password are managed here.
+          <span className="font-medium text-txt-primary">{t('account_detached_from_home_instance')}</span>{' '}
+          {user.homeInstance} {t('detached_account_operates_locally')}
           {homeConnection && (
             <>
-              {' '}As <span className="font-medium text-txt-primary">{homeConnection.username}</span> on{' '}
-              {user.homeInstance}, you can re-link this account — profile and presence will sync from there again.
+              {' '}{t('relink_as')} <span className="font-medium text-txt-primary">{homeConnection.username}</span>{' '}
+              {t('relink_on')} {user.homeInstance}{t('relink_suffix')}
               <button
                 type="button"
                 onClick={handleReattach}
@@ -327,10 +329,10 @@ export function AccountPanel() {
                 className="mt-2 block rounded-md bg-accent-amber/20 hover:bg-accent-amber/30 disabled:opacity-50 text-txt-primary px-3 py-1.5 text-xs font-medium transition-colors"
               >
                 {reattaching
-                  ? 'Re-attaching…'
+                  ? t('reattaching')
                   : reattachArmed
-                    ? `Confirm re-attach as ${homeConnection.username}`
-                    : `Re-attach to ${user.homeInstance}`}
+                    ? `${t('confirm_reattach_as')} ${homeConnection.username}`
+                    : `${t('reattach_to')} ${user.homeInstance}`}
               </button>
               {reattachError && <div className="mt-1.5 text-accent-rose">{reattachError}</div>}
             </>
@@ -340,7 +342,7 @@ export function AccountPanel() {
       {/* ── Profile Customization ── */}
       <div>
         <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">
-          Profile Customization
+          {t('profile_customization')}
         </div>
 
         {/* Live Preview Card */}
@@ -382,7 +384,7 @@ export function AccountPanel() {
         <div className="rounded-lg bg-white/[0.03] border border-white/[0.04] p-3.5 space-y-4">
           {/* Avatar upload */}
           <div>
-            <label className="block text-xs text-txt-secondary mb-1.5">Avatar</label>
+            <label className="block text-xs text-txt-secondary mb-1.5">{t('avatar')}</label>
             <div className="flex items-center gap-3">
               <button
                 type="button"
@@ -392,7 +394,7 @@ export function AccountPanel() {
               >
                 <div className="w-[64px] h-[64px] rounded-full overflow-hidden">
                   {displayAvatarSrc ? (
-                    <img src={displayAvatarSrc} alt="Avatar" className="w-full h-full object-cover" />
+                    <img src={displayAvatarSrc} alt={t('avatar')} className="w-full h-full object-cover" />
                   ) : (
                     <Avatar
                       src={null}
@@ -425,7 +427,7 @@ export function AccountPanel() {
                   disabled={uploadingAvatar}
                   className="text-xs text-accent-primary hover:underline text-left"
                 >
-                  Change Avatar
+                  {t('change_avatar')}
                 </button>
                 {(displayAvatarSrc || user.avatar) && avatarFilename !== '' && (
                   <button
@@ -433,7 +435,7 @@ export function AccountPanel() {
                     onClick={handleRemoveAvatar}
                     className="text-xs text-txt-danger hover:underline text-left"
                   >
-                    Remove
+                    {t('remove')}
                   </button>
                 )}
               </div>
@@ -449,7 +451,7 @@ export function AccountPanel() {
 
           {/* Banner upload */}
           <div>
-            <label className="block text-xs text-txt-secondary mb-1.5">Banner</label>
+            <label className="block text-xs text-txt-secondary mb-1.5">{t('banner')}</label>
             <button
               type="button"
               onClick={() => bannerInputRef.current?.click()}
@@ -489,7 +491,7 @@ export function AccountPanel() {
                 disabled={uploadingBanner}
                 className="text-xs text-accent-primary hover:underline"
               >
-                Change Banner
+                {t('change_banner')}
               </button>
               {(displayBannerSrc || user.banner) && bannerFilename !== '' && (
                 <button
@@ -497,7 +499,7 @@ export function AccountPanel() {
                   onClick={handleRemoveBanner}
                   className="text-xs text-txt-danger hover:underline"
                 >
-                  Remove
+                  {t('remove')}
                 </button>
               )}
             </div>
@@ -512,7 +514,7 @@ export function AccountPanel() {
 
           {/* Avatar Color */}
           <div>
-            <label className="block text-xs text-txt-secondary mb-1.5">Avatar Color</label>
+            <label className="block text-xs text-txt-secondary mb-1.5">{t('avatar_color')}</label>
             <div className="flex gap-2">
               {AVATAR_COLORS.map((key) => {
                 const entry = AVATAR_GRADIENT_MAP[key];
@@ -536,7 +538,7 @@ export function AccountPanel() {
 
           {/* Banner Color */}
           <div>
-            <label className="block text-xs text-txt-secondary mb-1.5">Banner Color</label>
+            <label className="block text-xs text-txt-secondary mb-1.5">{t('banner_color')}</label>
             <div className="grid grid-cols-7 gap-1.5 mb-2">
               {[0, 1, 2].map((row) =>
                 BANNER_COLOR_PRESETS.map((family) => {
@@ -585,7 +587,7 @@ export function AccountPanel() {
                   onClick={() => { setAccentColor(null); setCustomHex(''); }}
                   className="text-xs text-txt-tertiary hover:text-txt-secondary transition-colors"
                 >
-                  Clear
+                  {t('clear')}
                 </button>
               )}
             </div>
@@ -593,7 +595,7 @@ export function AccountPanel() {
 
           {/* Bio */}
           <div>
-            <label className="block text-xs text-txt-secondary mb-1.5">About Me</label>
+            <label className="block text-xs text-txt-secondary mb-1.5">{t('about_me')}</label>
             <div className="relative">
               <textarea
                 value={bio}
@@ -601,7 +603,7 @@ export function AccountPanel() {
                   if (e.target.value.length <= 190) setBio(e.target.value);
                 }}
                 rows={3}
-                placeholder="Tell the world about yourself..."
+                placeholder={t('tell_world_about_yourself')}
                 className="input-standard w-full resize-none"
                 maxLength={190}
               />
@@ -615,23 +617,23 @@ export function AccountPanel() {
 
       {/* ── Account ── */}
       <div>
-        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">Account</div>
+        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">{t('account')}</div>
         <div className="rounded-lg bg-white/[0.03] border border-white/[0.04] p-3.5 space-y-4">
           <div>
-            <label className="block text-xs text-txt-secondary mb-1.5">Status</label>
+            <label className="block text-xs text-txt-secondary mb-1.5">{t('status')}</label>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as UserStatus)}
               className="input-standard w-full appearance-none"
             >
-              <option value="online">Online</option>
-              <option value="idle">Idle</option>
-              <option value="dnd">Do Not Disturb</option>
+              <option value="online">{t('online')}</option>
+              <option value="idle">{t('idle')}</option>
+              <option value="dnd">{t('do_not_disturb')}</option>
             </select>
           </div>
 
           <div>
-            <label className="block text-xs text-txt-secondary mb-1.5">Display Name</label>
+            <label className="block text-xs text-txt-secondary mb-1.5">{t('display_name')}</label>
             <input
               type="text"
               value={displayName}
@@ -641,13 +643,13 @@ export function AccountPanel() {
           </div>
 
           <div>
-            <label className="block text-xs text-txt-secondary mb-1.5">Custom Status</label>
+            <label className="block text-xs text-txt-secondary mb-1.5">{t('custom_status')}</label>
             <input
               type="text"
               value={customStatus}
               onChange={(e) => setCustomStatus(e.target.value)}
               className="input-standard w-full"
-              placeholder="What are you up to?"
+              placeholder={t('what_are_you_up_to')}
             />
           </div>
         </div>
@@ -655,18 +657,18 @@ export function AccountPanel() {
 
       {/* ── Password ── */}
       <div>
-        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">Password</div>
+        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">{t('password')}</div>
         <form onSubmit={(e) => { e.preventDefault(); handleChangePassword(); }} className="rounded-lg bg-white/[0.03] border border-white/[0.04] p-3.5 space-y-3">
           <input type="text" autoComplete="username" value={user.username} readOnly tabIndex={-1} className="sr-only" />
           <div>
-            <label className="block text-xs text-txt-secondary mb-1.5">Current Password</label>
+            <label className="block text-xs text-txt-secondary mb-1.5">{t('current_password')}</label>
             <div className="relative">
               <input
                 type={showCurrentPassword ? 'text' : 'password'}
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 className="input-standard w-full pr-10"
-                placeholder="Enter current password"
+                placeholder={t('enter_current_password')}
                 autoComplete="current-password"
               />
               <button
@@ -688,14 +690,14 @@ export function AccountPanel() {
             </div>
           </div>
           <div>
-            <label className="block text-xs text-txt-secondary mb-1.5">New Password</label>
+            <label className="block text-xs text-txt-secondary mb-1.5">{t('new_password')}</label>
             <div className="relative">
               <input
                 type={showNewPassword ? 'text' : 'password'}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 className="input-standard w-full pr-10"
-                placeholder="Minimum 6 characters"
+                placeholder={t('minimum_6_characters')}
                 autoComplete="new-password"
               />
               <button
@@ -717,13 +719,13 @@ export function AccountPanel() {
             </div>
           </div>
           <div>
-            <label className="block text-xs text-txt-secondary mb-1.5">Confirm New Password</label>
+            <label className="block text-xs text-txt-secondary mb-1.5">{t('confirm_new_password')}</label>
             <input
               type="password"
               value={confirmNewPassword}
               onChange={(e) => setConfirmNewPassword(e.target.value)}
               className="input-standard w-full"
-              placeholder="Confirm new password"
+              placeholder={t('confirm_new_password_placeholder')}
               autoComplete="new-password"
             />
           </div>
@@ -737,9 +739,9 @@ export function AccountPanel() {
                 <div key={r.origin} className="flex items-center justify-between text-xs px-2 py-1 rounded bg-white/[0.02]">
                   <span className="text-txt-secondary">{r.origin}</span>
                   {r.success ? (
-                    <span className="text-status-online">Synced</span>
+                    <span className="text-status-online">{t('synced')}</span>
                   ) : (
-                    <span className="text-txt-danger" title={r.error}>Failed — will sync on reconnect</span>
+                    <span className="text-txt-danger" title={r.error}>{t('failed_will_sync_on_reconnect')}</span>
                   )}
                 </div>
               ))}
@@ -751,23 +753,23 @@ export function AccountPanel() {
             disabled={passwordLoading || !currentPassword || !newPassword || !confirmNewPassword}
             className="px-4 py-2 bg-accent-primary hover:bg-accent-primary/80 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {passwordLoading ? 'Changing...' : 'Change Password'}
+            {passwordLoading ? t('changing') : t('change_password')}
           </button>
         </form>
       </div>
 
       {/* ── Danger Zone ── */}
       <div>
-        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">Danger Zone</div>
+        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">{t('danger_zone')}</div>
         <div className="rounded-lg bg-accent-rose/5 border border-accent-rose/20 p-3.5">
           <p className="text-sm text-txt-secondary mb-3">
-            Once you delete your account, there is no going back. Your messages will remain but be attributed to "Deleted User".
+            {t('delete_account_warning')}
           </p>
           <button
             onClick={() => setShowDeleteModal(true)}
             className="px-4 py-2 bg-accent-rose hover:bg-accent-rose/80 text-white text-sm font-medium rounded-lg transition-colors"
           >
-            Delete Account
+            {t('delete_account')}
           </button>
         </div>
       </div>
@@ -783,15 +785,15 @@ export function AccountPanel() {
               <button
                 onClick={handleReset}
                 className="px-3 py-1 text-sm text-txt-tertiary hover:text-txt-secondary transition-colors"
-              >
-                Reset
+>
+                {t('reset')}
               </button>
               <button
                 onClick={handleSave}
                 disabled={isLoading || uploadingAvatar || uploadingBanner}
                 className="px-3 py-1.5 bg-accent-primary hover:bg-accent-primary/80 text-white text-sm font-medium rounded-full transition-colors disabled:opacity-50"
               >
-                {isLoading ? 'Saving...' : 'Save'}
+                {isLoading ? t('saving') : t('save')}
               </button>
             </div>
           </div>
@@ -804,7 +806,7 @@ export function AccountPanel() {
         onClose={() => setAvatarCropSrc(null)}
         imageSrc={avatarCropSrc ?? ''}
         onCropComplete={handleAvatarCropComplete}
-        title="Crop Avatar"
+        title={t('crop_avatar')}
         cropShape="round"
         aspectRatio={1}
         maxOutputDimension={256}
@@ -814,7 +816,7 @@ export function AccountPanel() {
         onClose={() => setBannerCropSrc(null)}
         imageSrc={bannerCropSrc ?? ''}
         onCropComplete={handleBannerCropComplete}
-        title="Crop Banner"
+        title={t('crop_banner')}
         cropShape="rect"
         aspectRatio={3}
         maxOutputDimension={1280}

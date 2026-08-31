@@ -1,7 +1,7 @@
-Backspace
+VERTEX
 Copyright (c) 2026 Jannis Braun
 
-Backspace is free and open source software under the GNU Affero General Public
+VERTEX is free and open source software under the GNU Affero General Public
 License v3.0 (AGPL-3.0-only); see the LICENSE file. A separate commercial license
 is also available; see LICENSE-COMMERCIAL.md.
 
@@ -26,13 +26,13 @@ Sound effects
 ================================================================================
 
 In-app sound cues (packages/web/public/sounds/*.ogg) are original works
-authored for the Backspace project and are covered by the project license.
+authored for the VERTEX project and are covered by the project license.
 
 ================================================================================
 Icons and brand assets
 ================================================================================
 
-The Backspace name, logo, and app icons (assets/brand/,
+The VERTEX name, logo, and app icons (assets/brand/,
 packages/web/public/icons/, packages/desktop build resources) are original
 works and trademarks of the project. Neither the AGPL nor the commercial license
 grants any right to use these trademarks; trademark use is governed separately by
@@ -45,11 +45,11 @@ project license.
 npm dependencies
 ================================================================================
 
-Backspace depends on open-source packages distributed via npm, all under
+VERTEX depends on open-source packages distributed via npm, all under
 permissive licenses (predominantly MIT, ISC, Apache-2.0, and BSD variants).
 The image-processing dependency "sharp" loads libvips, distributed as a
 prebuilt binary under the LGPL-3.0-or-later license; it is used unmodified and
-dynamically, and is not statically linked into Backspace.
+dynamically, and is not statically linked into VERTEX.
 
 To regenerate the full, current dependency license inventory, run:
 

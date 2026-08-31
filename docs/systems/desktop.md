@@ -2,12 +2,12 @@
 
 Source files:
 - `packages/desktop/src/main.ts` — Main process: window management, tray, IPC handlers, auto-update, deep links, app lifecycle
-- `packages/desktop/src/preload.ts` — Context bridge: exposes `window.backspace` API to renderer
+- `packages/desktop/src/preload.ts` — Context bridge: exposes `window.VERTEX` API to renderer
 - `packages/desktop/src/activityDetector.ts` — Process polling, game dictionary loading/sync, activity change detection
 - `packages/desktop/src/keybindManager.ts` — Global keybinds via uIOhook, native keycode mapping, press/release tracking
 - `packages/web/src/stores/keybindStore.ts` — Client-side keybind persistence (Zustand + localStorage)
 - `packages/web/src/hooks/useKeybinds.ts` — Keybind dispatch: Electron IPC bridge + web capture-phase fallback
-- `packages/web/src/platform/electron.d.ts` — TypeScript declarations for `window.backspace`
+- `packages/web/src/platform/electron.d.ts` — TypeScript declarations for `window.VERTEX`
 - `packages/web/src/platform/platform.ts` — `isElectron()` / `isElectronMac()` / `getElectronAPI()` helpers
 - `packages/desktop/electron-builder.yml` — Build config, protocol registration, afterPack hook
 - `packages/desktop/scripts/afterPack.js` — Cross-platform native module cleanup (critical for builds)
@@ -17,10 +17,10 @@ Source files:
 
 ## Architecture Overview
 
-The desktop app wraps the Backspace web client in Electron with:
+The desktop app wraps the VERTEX web client in Electron with:
 - **Main process** (`main.ts`): Window lifecycle, tray icon, IPC handler registry, auto-update, deep linking, activity detection, keybind manager
-- **Preload bridge** (`preload.ts`): Exposes `window.backspace` API via `contextBridge` with full sandbox isolation (`contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`)
-- **Renderer**: The standard web client, detecting Electron via `typeof window.backspace !== 'undefined'`
+- **Preload bridge** (`preload.ts`): Exposes `window.VERTEX` API via `contextBridge` with full sandbox isolation (`contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`)
+- **Renderer**: The standard web client, detecting Electron via `typeof window.VERTEX !== 'undefined'`
 
 The desktop package compiles to CommonJS (`module: "commonjs"`) targeting ES2022. Electron version: 40+.
 
@@ -70,7 +70,7 @@ Close does **not** quit the app. The `close` event is intercepted; the window is
 
 ### URL Loading Priority
 
-1. `BACKSPACE_URL` environment variable (managed deployments)
+1. `VERTEX_URL` environment variable (managed deployments)
 2. Saved instance URL from `{userData}/instance-url.json`
 3. No URL: loads `resources/instance-picker.html` (local HTML file)
 
@@ -101,7 +101,7 @@ Dev-mode caveat: if a developer runs Electron pointed at the Vite dev server (`h
 
 ## Instance Picker
 
-When no instance URL is configured, the app loads `resources/instance-picker.html` — a self-contained HTML page where the user enters their Backspace instance URL. The renderer communicates the chosen URL back via the `set-instance-url` IPC handler.
+When no instance URL is configured, the app loads `resources/instance-picker.html` — a self-contained HTML page where the user enters their VERTEX instance URL. The renderer communicates the chosen URL back via the `set-instance-url` IPC handler.
 
 After navigation (both to an instance URL and back to the picker), the main process forces Electron to re-evaluate drag regions by momentarily resizing the window (+1px then back).
 
@@ -111,7 +111,7 @@ The tray menu, macOS app menu, and recovery surface all include a "Change Instan
 
 - Pre-fills the URL input with the current value.
 - Shows a Cancel button (hidden by default; only shown when a saved URL exists).
-- Switches the header copy from "Welcome to Backspace / Connect to your instance" to "Switch instance / Connect to a different Backspace instance, or cancel to stay."
+- Switches the header copy from "Welcome to VERTEX / Connect to your instance" to "Switch instance / Connect to a different VERTEX instance, or cancel to stay."
 
 **Cancel button behavior:** Clicking Cancel re-saves the existing URL via `setInstanceUrl` (idempotent) and navigates back to it. The saved URL is only overwritten when the user explicitly clicks Connect on a *different* URL. This means the user can always back out of an accidental "Change Instance" click.
 
@@ -142,8 +142,8 @@ The OS is the source of truth for `openAtLogin` on all platforms. Disk is used o
 | Platform | Method | Key parameters | Rationale |
 |----------|--------|----------------|-----------|
 | macOS    | `app.setLoginItemSettings({ openAtLogin, openAsHidden, args })` | `openAsHidden: startMinimized`; `args: ['--hidden']` when `startMinimized` | Both detection paths covered (legacy `wasOpenedAsHidden` for macOS < 13 and `--hidden` argv for macOS 13+) |
-| Windows  | `app.setLoginItemSettings({ openAtLogin, enabled, path, args, name })` | `enabled: openAtLogin`; `path: process.execPath`; `args: ['--hidden']` when `startMinimized`; `name: 'Backspace'` | `enabled` is required to clear Task Manager's `StartupApproved\Run` disable when re-enabling. `path`/`args` enable correct matching in subsequent `getLoginItemSettings`. |
-| Linux    | `app.setLoginItemSettings({ openAtLogin, name, path?, args? })` | `name: 'backspace'` (deterministic `.desktop` filename); `path: $APPIMAGE` when running as AppImage; `args: ['--hidden']` when `startMinimized` | `name` ensures stable `~/.config/autostart/backspace.desktop` path. AppImage path tracks updates. |
+| Windows  | `app.setLoginItemSettings({ openAtLogin, enabled, path, args, name })` | `enabled: openAtLogin`; `path: process.execPath`; `args: ['--hidden']` when `startMinimized`; `name: 'VERTEX'` | `enabled` is required to clear Task Manager's `StartupApproved\Run` disable when re-enabling. `path`/`args` enable correct matching in subsequent `getLoginItemSettings`. |
+| Linux    | `app.setLoginItemSettings({ openAtLogin, name, path?, args? })` | `name: 'VERTEX'` (deterministic `.desktop` filename); `path: $APPIMAGE` when running as AppImage; `args: ['--hidden']` when `startMinimized` | `name` ensures stable `~/.config/autostart/VERTEX.desktop` path. AppImage path tracks updates. |
 
 ### Startup Re-Apply
 
@@ -151,7 +151,7 @@ The unconditional startup re-apply was removed (it was overwriting user changes 
 
 ```
 if linux AND $APPIMAGE is set:
-  read ~/.config/autostart/backspace.desktop → recordedExecPath (null if file missing)
+  read ~/.config/autostart/VERTEX.desktop → recordedExecPath (null if file missing)
   if saved.openAtLogin AND recordedExecPath != null AND $APPIMAGE != recordedExecPath:
     re-apply to refresh the autostart entry's Exec= path
   (a missing .desktop file is treated as user-disabled — never recreated here)
@@ -193,7 +193,7 @@ All four assets are produced by `scripts/gen-icons.mjs` from `assets/brand/{mark
 
 | Item | Action |
 |------|--------|
-| Show Backspace | `window.show()` + `focus()` |
+| Show VERTEX | `window.show()` + `focus()` |
 | Hide | `window.hide()` |
 | Change Instance | Load picker (non-destructive — saved URL preserved), show + focus |
 | Quit | Set `isQuitting = true`, `app.quit()` |
@@ -204,9 +204,9 @@ Tray click toggles window visibility (show/hide).
 
 ## Deep Linking
 
-Protocol: `backspace://`
+Protocol: `VERTEX://`
 
-Registered via `app.setAsDefaultProtocolClient('backspace')` and in `electron-builder.yml` under `protocols`.
+Registered via `app.setAsDefaultProtocolClient('VERTEX')` and in `electron-builder.yml` under `protocols`.
 
 ### Platform Handling
 
@@ -218,7 +218,7 @@ Registered via `app.setAsDefaultProtocolClient('backspace')` and in `electron-bu
 
 ### Flow
 
-1. `handleDeepLink(url)` receives a `backspace://` URL
+1. `handleDeepLink(url)` receives a `VERTEX://` URL
 2. If window exists: sends `deep-link` IPC to renderer, shows + focuses window
 3. If app not ready: stores in `pendingDeepLink` for delivery after `ready-to-show`
 
@@ -240,7 +240,7 @@ Powered by `electron-updater`. Loaded via `require()` (not import) for graceful 
 ```
 autoDownload: true
 autoInstallOnAppQuit: true
-Publish: GitHub (TheZwiss/backspace)
+Publish: GitHub (TheZwiss/VERTEX)
 ```
 
 **Signing status (as of v1.0.0):** all builds are unsigned. Consequences:
@@ -286,7 +286,7 @@ All `autoUpdater` events update the `RecoveryStateStore` (drives tray + macOS me
 
 On `update-downloaded`, a native OS notification fires **only when `mainWindow?.isFocused()` is false** — symmetric suppression across normal and recovery modes (the in-app banner / Restart button is visible to a focused user; the notification covers minimized/tray/background-desktop cases). Notification click calls `autoUpdater.quitAndInstall()` directly (force-kill fix path — see Recovery Mode section).
 
-Win32 only: `app.setAppUserModelId('com.backspace.desktop')` is set early in startup so notifications attribute to "Backspace" instead of "Electron" in Windows Action Center.
+Win32 only: `app.setAppUserModelId('com.VERTEX.desktop')` is set early in startup so notifications attribute to "VERTEX" instead of "Electron" in Windows Action Center.
 
 `extractErrorCode(err)` in `recovery.ts` extracts the `code` field from `electron-updater` errors when present (string only); used to populate `RecoveryState.lastUpdateError.code`.
 
@@ -325,7 +325,7 @@ Two flags not in the public state: `inRecoveryMode` (private to the store, guard
 | `did-fail-load` | Network/HTTP transport failures (DNS, refused, TLS, transport-level) | Filtered by `isMainFrame`; ignores `errorCode === -3` (ERR_ABORTED). 5xx with body does NOT fire — falls through to boot timer. |
 | `render-process-gone` | Renderer process termination | Filtered by reason; `clean-exit` ignored. Triggers on `crashed`, `killed`, `oom`, `launch-failed`, `integrity-failure`. |
 | `unresponsive` | Main thread blocked >10s | 10s grace period; cancelled by `responsive` event. Matches Chrome's "page not responding" pattern. |
-| Boot-completion ping | JS exceptions during boot, module-init throws, broken preload calls — failures the other events don't catch | `window.backspace.rendererReady()` from web side; main-side timer (20s, packaged builds only, http(s):// URLs only) |
+| Boot-completion ping | JS exceptions during boot, module-init throws, broken preload calls — failures the other events don't catch | `window.VERTEX.rendererReady()` from web side; main-side timer (20s, packaged builds only, http(s):// URLs only) |
 
 The boot ping is **not a heartbeat** — it is a one-shot per-navigation signal. Web-side call sites:
 
@@ -349,7 +349,7 @@ Page reads initial state via `getRecoveryState()` IPC and subscribes to `recover
 | Check for Updates | always | not in `'checking'` / `'downloading'` / `'downloaded'` |
 | Change Instance | always | always |
 | Open Releases Page | `updateState === 'error'` | always when visible |
-| Quit Backspace | always | always |
+| Quit VERTEX | always | always |
 
 **Change Instance from recovery is non-destructive.** The saved URL is not cleared when navigating to the picker; see the Instance Picker section above for the full behavior (pre-filled input, Cancel button, header copy update).
 
@@ -414,7 +414,7 @@ Executed before each release. See `docs/superpowers/specs/2026-05-03-electron-re
 
 Badge count: `set-badge-count` IPC calls `app.setBadgeCount()` (macOS dock badge, Windows taskbar overlay).
 
-**Win32 attribution:** `app.setAppUserModelId('com.backspace.desktop')` set early in startup so notifications attribute to "Backspace" in Windows Action Center.
+**Win32 attribution:** `app.setAppUserModelId('com.VERTEX.desktop')` set early in startup so notifications attribute to "VERTEX" in Windows Action Center.
 
 ---
 
@@ -515,7 +515,7 @@ All handlers registered in `main.ts:registerIpcHandlers()`.
 | Channel | Payload | Trigger |
 |---------|---------|---------|
 | `window-focus-changed` | `boolean` | Window focus/blur |
-| `deep-link` | `string` (URL) | `backspace://` protocol activation |
+| `deep-link` | `string` (URL) | `VERTEX://` protocol activation |
 | `update-available` | `{ version }` | electron-updater |
 | `update-downloaded` | `{ version }` | electron-updater |
 | `update-error` | `{ message, releaseUrl }` | electron-updater (only after confirmed update) |
@@ -529,11 +529,11 @@ All handlers registered in `main.ts:registerIpcHandlers()`.
 
 ---
 
-## Preload Bridge (`window.backspace`)
+## Preload Bridge (`window.VERTEX`)
 
-The preload script exposes the `window.backspace` API via `contextBridge.exposeInMainWorld`. TypeScript declarations are in `packages/web/src/platform/electron.d.ts`.
+The preload script exposes the `window.VERTEX` API via `contextBridge.exposeInMainWorld`. TypeScript declarations are in `packages/web/src/platform/electron.d.ts`.
 
-Detection: `typeof window.backspace !== 'undefined'` (see `platform.ts:isElectron()`).
+Detection: `typeof window.VERTEX !== 'undefined'` (see `platform.ts:isElectron()`).
 
 ### API Surface
 
@@ -612,7 +612,7 @@ interface GameEntry {
 
 ### Remote Sync (`syncDictionary()`)
 
-**Remote URL:** `https://raw.githubusercontent.com/TheZwiss/backspace/main/packages/desktop/resources/games.json`
+**Remote URL:** `https://raw.githubusercontent.com/TheZwiss/VERTEX/main/packages/desktop/resources/games.json`
 
 ```
 Step 1: Determine best local version (cache vs seed, whichever has higher version)
@@ -682,7 +682,7 @@ interface Activity {
 
 ### Overview
 
-Captures global keyboard and mouse events via `uiohook-napi` (OS-level input hook) and matches them against user-configured keybinds. Works even when the Backspace window is not focused.
+Captures global keyboard and mouse events via `uiohook-napi` (OS-level input hook) and matches them against user-configured keybinds. Works even when the VERTEX window is not focused.
 
 ### Native Keycode to DOM Code Mapping
 
@@ -696,7 +696,7 @@ uIOhook reports hardware scan codes. The web UI stores keybinds as djb2 hashes o
 | Digits | 0-9 (keycodes 2-11) |
 | Function keys | F1-F24 (keycodes 59-107) |
 | Modifiers | ControlLeft/Right, AltLeft/Right, ShiftLeft/Right, MetaLeft/Right |
-| Special | Backspace, Tab, Enter, CapsLock, Escape, Space |
+| Special | VERTEX, Tab, Enter, CapsLock, Escape, Space |
 | Navigation | PageUp/Down, Home, End, Arrows, Insert, Delete |
 | Punctuation | Semicolon, Equal, Comma, Minus, Period, Slash, Backquote, Brackets, Backslash, Quote |
 | Numpad | Numpad0-9, NumpadMultiply/Add/Subtract/Decimal/Divide |
@@ -798,7 +798,7 @@ On non-macOS platforms, `checkAccessibility()` always returns `true`.
 
 ### Keybind Store (`keybindStore.ts`)
 
-Persisted via Zustand `persist` middleware to `localStorage` key `backspace-keybinds` (version 1).
+Persisted via Zustand `persist` middleware to `localStorage` key `VERTEX-keybinds` (version 1).
 
 ```typescript
 interface Keybind {
@@ -868,8 +868,8 @@ Toggle actions only fire on `pressed: true`. Push-to-talk fires on both press (u
 ### electron-builder Configuration (`electron-builder.yml`)
 
 ```yaml
-appId: com.backspace.desktop
-productName: Backspace
+appId: com.VERTEX.desktop
+productName: VERTEX
 artifactName: "${productName}-${version}-${arch}.${ext}"
 output: dist-electron
 ```
@@ -933,7 +933,7 @@ All desktop and web brand assets are generated by `scripts/gen-icons.mjs` from s
 - `mark.svg` — bare gradient B. Drives the PWA maskable inner (60 % scale on `#1d1d1b`) and the Win/Linux tray icons.
 - `mark-mono-dark.svg` — solid-black B. Drives the macOS menu-bar template tray icon (alpha + black; OS recolours).
 
-The `dev` script copies the committed `build/icon.icns` into Electron's bundled `Resources/electron.icns` so the macOS dev dock shows the Backspace mark instead of the default Electron logo. This dev-only patch is independent of how `.icns` is generated.
+The `dev` script copies the committed `build/icon.icns` into Electron's bundled `Resources/electron.icns` so the macOS dev dock shows the VERTEX mark instead of the default Electron logo. This dev-only patch is independent of how `.icns` is generated.
 
 See `scripts/gen-icons.README.md` for the regeneration workflow and version-bump caveat (sharp / png-to-ico / png2icons upgrades change encoder output, requiring a follow-up regen+commit).
 
@@ -943,7 +943,7 @@ See `scripts/gen-icons.README.md` for the regeneration workflow and version-bump
 publish:
   - provider: github
     owner: TheZwiss
-    repo: backspace
+    repo: VERTEX
 ```
 
 GitHub releases are the update source. The `electron-updater` library handles checking, downloading, and applying updates.
@@ -954,19 +954,19 @@ GitHub releases are the update source. The `electron-updater` library handles ch
 
 ### userData Folder Location
 
-The runtime userData folder is named `Backspace` on every platform:
+The runtime userData folder is named `VERTEX` on every platform:
 
 | Platform | Path |
 |---|---|
-| macOS | `~/Library/Application Support/Backspace/` |
-| Linux | `~/.config/Backspace/` |
-| Windows | `%APPDATA%\Backspace\` |
+| macOS | `~/Library/Application Support/VERTEX/` |
+| Linux | `~/.config/VERTEX/` |
+| Windows | `%APPDATA%\VERTEX\` |
 
-Electron's default `app.getName()` reads `package.json`'s `name`, which in this monorepo is `@backspace/desktop` — that would land userData under a nested `@backspace/desktop/` folder. To prevent the monorepo's internal package name from leaking into a user-facing filesystem path, `main.ts` calls `app.setName('Backspace')` at module load, before any `app.getPath('userData')` consumer runs. electron-builder's `productName: Backspace` only renames the bundle metadata (`Backspace.app`, executable, installer, app menu) — it does not affect runtime userData.
+Electron's default `app.getName()` reads `package.json`'s `name`, which in this monorepo is `@VERTEX/desktop` — that would land userData under a nested `@VERTEX/desktop/` folder. To prevent the monorepo's internal package name from leaking into a user-facing filesystem path, `main.ts` calls `app.setName('VERTEX')` at module load, before any `app.getPath('userData')` consumer runs. electron-builder's `productName: VERTEX` only renames the bundle metadata (`VERTEX.app`, executable, installer, app menu) — it does not affect runtime userData.
 
 ### One-Time Migration
 
-Earlier builds wrote to `<appData>/@backspace/desktop/`. On first launch after the rename, `migrateUserData()` (in `userDataMigration.ts`) atomically moves that folder to `<appData>/Backspace/` and removes the now-empty `@backspace/` parent. The migration is conservative: if the new folder already exists and is non-empty, it skips the move rather than clobbering existing state. Failures are logged, not thrown — a failed migration leaves the user with a fresh-install state, which is degraded but not broken.
+Earlier builds wrote to `<appData>/@VERTEX/desktop/`. On first launch after the rename, `migrateUserData()` (in `userDataMigration.ts`) atomically moves that folder to `<appData>/VERTEX/` and removes the now-empty `@VERTEX/` parent. The migration is conservative: if the new folder already exists and is non-empty, it skips the move rather than clobbering existing state. Failures are logged, not thrown — a failed migration leaves the user with a fresh-install state, which is degraded but not broken.
 
 ### Files
 

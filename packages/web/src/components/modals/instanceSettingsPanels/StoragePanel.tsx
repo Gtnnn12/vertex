@@ -3,6 +3,7 @@ import { api } from '../../../api/client';
 import type { StorageStats, CleanupResult } from '@backspace/shared';
 import { useSettingsStore } from '../../../stores/settingsStore';
 import { useUIStore } from '../../../stores/uiStore';
+import { useLanguage } from '../../../contexts/LanguageContext';
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 B';
@@ -33,6 +34,7 @@ export function StoragePanel() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const addToast = useUIStore((s) => s.addToast);
+  const { t } = useLanguage();
   const [cleanupResult, setCleanupResult] = useState<CleanupResult | null>(null);
   const [cleaning, setCleaning] = useState(false);
   const [previewDone, setPreviewDone] = useState(false);
@@ -63,7 +65,7 @@ export function StoragePanel() {
       const data = await api.admin.storageStats();
       setStats(data);
     } catch (err) {
-      setLoadError(err instanceof Error ? err.message : 'Failed to load storage stats');
+      setLoadError(err instanceof Error ? err.message : t('failed_to_load_storage_stats'));
     } finally {
       setLoading(false);
     }
@@ -101,9 +103,9 @@ export function StoragePanel() {
     try {
       await updateInstanceSettings({ maxUploadSizeMb: mb });
       const display = mb >= 1024 ? `${formatUnitValue(mb / 1024)} GB` : `${mb} MB`;
-      addToast(`Upload limit set to ${display}`, 'success');
+      addToast(t('upload_limit_set_to').replace('{value}', display), 'success');
     } catch {
-      addToast('Failed to update upload limit', 'warning');
+      addToast(t('failed_to_update_upload_limit'), 'warning');
     } finally {
       setUploadLimitSaving(false);
     }
@@ -119,11 +121,11 @@ export function StoragePanel() {
         setMediaPreviewDone(true);
       } else {
         setMediaPreviewDone(false);
-        addToast(`Deleted ${result.deletedFiles} file${result.deletedFiles !== 1 ? 's' : ''} (${formatBytes(result.freedBytes)})`, 'success');
+        addToast(t('deleted_files').replace('{count}', String(result.deletedFiles)).replace('{size}', formatBytes(result.freedBytes)), 'success');
         await fetchStats();
       }
     } catch (err) {
-      addToast(err instanceof Error ? err.message : 'Media cleanup failed', 'warning');
+      addToast(err instanceof Error ? err.message : t('media_cleanup_failed'), 'warning');
     } finally {
       setMediaCleaning(false);
     }
@@ -140,11 +142,11 @@ export function StoragePanel() {
         setTusPreviewDone(true);
       } else {
         setTusPreviewDone(false);
-        addToast(`Cleaned ${result.deletedFiles} stale upload session${result.deletedFiles !== 1 ? 's' : ''} (${formatBytes(result.freedBytes)})`, 'success');
+        addToast(t('cleaned_stale_sessions').replace('{count}', String(result.deletedFiles)).replace('{size}', formatBytes(result.freedBytes)), 'success');
         await fetchStats();
       }
     } catch (err) {
-      addToast(err instanceof Error ? err.message : 'Stale upload cleanup failed', 'warning');
+      addToast(err instanceof Error ? err.message : t('stale_upload_cleanup_failed'), 'warning');
     } finally {
       setTusCleaning(false);
     }
@@ -160,25 +162,25 @@ export function StoragePanel() {
         setPreviewDone(true);
       } else {
         setPreviewDone(false);
-        addToast(`Cleaned up ${result.deletedFiles} file${result.deletedFiles !== 1 ? 's' : ''} (${formatBytes(result.freedBytes)})`, 'success');
+        addToast(t('cleaned_up_files').replace('{count}', String(result.deletedFiles)).replace('{size}', formatBytes(result.freedBytes)), 'success');
         await fetchStats();
       }
     } catch (err) {
-      addToast(err instanceof Error ? err.message : 'Cleanup failed', 'warning');
+      addToast(err instanceof Error ? err.message : t('cleanup_failed'), 'warning');
     } finally {
       setCleaning(false);
     }
   };
 
   if (loading) {
-    return <div className="text-sm text-txt-tertiary">Loading storage stats...</div>;
+    return <div className="text-sm text-txt-tertiary">{t('loading_storage_stats')}</div>;
   }
 
   if (loadError && !stats) {
     return (
       <div className="space-y-3">
         <div className="p-2 bg-accent-rose/10 border border-accent-rose/30 rounded text-txt-danger text-sm">{loadError}</div>
-        <button onClick={fetchStats} className="text-sm text-accent-primary hover:underline">Retry</button>
+        <button onClick={fetchStats} className="text-sm text-accent-primary hover:underline">{t('retry')}</button>
       </div>
     );
   }
@@ -189,48 +191,48 @@ export function StoragePanel() {
 
   return (
     <div className="space-y-5">
-      <h2 className="text-lg font-semibold text-txt-primary">Storage</h2>
+      <h2 className="text-lg font-semibold text-txt-primary">{t('storage')}</h2>
       <div className="text-xs text-txt-tertiary">
-        Monitor disk usage and clean up orphaned files left behind by deleted content or replaced avatars/banners.
+        {t('storage_hint')}
       </div>
 
       {/* Storage Overview */}
       <div>
-        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">Storage Overview</div>
+        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">{t('storage_overview')}</div>
         <div className="grid grid-cols-2 gap-2">
           <div className="rounded-lg bg-white/[0.02] p-3.5">
-            <div className="text-xs text-txt-tertiary mb-0.5">Total Files</div>
+            <div className="text-xs text-txt-tertiary mb-0.5">{t('total_files')}</div>
             <div className="text-lg font-semibold text-txt-primary">{stats.totalFiles}</div>
             <div className="text-xs text-txt-tertiary">{formatBytes(stats.totalSize)}</div>
           </div>
           <div className="rounded-lg bg-white/[0.02] p-3.5">
-            <div className="text-xs text-txt-tertiary mb-0.5">Referenced</div>
+            <div className="text-xs text-txt-tertiary mb-0.5">{t('referenced')}</div>
             <div className="text-lg font-semibold text-txt-primary">{stats.referencedFiles}</div>
             <div className="text-xs text-txt-tertiary">{formatBytes(stats.referencedSize)}</div>
           </div>
           <div className="rounded-lg bg-white/[0.02] p-3.5">
-            <div className="text-xs text-txt-tertiary mb-0.5">Orphaned Files</div>
+            <div className="text-xs text-txt-tertiary mb-0.5">{t('orphaned_files')}</div>
             <div className={`text-lg font-semibold ${stats.orphanedFiles > 0 ? 'text-accent-amber' : 'text-txt-primary'}`}>
               {stats.orphanedFiles}
             </div>
             <div className="text-xs text-txt-tertiary">{formatBytes(stats.orphanedSize)}</div>
           </div>
           <div className="rounded-lg bg-white/[0.02] p-3.5">
-            <div className="text-xs text-txt-tertiary mb-0.5">Unlinked Uploads</div>
+            <div className="text-xs text-txt-tertiary mb-0.5">{t('unlinked_uploads')}</div>
             <div className={`text-lg font-semibold ${stats.unlinkedAttachments > 0 ? 'text-accent-amber' : 'text-txt-primary'}`}>
               {stats.unlinkedAttachments}
             </div>
             <div className="text-xs text-txt-tertiary">{formatBytes(stats.unlinkedSize)}</div>
           </div>
           <div className="rounded-lg bg-white/[0.02] p-3.5">
-            <div className="text-xs text-txt-tertiary mb-0.5">Dangling Records</div>
+            <div className="text-xs text-txt-tertiary mb-0.5">{t('dangling_records')}</div>
             <div className={`text-lg font-semibold ${stats.danglingAttachments > 0 ? 'text-accent-amber' : 'text-txt-primary'}`}>
               {stats.danglingAttachments}
             </div>
             <div className="text-xs text-txt-tertiary">{formatBytes(stats.danglingSize)}</div>
           </div>
           <div className="rounded-lg bg-white/[0.02] p-3.5">
-            <div className="text-xs text-txt-tertiary mb-0.5">Stale Uploads</div>
+            <div className="text-xs text-txt-tertiary mb-0.5">{t('stale_uploads')}</div>
             <div className={`text-lg font-semibold ${stats.staleTusSessions > 0 ? 'text-accent-amber' : 'text-txt-primary'}`}>
               {stats.staleTusSessions}
             </div>
@@ -242,14 +244,14 @@ export function StoragePanel() {
       {/* File Type Breakdown */}
       {stats.breakdown.length > 0 && (
         <div>
-          <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">File Type Breakdown</div>
+          <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">{t('file_type_breakdown')}</div>
           <div className="rounded-lg bg-white/[0.02] p-3.5">
             <div className="space-y-1.5">
               {stats.breakdown.map((b) => (
                 <div key={b.type} className="flex items-center justify-between text-sm">
                   <span className="text-txt-secondary capitalize">{b.type}</span>
                   <span className="text-txt-tertiary">
-                    {b.count} file{b.count !== 1 ? 's' : ''} — {formatBytes(b.size)}
+                    {t('file_count').replace('{count}', String(b.count)).replace('{size}', formatBytes(b.size))}
                   </span>
                 </div>
               ))}
@@ -260,10 +262,10 @@ export function StoragePanel() {
 
       {/* Upload Limit */}
       <div>
-        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">Upload Limit</div>
+        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">{t('upload_limit')}</div>
         <div className="rounded-lg bg-white/[0.02] p-3.5">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-            <label className="text-sm text-txt-secondary whitespace-nowrap">Max file size</label>
+            <label className="text-sm text-txt-secondary whitespace-nowrap">{t('max_file_size')}</label>
             <div className="flex items-center gap-3">
               <input
                 type="number"
@@ -295,7 +297,7 @@ export function StoragePanel() {
               disabled={!uploadLimitDirty || uploadLimitSaving || parsedUploadMb === null}
               className="px-3 py-1 bg-accent-primary hover:bg-accent-primary/80 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 ml-auto"
             >
-              {uploadLimitSaving ? 'Saving...' : 'Save'}
+              {uploadLimitSaving ? t('saving') : t('save')}
             </button>
           </div>
         </div>
@@ -303,10 +305,10 @@ export function StoragePanel() {
 
       {/* Cleanup Actions */}
       <div>
-        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">Cleanup</div>
+        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">{t('cleanup')}</div>
         <div className="rounded-lg bg-white/[0.02] p-3.5 space-y-3">
           {!hasOrphans && (
-            <div className="text-sm text-txt-tertiary">No orphaned files, stale uploads, or dangling records found.</div>
+            <div className="text-sm text-txt-tertiary">{t('no_orphaned_files')}</div>
           )}
 
           {hasOrphans && (
@@ -316,14 +318,14 @@ export function StoragePanel() {
                 disabled={cleaning}
                 className="px-3 py-1.5 bg-white/[0.06] hover:bg-white/[0.1] text-txt-secondary text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
               >
-                {cleaning ? 'Scanning...' : 'Preview Cleanup'}
+                {cleaning ? t('scanning') : t('preview_cleanup')}
               </button>
               <button
                 onClick={() => handleCleanup(false)}
                 disabled={cleaning || !previewDone}
                 className="px-3 py-1.5 bg-accent-rose hover:bg-accent-rose/80 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
               >
-                {cleaning ? 'Cleaning...' : 'Clean Up Now'}
+                {cleaning ? t('cleaning') : t('clean_up_now')}
               </button>
             </div>
           )}
@@ -335,17 +337,17 @@ export function StoragePanel() {
                 : 'bg-status-online/10 border border-status-online/30 text-status-online'
             }`}>
               <div className="font-medium mb-1">
-                {cleanupResult.dryRun ? 'Preview — no files deleted' : 'Cleanup complete'}
+                {cleanupResult.dryRun ? t('preview_no_files_deleted') : t('cleanup_complete')}
               </div>
               <div>
-                {cleanupResult.deletedFiles} orphaned/dangling file{cleanupResult.deletedFiles !== 1 ? 's' : ''} ({formatBytes(cleanupResult.freedBytes)})
+                {t('orphaned_dangling_count').replace('{count}', String(cleanupResult.deletedFiles)).replace('{size}', formatBytes(cleanupResult.freedBytes))}
                 {cleanupResult.deletedAttachmentRecords > 0 && (
-                  <>, {cleanupResult.deletedAttachmentRecords} stale upload record{cleanupResult.deletedAttachmentRecords !== 1 ? 's' : ''}</>
+                  <>{t('stale_record_count').replace('{count}', String(cleanupResult.deletedAttachmentRecords))}</>
                 )}
               </div>
               {cleanupResult.errors.length > 0 && (
                 <div className="mt-1 text-txt-danger">
-                  {cleanupResult.errors.length} error{cleanupResult.errors.length !== 1 ? 's' : ''}: {cleanupResult.errors[0]}
+                  {t('error_count').replace('{count}', String(cleanupResult.errors.length))}: {cleanupResult.errors[0]}
                 </div>
               )}
             </div>
@@ -355,13 +357,13 @@ export function StoragePanel() {
 
       {/* Stale Uploads */}
       <div>
-        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">Stale Uploads</div>
+        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">{t('stale_uploads')}</div>
         <div className="rounded-lg bg-white/[0.02] p-3.5 space-y-3">
           <div className="text-xs text-txt-tertiary">
-            Abandoned tus upload sessions in <code className="text-txt-secondary">.tus/</code> (paused/crashed without DELETE). Auto-expire runs every 24 hours; this lets you sweep proactively.
+            {t('stale_uploads_hint')}
           </div>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-            <label className="text-sm text-txt-secondary whitespace-nowrap">Max age (hours)</label>
+            <label className="text-sm text-txt-secondary whitespace-nowrap">{t('max_age_hours')}</label>
             <input
               type="number"
               min={0.5}
@@ -383,14 +385,14 @@ export function StoragePanel() {
               disabled={tusCleaning || tusMaxAgeHours <= 0}
               className="px-3 py-1.5 bg-white/[0.06] hover:bg-white/[0.1] text-txt-secondary text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
             >
-              {tusCleaning ? 'Scanning...' : 'Preview Cleanup'}
+              {tusCleaning ? t('scanning') : t('preview_cleanup')}
             </button>
             <button
               onClick={() => handleTusCleanup(false)}
               disabled={tusCleaning || !tusPreviewDone}
               className="px-3 py-1.5 bg-accent-rose hover:bg-accent-rose/80 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
             >
-              {tusCleaning ? 'Cleaning...' : 'Clean Up Now'}
+              {tusCleaning ? t('cleaning') : t('clean_up_now')}
             </button>
           </div>
 
@@ -401,14 +403,14 @@ export function StoragePanel() {
                 : 'bg-status-online/10 border border-status-online/30 text-status-online'
             }`}>
               <div className="font-medium mb-1">
-                {tusCleanupResult.dryRun ? 'Preview — no files deleted' : 'Cleanup complete'}
+                {tusCleanupResult.dryRun ? t('preview_no_files_deleted') : t('cleanup_complete')}
               </div>
               <div>
-                {tusCleanupResult.deletedFiles} session file{tusCleanupResult.deletedFiles !== 1 ? 's' : ''} ({formatBytes(tusCleanupResult.freedBytes)})
+                {t('session_file_count').replace('{count}', String(tusCleanupResult.deletedFiles)).replace('{size}', formatBytes(tusCleanupResult.freedBytes))}
               </div>
               {tusCleanupResult.errors.length > 0 && (
                 <div className="mt-1 text-txt-danger">
-                  {tusCleanupResult.errors.length} error{tusCleanupResult.errors.length !== 1 ? 's' : ''}: {tusCleanupResult.errors[0]}
+                  {t('error_count').replace('{count}', String(tusCleanupResult.errors.length))}: {tusCleanupResult.errors[0]}
                 </div>
               )}
             </div>
@@ -418,10 +420,10 @@ export function StoragePanel() {
 
       {/* Media Retention */}
       <div>
-        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">Media Retention</div>
+        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">{t('media_retention')}</div>
         <div className="rounded-lg bg-white/[0.02] p-3.5 space-y-3">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-            <label className="text-sm text-txt-secondary whitespace-nowrap">Delete chat media older than</label>
+            <label className="text-sm text-txt-secondary whitespace-nowrap">{t('delete_media_older_than')}</label>
             <div className="flex items-center gap-3">
               <input
                 type="number"
@@ -430,7 +432,7 @@ export function StoragePanel() {
                 onChange={(e) => { setMediaAgeDays(Number(e.target.value)); setMediaPreviewDone(false); setMediaCleanupResult(null); }}
                 className="input-standard w-20 px-2 py-1 text-sm text-center"
               />
-              <span className="text-sm text-txt-tertiary">days</span>
+              <span className="text-sm text-txt-tertiary">{t('days')}</span>
             </div>
           </div>
 
@@ -440,14 +442,14 @@ export function StoragePanel() {
               disabled={mediaCleaning || mediaAgeDays < 1}
               className="px-3 py-1.5 bg-white/[0.06] hover:bg-white/[0.1] text-txt-secondary text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
             >
-              {mediaCleaning ? 'Scanning...' : 'Preview'}
+              {mediaCleaning ? t('scanning') : t('preview')}
             </button>
             <button
               onClick={() => handleMediaCleanup(false)}
               disabled={mediaCleaning || !mediaPreviewDone}
               className="px-3 py-1.5 bg-accent-rose hover:bg-accent-rose/80 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
             >
-              {mediaCleaning ? 'Deleting...' : 'Delete Now'}
+              {mediaCleaning ? t('deleting') : t('delete_now')}
             </button>
           </div>
 
@@ -458,14 +460,14 @@ export function StoragePanel() {
                 : 'bg-status-online/10 border border-status-online/30 text-status-online'
             }`}>
               <div className="font-medium mb-1">
-                {mediaCleanupResult.dryRun ? 'Preview — no files deleted' : 'Cleanup complete'}
+                {mediaCleanupResult.dryRun ? t('preview_no_files_deleted') : t('cleanup_complete')}
               </div>
               <div>
-                {mediaCleanupResult.deletedFiles} file{mediaCleanupResult.deletedFiles !== 1 ? 's' : ''} ({formatBytes(mediaCleanupResult.freedBytes)})
+                {t('media_file_count').replace('{count}', String(mediaCleanupResult.deletedFiles)).replace('{size}', formatBytes(mediaCleanupResult.freedBytes))}
               </div>
               {mediaCleanupResult.errors.length > 0 && (
                 <div className="mt-1 text-txt-danger">
-                  {mediaCleanupResult.errors.length} error{mediaCleanupResult.errors.length !== 1 ? 's' : ''}: {mediaCleanupResult.errors[0]}
+                  {t('error_count').replace('{count}', String(mediaCleanupResult.errors.length))}: {mediaCleanupResult.errors[0]}
                 </div>
               )}
             </div>
@@ -477,7 +479,7 @@ export function StoragePanel() {
         onClick={() => { setCleanupResult(null); setPreviewDone(false); fetchStats(); }}
         className="text-sm text-accent-primary hover:underline"
       >
-        Refresh Stats
+        {t('refresh_stats')}
       </button>
     </div>
   );

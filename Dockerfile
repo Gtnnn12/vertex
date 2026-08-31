@@ -1,5 +1,5 @@
 # ============================================================
-# Backspace — Multi-stage Docker build
+# VERTEX — Multi-stage Docker build
 # ============================================================
 
 # Stage 1: Install dependencies and build frontend
@@ -30,7 +30,7 @@ COPY packages/server/ packages/server/
 COPY packages/web/ packages/web/
 
 # Build the web frontend
-RUN pnpm --filter @backspace/web build
+RUN pnpm --filter @VERTEX/web build
 
 # ============================================================
 # Stage 2: Production runtime
@@ -82,15 +82,15 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOST=0.0.0.0
-ENV DB_PATH=/app/data/backspace.db
+ENV DB_PATH=/app/data/VERTEX.db
 ENV UPLOAD_DIR=/app/data/uploads
 
 # AGPL-3.0 § 13 source offer: bake the running build's git commit into the image
 # so GET /api/instance/info can advertise the exact version. Passed via
-# --build-arg BACKSPACE_COMMIT=$(git rev-parse --short HEAD) (see deploy.sh /
+# --build-arg VERTEX_COMMIT=$(git rev-parse --short HEAD) (see deploy.sh /
 # docker-compose.yml). Empty when git is unavailable → server treats as null.
-ARG BACKSPACE_COMMIT=""
-ENV BACKSPACE_COMMIT=$BACKSPACE_COMMIT
+ARG VERTEX_COMMIT=""
+ENV VERTEX_COMMIT=$VERTEX_COMMIT
 
 EXPOSE 3000
 

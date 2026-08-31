@@ -1,6 +1,6 @@
 # Screenshots
 
-A tour of Backspace in action, taken from a live test instance. For a quick
+A tour of VERTEX in action, taken from a live test instance. For a quick
 overview, see the [Screenshots section of the README](../README.md#screenshots).
 
 > Images are captured from the Electron desktop app; the web app is identical.

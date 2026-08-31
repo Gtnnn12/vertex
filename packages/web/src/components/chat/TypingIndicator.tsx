@@ -1,12 +1,14 @@
 import React, { useMemo } from 'react';
 import { useChatStore } from '../../stores/chatStore';
 import { useAuthStore } from '../../stores/authStore';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface TypingIndicatorProps {
   channelId: string;
 }
 
 export function TypingIndicator({ channelId }: TypingIndicatorProps) {
+  const { t } = useLanguage();
   const typingUsersRaw = useChatStore((s) => s.typingUsers.get(channelId));
   const currentUserId = useAuthStore((s) => s.user?.id);
 
@@ -22,11 +24,13 @@ export function TypingIndicator({ channelId }: TypingIndicatorProps) {
 
   let text = '';
   if (others.length === 1) {
-    text = `${others[0]!.username} is typing`;
+    text = t('is_typing_template').replace('{name}', others[0]!.username);
   } else if (others.length === 2) {
-    text = `${others[0]!.username} and ${others[1]!.username} are typing`;
+    text = t('are_typing_two')
+      .replace('{name1}', others[0]!.username)
+      .replace('{name2}', others[1]!.username);
   } else {
-    text = 'Several people are typing';
+    text = t('several_people_are_typing');
   }
 
   return (

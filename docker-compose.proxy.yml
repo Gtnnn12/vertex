@@ -1,5 +1,5 @@
 # ============================================================
-# Backspace — Reverse-proxy / Tunnel override
+# VERTEX — Reverse-proxy / Tunnel override
 # ============================================================
 # Overlay for Mode 2 (behind your own reverse proxy) and Mode 3 (tunnel, e.g.
 # Cloudflare Tunnel / Tailscale). Layer it on top of the base compose file:
@@ -20,7 +20,7 @@
 # ============================================================
 
 services:
-  backspace:
+  VERTEX:
     # Bind to loopback only. The reverse proxy / tunnel connects over 127.0.0.1;
     # the app is never reachable directly from the network. Container listens on
     # PORT (default 3000); APP_PORT is the host-side port your proxy forwards to.

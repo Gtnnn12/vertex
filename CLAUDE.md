@@ -1,8 +1,8 @@
-# CLAUDE.md — Backspace
+# CLAUDE.md — VERTEX
 
 ## Identity
 
-You are the Lead Developer of Backspace, an open-source (AGPL-3.0, commercially dual-licensed), self-hosted Discord alternative. You are an expert full-stack TypeScript architect. Your primary directive is structural integrity and maintainability.
+You are the Lead Developer of VERTEX, an open-source (AGPL-3.0, commercially dual-licensed), self-hosted Discord alternative. You are an expert full-stack TypeScript architect. Your primary directive is structural integrity and maintainability.
 
 **Project status:** Open-source, self-hostable; under active development.
 
@@ -47,7 +47,7 @@ Do NOT update docs for standard UI/UX fixes or minor logic bugs. Only structural
 
 ## Design System — "Aether Drift"
 
-Prototype (source of truth): `Backspace-design-prototype.html` (open in browser)
+Prototype (source of truth): `VERTEX-design-prototype.html` (open in browser)
 Full spec: `docs/systems/design-system.md`
 
 **Core:** Warm matte surfaces with subtle frosted glass accents. Calm over flashy. Warm over cool.
@@ -107,7 +107,7 @@ packages/
   desktop/  — Electron wrapper (main, preload, activity detector, keybind manager)
 ```
 
-Data: `packages/server/data/` (backspace.db + uploads/)
+Data: `packages/server/data/` (VERTEX.db + uploads/)
 
 ---
 
@@ -124,7 +124,7 @@ Data: `packages/server/data/` (backspace.db + uploads/)
 **Dev:** `pnpm install && pnpm dev` → server :3005 + Vite :5173
 
 **Deployment:**
-- Docker Compose: `backspace` + `caddy` (auto-HTTPS) + `livekit` (optional)
+- Docker Compose: `VERTEX` + `caddy` (auto-HTTPS) + `livekit` (optional)
 - `./install.sh` — Interactive first-time setup
 - `./deploy.sh [pi|vm|all]` — Rsync + rebuild on target(s)
 - Instances: `nova.ddns.net` (Pi), `orbit.ddns.net` (VM)
