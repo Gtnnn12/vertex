@@ -15,7 +15,7 @@
     "e2e:identity-deletion": "playwright test e2e/identity-deletion.spec.ts"
   },
   "dependencies": {
-    "@vertex/shared": "workspace:*",
+    "@backspace/shared": "workspace:*",
     "@emoji-mart/data": "^1.2.1",
     "@emoji-mart/react": "^1.1.1",
     "@livekit/components-react": "^2.7.4",

@@ -253,7 +253,7 @@ export function UserProfileModal() {
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center animate-fade-in">
       <div className="absolute inset-0 bg-black/50" onClick={closeModal} />
-      <div className="relative max-w-lg w-full mx-4 max-h-[calc(100vh-2rem)] flex flex-col glass-modal rounded-lg animate-slide-up overflow-hidden">
+      <div className="relative max-w-lg w-full mx-4 max-h-[calc(100vh-2rem)] flex flex-col glass-modal rounded-2xl animate-slide-up overflow-hidden">
         {/* Banner */}
         <div
           className="h-[100px] flex-shrink-0 relative"
@@ -309,7 +309,7 @@ export function UserProfileModal() {
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`px-3 py-2 text-[13px] font-medium rounded-t-lg transition-colors relative ${
+                className={`px-3 py-2 text-[12px] font-medium rounded-t-lg transition-colors relative ${
                   activeTab === tab.key
                     ? 'text-txt-primary'
                     : 'text-txt-tertiary hover:text-txt-secondary'
@@ -317,7 +317,7 @@ export function UserProfileModal() {
               >
                 {tab.label}
                 {tab.count !== undefined && !loadingMutuals && (
-                  <span className="ml-1 text-[11px] text-txt-tertiary">({tab.count})</span>
+                  <span className="ml-1 text-[10px] text-txt-tertiary">({tab.count})</span>
                 )}
                 {activeTab === tab.key && (
                   <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-accent-primary rounded-full" />
@@ -328,7 +328,7 @@ export function UserProfileModal() {
         </div>
 
         {/* Tab content */}
-        <div className="flex-1 overflow-y-auto scrollbar-thin p-5 min-h-[200px]">
+        <div className="flex-1 overflow-y-auto scrollbar-thin p-6 min-h-[220px]">
           {activeTab === 'about' && (
             <div className="space-y-4">
               {/* Bio */}

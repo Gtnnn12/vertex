@@ -391,13 +391,17 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
   // Self-mention highlighting
   const isMentioned = currentUser && message.content?.includes('<@' + currentUser.id + '>');
 
-  const content = (
+const content = (
     <div
       id={`msg-${message.id}`}
-      className={`group relative flex gap-4 px-5 py-[3px] transition-colors ${isFirstInGroup || message.replyTo ? 'mt-[1.0625rem]' : ''} ${
+      className={`group relative flex-col gap-2 px-4 py-2.5 rounded-[14px] transition-colors ${
+        isFirstInGroup || message.replyTo ? 'mt-[1.0625rem]' : ''
+      } ${
         isMentioned
           ? 'bg-accent-amber/10 border-l-2 border-l-accent-amber hover:bg-accent-amber/15'
-          : 'hover:bg-[rgba(255,255,255,0.025)]'
+          : isAuthor
+            ? 'bg-surface-base/50 hover:bg-surface-base/80'
+            : 'bg-surface-base/30 hover:bg-surface-base/50'}
       }`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => {
@@ -410,7 +414,7 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
     >
       {/* Reply Line */}
       {message.replyTo && (
-        <div className="absolute left-[40px] top-[-14px] w-[30px] h-[22px] border-l-2 border-t-2 border-interactive-muted rounded-tl-[6px] opacity-60" />
+        <div className="absolute left-[40px] top-[-12px] w-[30px] h-[20px] border-l-2 border-t-2 border-interactive-muted/60 rounded-tl-[6px] opacity-60" />
       )}
 
       {/* Avatar or timestamp column */}

@@ -550,29 +550,29 @@ export function ChannelSidebar() {
 
   return (
     <>
-    <div className="w-60 md:w-full bg-surface-channel flex flex-col flex-shrink-0 select-none md:pl-[72px] border-r border-border-hard">
+    <div className="w-60 md:w-full bg-surface-channel/80 flex flex-col flex-shrink-0 select-none md:pl-[20px] border-r border-border-hard/30 backdrop-blur-md">
       {/* Space header */}
-      <div className="h-14 flex items-stretch border-b border-border-hard z-10 group/header">
+      <div className="h-14 flex items-stretch border-b border-border-hard/30 backdrop-blur-md z-10 group/header">
         <button
           onClick={() => openModal('spaceSettings')}
-          className="flex-1 h-full px-4 flex items-center justify-between hover:bg-interactive-hover transition-colors min-w-0"
+          className="flex-1 h-full px-4 flex items-center justify-between hover:bg-white/[0.06] transition-colors min-w-0"
         >
           <div className="min-w-0">
             <span className="font-bold text-[15px] tracking-[-0.02em] text-txt-primary truncate leading-tight block">{space.name}</span>
             {instanceLabel && (
-              <span className="text-[10px] text-txt-tertiary font-medium truncate block leading-tight">
+              <span className="text-[10px] text-txt-tertiary/60 font-medium truncate block leading-tight">
                 {instanceLabel}
               </span>
             )}
           </div>
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor" className="text-txt-tertiary flex-shrink-0">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor" className="text-txt-tertiary/60 flex-shrink-0">
             <path d="M5.293 7.293a1 1 0 011.414 0L9 9.586l2.293-2.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" />
           </svg>
         </button>
         {canCreateInvite && (
           <button
             onClick={() => openModal('invite')}
-            className="w-10 h-full flex items-center justify-center text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover transition-all flex-shrink-0"
+            className="w-10 h-full flex items-center justify-center text-txt-tertiary/60 hover:text-txt-primary hover:bg-interactive-hover/40 transition-all flex-shrink-0"
             title="Invite People"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -659,14 +659,14 @@ export function ChannelSidebar() {
 
           const categoryHeader = (
                 <div
-                  className={`flex items-center justify-between px-1 mb-1 group cursor-pointer ${
+className={`flex items-center justify-between px-1 mb-1 group cursor-pointer ${
                     activeDrag?.type === 'category' && activeDrag.dragId === category.id ? 'opacity-50' : ''
-                  } ${dropTarget?.targetId === category.id && dropTarget.targetType === 'category' ? 'ring-1 ring-accent-mint/40 rounded' : ''}`}
+                  } ${dropTarget?.targetId === category.id && dropTarget.targetType === 'category' ? 'ring-1 ring-accent-primary/40 rounded' : ''}`}
                   {...categoryHandlers(category.id)}
                   onClick={() => toggleCollapse(category.id)}
                 >
                   <div className="flex items-center gap-0.5 text-txt-tertiary hover:text-txt-secondary transition-colors min-w-0">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className={`opacity-70 transition-transform flex-shrink-0 ${isCollapsed ? '-rotate-90' : ''}`}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className={`opacity-60 transition-transform flex-shrink-0 ${isCollapsed ? '-rotate-90' : ''}`}>
                       <path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z" />
                     </svg>
                     <span className="text-[11px] font-medium uppercase tracking-[0.06em] truncate" style={{ color: '#484854' }}>{category.name}</span>
@@ -675,9 +675,9 @@ export function ChannelSidebar() {
                         <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" />
                       </svg>
                     )}
-                    {hasUnread && (
-                      <div className="ml-1 w-1.5 h-1.5 rounded-full bg-accent-rose flex-shrink-0" />
-                    )}
+{hasUnread && (
+                    <div className="ml-1 w-1.5 h-1.5 rounded-full bg-accent-primary/40 flex-shrink-0" />
+                  )}
                   </div>
                   {canManageChannels && (
                     <button
@@ -685,12 +685,13 @@ export function ChannelSidebar() {
                         e.stopPropagation();
                         openModal('createChannel', { categoryId: category.id });
                       }}
-                      className="text-txt-tertiary hover:text-txt-primary transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0"
+                      className="text-txt-tertiary/60 hover:text-txt-primary hover:bg-interactive-hover/40 rounded-[6px] py-0.5 px-2.5 transition-all flex-shrink-0"
                       title="Create Channel"
                     >
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" className="flex-shrink-0 opacity-60">
                         <path d="M8 2a.5.5 0 01.5.5v5h5a.5.5 0 010 1h-5v5a.5.5 0 01-1 0v-5h-5a.5.5 0 010-1h5v-5A.5.5 0 018 2z" />
                       </svg>
+                      <span className="ml-1 text-[11px] font-medium">Create Channel</span>
                     </button>
                   )}
                 </div>
@@ -769,26 +770,26 @@ export function ChannelSidebar() {
 
         {/* Create channel / category buttons */}
         {canManageChannels && (
-          <div className="px-1 mt-4 pt-3 border-t border-white/[0.06]">
+          <div className="px-1 mt-4 pt-3 border-t border-interactive-muted/60">
             {sortedCategories.length > 0 && (
               <button
                 onClick={() => openModal('createChannel')}
-                className="w-full flex items-center gap-1.5 px-[10px] py-1 rounded-[6px] text-txt-tertiary/60 hover:text-txt-secondary hover:bg-interactive-hover transition-colors"
+                className="w-full flex items-center gap-1.5 px-3 py-1 rounded-[8px] text-txt-tertiary/60 hover:text-txt-secondary hover:bg-interactive-hover/40 transition-colors"
               >
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" className="flex-shrink-0 opacity-70">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" className="flex-shrink-0 opacity-60">
                   <path d="M8 2a.5.5 0 01.5.5v5h5a.5.5 0 010 1h-5v5a.5.5 0 01-1 0v-5h-5a.5.5 0 010-1h5v-5A.5.5 0 018 2z" />
                 </svg>
-                <span className="text-[12px]">Create Channel</span>
+                <span className="text-[11px]">Create Channel</span>
               </button>
             )}
             <button
               onClick={() => openModal('createCategory')}
-              className="w-full flex items-center gap-1.5 px-[10px] py-1 rounded-[6px] text-txt-tertiary/60 hover:text-txt-secondary hover:bg-interactive-hover transition-colors"
+              className="w-full flex items-center gap-1.5 px-3 py-1 rounded-[8px] text-txt-tertiary/60 hover:text-txt-secondary hover:bg-interactive-hover/40 transition-colors"
             >
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" className="flex-shrink-0 opacity-70">
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" className="flex-shrink-0 opacity-60">
                 <path d="M8 2a.5.5 0 01.5.5v5h5a.5.5 0 010 1h-5v5a.5.5 0 01-1 0v-5h-5a.5.5 0 010-1h5v-5A.5.5 0 018 2z" />
               </svg>
-              <span className="text-[12px]">Create Category</span>
+              <span className="text-[11px]">Create Category</span>
             </button>
           </div>
         )}
@@ -1273,7 +1274,7 @@ function ChannelItem({
         className={`relative ${isDragging ? 'opacity-50' : ''}`}
         {...channelDragHandlers}
       >
-        {dropIndicator === 'before' && <div className="absolute -top-[1px] left-2 right-2 h-[2px] bg-accent-mint rounded-full z-10" />}
+        {dropIndicator === 'before' && <div className="absolute -top-[1px] left-2 right-2 h-[2px] bg-accent-primary rounded-full z-10" />}
         <VoiceChannel
           channelId={channel.id}
           channelName={channel.name}
@@ -1284,7 +1285,7 @@ function ChannelItem({
           voiceUserHandlers={voiceUserHandlers}
           dropZone={voiceChannelDropZone}
         />
-        {dropIndicator === 'after' && <div className="absolute -bottom-[1px] left-2 right-2 h-[2px] bg-accent-mint rounded-full z-10" />}
+        {dropIndicator === 'after' && <div className="absolute -bottom-[1px] left-2 right-2 h-[2px] bg-accent-primary rounded-full z-10" />}
       </div>
     );
   }
@@ -1294,7 +1295,7 @@ function ChannelItem({
       className={`relative ${isDragging ? 'opacity-50' : ''}`}
       {...channelDragHandlers}
     >
-      {dropIndicator === 'before' && <div className="absolute -top-[1px] left-2 right-2 h-[2px] bg-accent-mint rounded-full z-10" />}
+      {dropIndicator === 'before' && <div className="absolute -top-[1px] left-2 right-2 h-[2px] bg-accent-primary rounded-full z-10" />}
       <button
         onClick={onChannelClick}
         className={`relative w-full flex items-center gap-1.5 px-[10px] h-8 rounded-[6px] group transition-colors ${
@@ -1312,9 +1313,9 @@ function ChannelItem({
           />
         )}
         {isUnread && (
-          <div className="absolute right-2 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-accent-rose" />
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-accent-primary" />
         )}
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="flex-shrink-0 text-[#6e6e7a]">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="flex-shrink-0 text-txt-secondary">
           <path d="M5.88657 21C5.57547 21 5.3399 20.7189 5.39427 20.4126L6.00001 17H2.59511C2.28449 17 2.04905 16.7198 2.10259 16.4138L2.27759 15.4138C2.31946 15.1746 2.52722 15 2.77011 15H6.35001L7.41001 9H4.00511C3.69449 9 3.45905 8.71977 3.51259 8.41381L3.68759 7.41381C3.72946 7.17456 3.93722 7 4.18011 7H7.76001L8.39677 3.41262C8.43914 3.17391 8.64664 3 8.88907 3H9.87344C10.1845 3 10.4201 3.28107 10.3657 3.58738L9.76001 7H15.76L16.3968 3.41262C16.4391 3.17391 16.6466 3 16.8891 3H17.8734C18.1845 3 18.4201 3.28107 18.3657 3.58738L17.76 7H21.1649C21.4755 7 21.711 7.28023 21.6574 7.58619L21.4824 8.58619C21.4406 8.82544 21.2328 9 20.9899 9H17.41L16.35 15H19.7549C20.0655 15 20.301 15.2802 20.2474 15.5862L20.0724 16.5862C20.0306 16.8254 19.8228 17 19.5799 17H16L15.3632 20.5874C15.3209 20.8261 15.1134 21 14.8709 21H13.8866C13.5755 21 13.3399 20.7189 13.3943 20.4126L14 17H8.00001L7.36325 20.5874C7.32088 20.8261 7.11337 21 6.87094 21H5.88657ZM9.41001 9L8.35001 15H14.35L15.41 9H9.41001Z" />
         </svg>
         <span className={`truncate text-[15px] leading-5 tracking-[0.01em] flex-1 text-left ${isUnread ? 'font-semibold' : 'font-medium'}`}>{channel.name}</span>

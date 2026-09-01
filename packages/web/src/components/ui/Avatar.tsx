@@ -16,20 +16,12 @@ interface AvatarProps {
 }
 
 const statusColors: Record<string, string> = {
-  online: 'bg-status-online',
-  idle: 'bg-status-idle',
-  dnd: 'bg-status-dnd',
-  offline: 'bg-status-offline',
+  online: 'bg-status-online/80',
+  idle: 'bg-status-idle/80',
+  dnd: 'bg-status-dnd/80',
+  offline: 'bg-status-offline/80',
 };
 
-/**
- * Builds a CSS radial-gradient mask that punches a circular hole in the avatar
- * where the status dot sits. The hole reveals the parent background, creating
- * a true cutout effect on any surface — no border-color matching needed.
- *
- * Prototype reference (.m-dot): 12px box with 3px border (border-box) = 6px
- * visible color, positioned at bottom:-2 right:-2 → center 4px from corner.
- */
 function buildCutoutMask(avatarSize: number, ringWidth: number = 0): string {
   const outerSize = avatarSize + ringWidth * 2;
   const { dot, gap, inset } = getDotMetrics(avatarSize, ringWidth);
@@ -43,13 +35,11 @@ function buildCutoutMask(avatarSize: number, ringWidth: number = 0): string {
 function getDotMetrics(avatarSize: number, ringWidth: number = 0) {
   let dot: number, gap: number, avatarInset: number;
   if (avatarSize <= 24) {
-    dot = 5; gap = 2; avatarInset = 3;
+    dot = Math.round(avatarSize * 0.12); gap = Math.round(avatarSize * 0.04); avatarInset = Math.round(avatarSize * 0.08);
   } else if (avatarSize <= 48) {
-    dot = 6; gap = 3; avatarInset = 4;
+    dot = Math.round(avatarSize * 0.15); gap = Math.round(avatarSize * 0.05); avatarInset = Math.round(avatarSize * 0.10);
   } else {
-    dot = Math.round(avatarSize * 0.15);
-    gap = Math.round(avatarSize * 0.05);
-    avatarInset = Math.round(avatarSize * 0.10);
+    dot = Math.round(avatarSize * 0.18); gap = Math.round(avatarSize * 0.06); avatarInset = Math.round(avatarSize * 0.12);
   }
   return { dot, gap, inset: avatarInset + ringWidth };
 }

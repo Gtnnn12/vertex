@@ -23,61 +23,63 @@
 @layer base {
   :root {
     /* ── Matte Surfaces (RGB channels for Tailwind opacity support) ── */
-    --bg-base: 11 12 19;
-    --bg-channel: 18 19 28;
-    --bg-chat: 15 16 24;
-    --bg-members: 20 21 30;
-    --bg-elevated: 24 25 36;
-    --bg-input: 14 15 21;
-    --bg-overlay: rgba(0, 0, 0, 0.6);
+    --bg-base: 11 11 16;
+    --bg-channel: 26 26 35;
+    --bg-chat: 19 19 26;
+    --bg-members: 26 26 35;
+    --bg-elevated: 37 37 48;
+    --bg-input: 17 17 24;
+    --bg-overlay: rgba(0, 0, 0, 0.85);
 
-    /* ── Primary Accent Palette (technological gradient) ── */
-    --accent-primary: 96 108 236;
-    --accent-primary-hover: 82 79 212;
-    --accent-primary-active: 66 58 179;
+    /* ── Borders ── */
+    --border-hard: 34 34 44;
+    --border-soft: 42 42 54;
 
-    /* ── Secondary Accent Colors (refined technological gradient) ── */
-    --accent-cyan: 0 206 211;
-    --accent-indigo: 79 70 229;
-    --accent-sky: 14 165 233;
-    --accent-teal: 15 225 138;
+    /* ── Pastel Accents ── */
+    --accent-mint: 134 239 172;
+    --accent-peach: 252 165 165;
+    --accent-lavender: 196 181 253;
+    --accent-sky: 125 211 252;
+    --accent-amber: 252 211 77;
+    --accent-rose: 253 164 175;
+    --accent-coral: 251 146 60;
 
-    /* ── Refined Neutral Accents ── */
-    --accent-rose: 244 63 94;
-    --accent-amber: 251 191 36;
-    --accent-violet: 168 85 247;
+    /* ── Primary Action (replaces blurple) ── */
+    --accent-primary: 124 108 246;
+    --accent-primary-hover: 107 92 224;
+    --accent-primary-active: 95 79 208;
 
     /* ── Text Hierarchy ── */
-    --text-primary: 246 246 246;
-    --text-secondary: 170 170 185;
-    --text-tertiary: 110 110 125;
-    --text-category: 86 86 100;
-    --text-message: 235 235 241;
-    --text-link: 14 165 233;
-    --text-positive: 34 197 94;
-    --text-warning: 251 191 36;
-    --text-danger: 239 68 68;
+    --text-primary: 239 239 239;
+    --text-secondary: 160 160 170;
+    --text-tertiary: 92 92 104;
+    --text-category: 72 72 84;
+    --text-message: 216 216 222;
+    --text-link: 125 211 252;
+    --text-positive: 134 239 172;
+    --text-warning: 252 211 77;
+    --text-danger: 252 165 165;
 
     /* ── Interactive ── */
     --interactive-hover: rgba(255, 255, 255, 0.06);
-    --interactive-active: rgba(255, 255, 255, 0.10);
+    --interactive-active: rgba(255, 255, 255, 0.12);
     --interactive-selected: rgba(255, 255, 255, 0.16);
-    --interactive-muted: 82 84 100;
+    --interactive-muted: 58 58 68;
 
     /* ── Status ── */
-    --status-online: 34 197 94;
-    --status-idle: 251 191 36;
-    --status-dnd: 244 63 94;
-    --status-offline: 82 84 100;
+    --status-online: 134 239 172;
+    --status-idle: 252 211 77;
+    --status-dnd: 252 165 165;
+    --status-offline: 58 58 68;
 
     /* ── Glass Material ── */
-    --glass-bg: rgba(18, 19, 27, 0.65);
-    --glass-modal-bg: rgba(18, 19, 27, 0.78);
-    --glass-border: rgba(255, 255, 255, 0.06);
-    --glass-highlight: rgba(255, 255, 255, 0.04);
+    --glass-bg: rgba(20, 20, 26, 0.52);
+    --glass-modal-bg: rgba(20, 20, 26, 0.82);
+    --glass-border: rgba(255, 255, 255, 0.07);
+    --glass-highlight: rgba(255, 255, 255, 0.05);
 
     /* ── Notification ── */
-    --notification: 244 63 94;
+    --notification: 253 164 175;
   }
 
   * {
@@ -306,14 +308,44 @@
   }
 }
 
+@layer utilities {
+  /* Space strip glass — in utilities layer so md:glass-strip wins over bg-surface-* */
+  .glass-strip {
+    backdrop-filter: blur(20px) saturate(120%);
+    -webkit-backdrop-filter: blur(20px) saturate(120%);
+    background: var(--glass-bg);
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.03),
+      2px 0 12px rgba(0, 0, 0, 0.20);
+  }
+
+  .rounded-inherit {
+    border-radius: inherit;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.15);
+    border-radius: 100px;
+  }
+}
+
 /* ── Emoji Mart Overrides ── */
 .emoji-picker-wrapper em-emoji-picker {
-  --em-rgb-background: 18, 19, 27;
-  --em-rgb-input: 14, 15, 21;
-  --em-rgb-color: 225, 225, 232;
-  --em-color-border: rgba(255, 255, 255, 0.06);
-  --em-color-border-over: rgba(255, 255, 255, 0.08);
-  --rgb-accent: 96, 108, 236;
+  --em-rgb-background: 20, 20, 26;
+  --em-rgb-input: 17, 17, 24;
+  --em-rgb-color: 216, 216, 222;
+  --em-color-border: rgba(255, 255, 255, 0.07);
+  --em-color-border-over: rgba(255, 255, 255, 0.12);
+  --rgb-accent: 124, 108, 246;
   --font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   border: none !important;
   background: transparent !important;
@@ -333,19 +365,19 @@
   width: 100%;
 }
 
-/* ── Subtle Micro-Animations ── */
+/* Animations */
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
-.animate-fade-in {
-  animation: fadeIn 0.15s ease-out;
+@keyframes slideUp {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
-@keyframes slideUp {
-  from { transform: translateY(4px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+.animate-fade-in {
+  animation: fadeIn 0.15s ease-out;
 }
 
 .animate-slide-up {
@@ -354,7 +386,7 @@
 
 /* Slides into place from above — used for popovers that open upward */
 @keyframes slideDown {
-  from { transform: translateY(-4px); opacity: 0; }
+  from { transform: translateY(-10px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
 
@@ -363,72 +395,156 @@
 }
 
 @keyframes typingFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from { transform: translateY(4px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 .animate-typing-in {
   animation: typingFadeIn 0.15s ease-out;
 }
 
-/* Subtle pulse for interactive elements */
-@keyframes pulse-subtle {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.9; }
-}
-.animate-pulse-subtle {
-  animation: pulse-subtle 2s ease-in-out infinite;
+@keyframes gradientPulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
 }
 
-/* Scale emphasis for button press */
-@keyframes scale-emphasis {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.02); }
-}
-.animate-scale-emphasis {
-  animation: scale-emphasis 120ms ease-out;
+.animate-gradient-pulse {
+  animation: gradientPulse 4s ease-in-out infinite;
 }
 
-/* Micro-appearance for content */
-@keyframes content-appear {
-  from { opacity: 0; transform: translateY(2px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.animate-content-appear {
-  animation: content-appear 120ms ease-out;
+/* ── Skeleton Loading ── */
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
 }
 
-/* Button hover lift */
-@keyframes button-lift {
-  from { transform: translateY(0); }
-  to { transform: translateY(-2px); }
-}
-.animate-button-lift {
-  animation: button-lift 150ms ease-out;
-}
-
-/* Subtle fade slide for modals */
-@keyframes modal-fade-slide {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.animate-modal-fade-slide {
-  animation: modal-fade-slide 200ms ease-out;
+.skeleton {
+  background: linear-gradient(90deg,
+    rgba(255,255,255,0.04) 0%,
+    rgba(255,255,255,0.08) 40%,
+    rgba(255,255,255,0.04) 80%
+  );
+  background-size: 400px 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+  border-radius: 4px;
 }
 
-/* ── Reduced motion support ── */
-@media (prefers-reduced-motion: reduce) {
-  .animate-fade-in,
-  .animate-slide-up,
-  .animate-slide-down,
-  .animate-typing-in,
-  .animate-pulse-subtle,
-  .animate-scale-emphasis,
-  .animate-content-appear,
-  .animate-button-lift,
-  .animate-modal-fade-slide {
-    animation: none !important;
-    transition: none !important;
+.skeleton-circle { border-radius: 50%; }
+.skeleton-bar    { height: 12px; border-radius: 6px; }
+.skeleton-block  { border-radius: 8px; }
+
+@keyframes search-flash {
+  0% { background-color: rgba(124, 108, 246, 0.2); }
+  100% { background-color: transparent; }
+}
+.search-highlight { animation: search-flash 2s ease-out; }
+
+@keyframes stepForward {
+  from { transform: translateX(24px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes stepBack {
+  from { transform: translateX(-24px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.animate-step-forward {
+  animation: stepForward 0.25s ease-out;
+}
+.animate-step-back {
+  animation: stepBack 0.25s ease-out;
+}
+
+/* ── Incoming Call Animations ── */
+
+/* Liquid ripple: soft gradient orb that expands and dissolves */
+@keyframes callRippleLiquid {
+  0% {
+    scale: 0.3;
+    opacity: 0.45;
   }
+  70% {
+    opacity: 0.12;
+  }
+  100% {
+    scale: 2.8;
+    opacity: 0;
+  }
+}
+
+/* Soft multi-layered halo around avatar */
+@keyframes callGlowSoft {
+  0%, 100% {
+    box-shadow:
+      0 0 20px rgba(134, 239, 172, 0.06),
+      0 0 40px rgba(134, 239, 172, 0.04),
+      0 0 80px rgba(134, 239, 172, 0.02);
+  }
+  50% {
+    box-shadow:
+      0 0 24px rgba(134, 239, 172, 0.12),
+      0 0 48px rgba(134, 239, 172, 0.06),
+      0 0 96px rgba(134, 239, 172, 0.03);
+  }
+}
+
+/* Traveling light refraction across glass card surface */
+@keyframes callRefraction {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+/* Gentle breathing glow on accept button */
+@keyframes callButtonBreath {
+  0%, 100% {
+    box-shadow:
+      0 0 12px rgba(134, 239, 172, 0.08),
+      0 0 28px rgba(134, 239, 172, 0.04);
+  }
+  50% {
+    box-shadow:
+      0 0 18px rgba(134, 239, 172, 0.16),
+      0 0 36px rgba(134, 239, 172, 0.06);
+  }
+}
+
+.animate-call-ripple {
+  animation: callRippleLiquid 4s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+}
+
+.animate-call-glow {
+  animation: callGlowSoft 4s ease-in-out infinite;
+}
+
+.animate-call-button-glow {
+  animation: callButtonBreath 3s ease-in-out infinite;
+}
+
+/* Light refraction shimmer overlay on the call card */
+.call-refraction::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    transparent 35%,
+    rgba(134, 239, 172, 0.03) 42%,
+    rgba(134, 239, 172, 0.05) 50%,
+    rgba(134, 239, 172, 0.03) 58%,
+    transparent 65%,
+    transparent 100%
+  );
+  animation: callRefraction 6s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-call-ripple,
+  .animate-call-glow,
+  .animate-call-button-glow { animation: none !important; }
+  .call-refraction::after { animation: none !important; opacity: 0; }
+  .skeleton { animation: none; }
 }
 
 /* ── MOBILE SCREEN TRANSITIONS ── */
@@ -447,3 +563,100 @@
 /* ── Electron window drag regions ── */
 .titlebar-drag { -webkit-app-region: drag; }
 .titlebar-no-drag { -webkit-app-region: no-drag; }
+
+/* ===== ANIMACIONES CYBERPUNK DE VERTEX ===== */
+
+/* Pulso ne�n en botones */
+@keyframes neonPulse {
+    0% { box-shadow: 0 0 10px #a855f7; }
+    50% { box-shadow: 0 0 30px #ff00cc; }
+    100% { box-shadow: 0 0 10px #a855f7; }
+}
+.btn-primary, .btn-enter, .btn-voice {
+    animation: neonPulse 2s infinite;
+}
+
+/* Flotaci�n suave para avatares */
+@keyframes floatAvatar {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-6px); }
+    100% { transform: translateY(0px); }
+}
+.avatar, .user-avatar {
+    animation: floatAvatar 3s ease-in-out infinite;
+}
+
+/* Brillo de entrada (fade-in con brillo) */
+@keyframes fadeInGlow {
+    from { opacity: 0; filter: blur(4px); }
+    to { opacity: 1; filter: blur(0); }
+}
+.glass-panel, .message, .server-item {
+    animation: fadeInGlow 0.6s ease forwards;
+}
+
+/* Barra de estado con destello */
+@keyframes statusGlow {
+    0% { text-shadow: 0 0 5px #a855f7; }
+    50% { text-shadow: 0 0 20px #ff00cc; }
+    100% { text-shadow: 0 0 5px #a855f7; }
+}
+.status-online {
+    animation: statusGlow 1.5s infinite;
+}
+
+/* ============================================================
+   ?? VERTEX - ESTILOS BLANCO/NEGRO CON NE�N
+   ============================================================ */
+
+:root {
+  --bg-primary: #f5f5f7;
+  --bg-secondary: #ffffff;
+  --text-primary: #1a1a1a;
+  --text-secondary: #4a4a4a;
+  --neon-color: #a855f7;
+  --neon-cyan: #00ffcc;
+  --border-light: rgba(0, 0, 0, 0.05);
+  --shadow-soft: 0 4px 30px rgba(0, 0, 0, 0.05);
+}
+
+body {
+  background: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+  font-family: 'Inter', -apple-system, sans-serif !important;
+}
+
+.glass-panel, .chat-area, .settings-container, .sidebar-content {
+  background: rgba(255, 255, 255, 0.6) !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid var(--border-light) !important;
+  border-radius: 16px !important;
+  box-shadow: var(--shadow-soft) !important;
+}
+
+.btn-neon {
+  background: transparent !important;
+  border: 1px solid var(--neon-color) !important;
+  color: var(--text-primary) !important;
+  border-radius: 40px !important;
+  padding: 8px 20px !important;
+  transition: all 0.3s ease !important;
+}
+.btn-neon:hover {
+  box-shadow: 0 0 25px rgba(168, 85, 247, 0.3) !important;
+  transform: scale(1.02) !important;
+}
+
+.vertex-credits {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 12px;
+  letter-spacing: 2px;
+  padding: 20px 0;
+  opacity: 0.7;
+}
+.vertex-credits span {
+  color: var(--neon-color);
+  font-weight: 700;
+  text-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+}

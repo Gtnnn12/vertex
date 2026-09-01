@@ -62,7 +62,7 @@ export function Modal({ isOpen, onClose, title, children, maxWidth = 'max-w-md',
     return (
       <div className="fixed inset-0 z-[200] flex items-end justify-center animate-fade-in">
         <div
-          className="absolute inset-0 bg-black/50"
+          className="absolute inset-0 bg-surface-channel/50"
           onClick={onClose}
         />
         <div className="relative w-full max-h-[85vh] flex flex-col glass-modal rounded-t-2xl animate-slide-up" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
@@ -92,7 +92,7 @@ export function Modal({ isOpen, onClose, title, children, maxWidth = 'max-w-md',
     return (
       <div className="fixed inset-0 z-[200] flex items-center justify-center animate-fade-in">
         <div
-          className="absolute inset-0 bg-black/50"
+          className="absolute inset-0 bg-surface-channel/50"
           onClick={onClose}
         />
         <div className="relative w-[90vw] max-w-6xl h-[85vh] flex flex-col glass-modal rounded-xl animate-slide-up overflow-hidden">

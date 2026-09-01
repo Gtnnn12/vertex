@@ -639,7 +639,8 @@ export function MessageInput({ channelId, channelName, placeholder }: MessageInp
       }
     : undefined;
   const composerClass =
-    'absolute left-2 right-2 z-[110] glass-bubble rounded-[14px]' +
+    'absolute left-2 right-2 z-[110] glass-pill rounded-[14px] bg-surface-base/80' +
+    ' backdrop-blur-md border-t border-border-hard/30' +
     ' md:left-3 md:right-3 md:bottom-3';
 
   // Dynamic message-list bottom padding ("composer clearance"):

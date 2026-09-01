@@ -69,7 +69,7 @@ function MemberSidebarRow({
   const displayName = canonical.displayName ?? baseName;
 
   const rowClass = isRichActivity
-    ? `flex items-center gap-2.5 px-2.5 py-2 rounded-[10px] mb-1 cursor-pointer transition-colors glass-pill border-l-2 ${accentClass}`
+    ? `flex items-center gap-2.5 px-2.5 py-2 rounded-[10px] mb-1 cursor-pointer transition-colors border-l-2 ${accentClass}`
     : 'flex items-center gap-2.5 px-2 py-1.5 rounded-[4px] hover:bg-interactive-hover cursor-pointer group transition-colors';
 
   return (
@@ -152,7 +152,7 @@ export function MemberSidebar() {
       return { color: sorted[0]!.color };
     }
     if (ownerId && member.userId === ownerId) {
-      return { color: 'rgb(var(--accent-rose))' };
+      return { color: 'rgb(var(--accent-primary))' };
     }
     return undefined;
   };
@@ -183,7 +183,7 @@ export function MemberSidebar() {
   };
 
   return (
-    <div className="w-60 bg-surface-members flex-shrink-0 overflow-y-auto select-none no-scrollbar hidden md:block border-l border-border-hard">
+    <div className="w-60 bg-surface-members flex-shrink-0 overflow-y-auto select-none no-scrollbar hidden md:block border-l border-interactive-muted">
       {showMemberSkeleton ? (
         <div className="px-3 pt-4" role="status" aria-label={t('loading_members')}>
           {/* Role group 1 */}

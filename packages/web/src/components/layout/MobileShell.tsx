@@ -194,7 +194,7 @@ export function MobileShell() {
   const shellHeight = keyboardOpen && vvHeight !== null ? `${vvHeight}px` : '100dvh';
 
   return (
-    <div className="flex flex-col" style={{ height: shellHeight }}>
+    <div className="flex flex-col min-h-screen bg-surface-base/80 backdrop-blur-md pb-8">
       <MobileScreenStack
         rootScreen={rootScreens[mobileScreen]}
         screenMap={screenMap}

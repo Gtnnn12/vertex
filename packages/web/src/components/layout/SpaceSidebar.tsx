@@ -65,16 +65,16 @@ function SidebarItem({ id, name, icon, avatarColor, active, onClick, onContextMe
   const firstLetter = name.charAt(0).toUpperCase();
 
   const getPillHeight = () => {
-    if (active) return 'h-8';
-    if (isHovered) return 'h-4';
-    if (hasUnread && !active) return 'h-2';
-    return 'h-2 scale-0';
+    if (active) return 'h-5';
+    if (isHovered) return 'h-3';
+    if (hasUnread && !active) return 'h-1';
+    return 'h-1 scale-0';
   };
 
   const backgroundStyle = useMemo((): React.CSSProperties | undefined => {
     if (type === 'action') {
       return {
-        background: isHovered ? 'rgba(134, 239, 172, 0.12)' : 'rgba(255, 255, 255, 0.04)',
+        background: isHovered ? 'rgba(96, 108, 236, 0.10)' : 'rgba(255, 255, 255, 0.03)',
       };
     }
 
@@ -91,25 +91,25 @@ function SidebarItem({ id, name, icon, avatarColor, active, onClick, onContextMe
   }, [type, id, name, icon, avatarColor, isHovered, active]);
 
   const getButtonClasses = () => {
-    const base = 'w-10 h-10 flex items-center justify-center duration-200 overflow-hidden [transition:border-radius_0.2s,background_0.2s,color_0.2s]';
+    const base = 'w-10 h-10 flex items-center justify-center rounded-full transition-colors flex-shrink-0';
 
     if (type === 'dm') {
-      return `${base} text-white ${active ? 'rounded-[13px]' : 'rounded-[20px] hover:rounded-[13px]'}`;
+      return `${base} text-txt-primary hover:bg-white/[0.06]`;
     }
 
     if (type === 'action') {
-      return `${base} rounded-[20px] hover:rounded-[13px] text-accent-mint`;
+      return `${base} hover:bg-white/[0.06] text-txt-primary`;
     }
 
     if (icon) {
-      return `${base} ${active ? 'rounded-[13px]' : 'rounded-[20px] hover:rounded-[13px]'}`;
+      return `${base} hover:bg-white/[0.06]`;
     }
 
-    return `${base} text-white ${active ? 'rounded-[13px]' : 'rounded-[20px] hover:rounded-[13px]'}`;
+    return `${base} hover:bg-white/[0.06] text-txt-primary`;
   };
 
   const buttonContent = (
-    <button onClick={onClick} className={`${getButtonClasses()} ${dimmed ? 'opacity-40 saturate-50' : ''}`} style={backgroundStyle} title={tooltipText ? undefined : name}>
+    <button onClick={onClick} className={`${getButtonClasses()} ${dimmed ? 'opacity-40' : ''}`} style={backgroundStyle} title={tooltipText ? undefined : name}>
       {type === 'dm' ? (
         <img src="/icons/logo-mark.svg" alt="Backspace" className="w-[25px] h-auto" />
       ) : type === 'action' ? (
@@ -139,14 +139,14 @@ function SidebarItem({ id, name, icon, avatarColor, active, onClick, onContextMe
   );
 
   const innerContent = (
-    <div className={`relative ${dropIndicator === 'merge' ? 'scale-110 ring-2 ring-accent-mint/60 rounded-full' : ''} transition-transform duration-150`}>
+    <div className="relative flex-1 flex items-center gap-2 px-2 py-1.5">
       {buttonContent}
       {federationBadge && (
-        <div className="absolute -bottom-0.5 -right-0.5 w-[14px] h-[14px] rounded-full bg-surface-base flex items-center justify-center">
+        <div className="absolute -bottom-0.5 -right-0.5 w-[10px] h-[10px] rounded-full bg-surface-base/60 flex items-center justify-center">
           {federationDisconnected ? (
-            <div className="w-[8px] h-[8px] rounded-full bg-accent-amber" />
+            <div className="w-[5px] h-[5px] rounded-full bg-accent-amber" />
           ) : (
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className="text-txt-tertiary/80">
+            <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor" className="text-txt-tertiary/70">
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
             </svg>
           )}
@@ -157,7 +157,7 @@ function SidebarItem({ id, name, icon, avatarColor, active, onClick, onContextMe
 
   return (
     <div
-      className={`relative flex items-center mb-1.5 w-full justify-center ${isDragging ? 'opacity-50' : ''}`}
+      className={`relative flex items-center gap-2 mb-1 w-full justify-center ${isDragging ? 'opacity-50' : ''} rounded-lg transition-colors`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onContextMenu={onContextMenu}
@@ -169,17 +169,17 @@ function SidebarItem({ id, name, icon, avatarColor, active, onClick, onContextMe
     >
       {/* Drop indicator lines — offset into the mb-1.5 gap so adjacent items share one line */}
       {dropIndicator === 'before' && (
-        <div className="absolute -top-[3px] left-3 right-3 h-[2px] bg-accent-mint rounded-full z-10" />
+        <div className="absolute -top-[3px] left-3 right-3 h-[2px] bg-accent-primary rounded-full z-10" />
       )}
       {dropIndicator === 'after' && (
-        <div className="absolute -bottom-[3px] left-3 right-3 h-[2px] bg-accent-mint rounded-full z-10" />
+        <div className="absolute -bottom-[2px] left-3 right-3 h-[1px] bg-accent-primary/40 rounded-full z-10" />
       )}
 
       {/* Pill Indicator */}
       {(type === 'space' || type === 'dm') && (
-        <div className="absolute -left-0 w-2 h-10 flex items-center">
+        <div className="absolute -left-0 w-1 h-full flex items-center">
           <div
-            className={`bg-white rounded-r-full transition-all duration-200 origin-left ${getPillHeight()} w-1`}
+            className={`bg-accent-primary rounded-r-full transition-all duration-150 origin-left ${getPillHeight()} w-0.5`}
           />
         </div>
       )}
@@ -557,14 +557,14 @@ function FolderSlot({
     >
       {/* Drop indicators — offset into the mb-1.5 gap so adjacent items share one line */}
       {dropIndicator === 'before' && (
-        <div className="absolute -top-[3px] left-3 right-3 h-[2px] bg-accent-mint rounded-full z-10" />
+        <div className="absolute -top-[3px] left-3 right-3 h-[2px] bg-accent-primary rounded-full z-10" />
       )}
       {dropIndicator === 'after' && (
-        <div className="absolute -bottom-[3px] left-3 right-3 h-[2px] bg-accent-mint rounded-full z-10" />
+        <div className="absolute -bottom-[3px] left-3 right-3 h-[2px] bg-accent-primary rounded-full z-10" />
       )}
       {dropIndicator === 'merge' && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-          <div className="w-12 h-12 rounded-[16px] ring-2 ring-accent-mint/60" />
+          <div className="w-12 h-12 rounded-[16px] ring-2 ring-accent-primary/60" />
         </div>
       )}
 
@@ -1092,7 +1092,7 @@ export function SpaceSidebar() {
   }, [openFolderId, resolvedLayout]);
 
   return (
-    <nav data-pip-obstacle="left" className="w-[72px] bg-surface-base flex flex-col items-center py-3 overflow-y-auto flex-shrink-0 no-scrollbar select-none md:fixed md:inset-y-0 md:left-0 md:z-[100] md:glass-strip" style={{ paddingBottom: floatingPanelHeight + 24, ...(isElectron() ? { top: '33px' } : {}) }} onDragOver={(e) => { if (dragState) e.preventDefault(); }} onDrop={handleDrop}>
+    <nav data-pip-obstacle="left" className="md:glass-strip flex-shrink-0 flex flex-col items-start py-3 overflow-y-auto select-none transition-all duration-200 md:fixed md:inset-y-0 md:left-0 md:z-[100] w-[280px] md:w-auto bg-surface-base/50 border-r border-border-hard/30 select-none" style={{ paddingBottom: floatingPanelHeight + 24, ...(isElectron() ? { top: '33px' } : {}) }} onDragOver={(e) => { if (dragState) e.preventDefault(); }} onDrop={handleDrop}>
       <SidebarItem
         id="@me"
         name="Direct Messages"

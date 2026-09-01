@@ -92,7 +92,7 @@ export function SystemMessage({ message, dm }: SystemMessageProps) {
 
   return (
     <div className="flex items-center justify-center py-1 px-4 select-none">
-      <span className="text-xs text-txt-tertiary">
+      <span className="text-xs text-txt-tertiary/60">
         <span className="mr-1.5">{icon}</span>
         {text}
       </span>

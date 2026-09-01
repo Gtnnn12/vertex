@@ -36,5 +36,7 @@ export function ProfileAvatar({ user, placement = 'right', ...avatarProps }: Pro
       }
     : undefined;
 
-  return <Avatar {...avatarProps} user={user} onClick={handleClick} />;
+  const ringColor = user?.accentColor ?? 'rgba(20,20,26,0.82)';
+
+  return <Avatar {...avatarProps} user={user} onClick={handleClick} ring={{ width: 4, color: ringColor }} />;
 }
