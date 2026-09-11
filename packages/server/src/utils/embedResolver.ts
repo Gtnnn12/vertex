@@ -27,7 +27,7 @@ export async function probeRemoteImageDimensions(
   try {
     const response = await safeFetch(url, {
       headers: {
-        'User-Agent': 'BackspaceBot/1.0',
+        'User-Agent': 'VERTEXBot/1.0',
         Accept: 'image/*',
         Range: `bytes=0-${PROBE_BYTES - 1}`,
       },

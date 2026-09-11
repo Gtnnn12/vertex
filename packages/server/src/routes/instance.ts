@@ -12,7 +12,7 @@ export async function instanceRoutes(app: FastifyInstance): Promise<void> {
     const db = getDb();
 
     const settings = db.select().from(schema.instanceSettings).where(eq(schema.instanceSettings.id, 1)).get();
-    const instanceName = settings?.instanceName ?? 'Backspace';
+    const instanceName = settings?.instanceName ?? 'VERTEX';
 
     // DB setting overrides env var if explicitly set by admin
     const registrationOpen = settings?.registrationOpen !== null && settings?.registrationOpen !== undefined

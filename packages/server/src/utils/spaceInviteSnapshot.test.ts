@@ -46,6 +46,15 @@ function applyMigrations(db: Database.Database): void {
       if (clean) db.exec(clean);
     }
   }
+
+  // The profile-board column comes from the runtime ensureColumn migration,
+  // not a drizzle file — mirror it here for tests that seed users through the
+  // drizzle schema (which now includes profileBoard).
+  try {
+    db.prepare('SELECT profile_board FROM users LIMIT 1').get();
+  } catch {
+    db.exec('ALTER TABLE users ADD COLUMN profile_board TEXT');
+  }
 }
 
 describe('fetchSpaceInviteSnapshot', () => {
@@ -175,7 +184,7 @@ describe('getLocalInviteSnapshot', () => {
     expect(getLocalInviteSnapshot('does-not-exist')).toBeNull();
   });
 
-  it('falls back to "Backspace" when no instance settings row exists', () => {
+  it('falls back to "VERTEX" when no instance settings row exists', () => {
     testDb.insert(schema.spaces).values({
       id: 'S2',
       name: 'NoSettings',
@@ -191,7 +200,7 @@ describe('getLocalInviteSnapshot', () => {
 
     const snap = getLocalInviteSnapshot('nosettings');
     expect(snap).not.toBeNull();
-    expect(snap?.instanceName).toBe('Backspace');
+    expect(snap?.instanceName).toBe('VERTEX');
     expect(snap?.memberCount).toBe(0);
   });
 });

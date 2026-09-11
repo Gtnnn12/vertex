@@ -54,6 +54,15 @@ function applyMigrations(db: Database.Database): void {
       if (clean) db.exec(clean);
     }
   }
+
+  // The profile-board column comes from the runtime ensureColumn migration,
+  // not a drizzle file — mirror it here for tests that seed users through the
+  // drizzle schema (which now includes profileBoard).
+  try {
+    db.prepare('SELECT profile_board FROM users LIMIT 1').get();
+  } catch {
+    db.exec('ALTER TABLE users ADD COLUMN profile_board TEXT');
+  }
 }
 
 beforeEach(() => {
@@ -61,6 +70,9 @@ beforeEach(() => {
   testDb = drizzle(sqlite, { schema });
   applyMigrations(sqlite);
   _sf = 1;
+  // Align this instance's identity domain with the getOurOrigin mock so the
+  // sweep's ourDomain/self-homed match uses 'home.test' consistently.
+  vi.stubEnv('DOMAIN', 'home.test');
 });
 
 function seedUser(row: Partial<typeof schema.users.$inferInsert> & { id: string; username: string }): void {

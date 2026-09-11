@@ -55,6 +55,15 @@ function applyMigrations(db: Database.Database): void {
       if (clean) db.exec(clean);
     }
   }
+
+  // The profile-board column comes from the runtime ensureColumn migration,
+  // not a drizzle file — mirror it here for tests that seed users through the
+  // drizzle schema (which now includes profileBoard).
+  try {
+    db.prepare('SELECT profile_board FROM users LIMIT 1').get();
+  } catch {
+    db.exec('ALTER TABLE users ADD COLUMN profile_board TEXT');
+  }
 }
 
 beforeEach(() => {
@@ -62,6 +71,11 @@ beforeEach(() => {
   testDb = drizzle(sqlite, { schema });
   applyMigrations(sqlite);
   _sf = 1;
+  // Align this instance's identity domain with the getOurOrigin mock so the
+  // self-homed guard — which consults config.domain first — sees 'home.test'
+  // as our own domain. config.ts loads lazily at the first dynamic import,
+  // so the env value is in effect before any route module is evaluated.
+  vi.stubEnv('DOMAIN', 'home.test');
 });
 
 describe('resolveOrCreateReplicatedUser — stub username', () => {

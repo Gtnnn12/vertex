@@ -11,6 +11,7 @@ export const ACTIVITY_LIMITS = {
 
 export const ACTIVITY_PRIORITY: Record<ActivityType, number> = {
   streaming: 5,
+  spotify: 5,
   playing: 4,
   listening: 3,
   watching: 2,

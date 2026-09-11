@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { eq } from 'drizzle-orm';
+import { STAFF_RANK, STAFF_ROLES, type StaffRole } from '@backspace/shared';
 import { config } from '../config.js';
 import { getDb, schema } from '../db/index.js';
 import type { FastifyRequest, FastifyReply } from 'fastify';
@@ -18,6 +19,9 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 export interface JwtPayload {
   userId: string;
   username: string;
+  /** Coarse UI-facing role ('owner' | 'admin' | 'user'). Advisory only —
+   *  authorization always re-checks the DB (see requireAdmin). */
+  role?: string;
   iat?: number;
 }
 
@@ -73,6 +77,8 @@ export async function verifyJwtAndUser(token: string): Promise<{
     isDeleted: schema.users.isDeleted,
     passwordChangedAt: schema.users.passwordChangedAt,
     homeInstance: schema.users.homeInstance,
+    bannedUntil: schema.users.bannedUntil,
+    banReason: schema.users.banReason,
   }).from(schema.users).where(eq(schema.users.id, payload.userId)).get();
 
   if (!user || user.isDeleted === 1) {
@@ -85,6 +91,12 @@ export async function verifyJwtAndUser(token: string): Promise<{
     if (payload.iat < Math.floor(user.passwordChangedAt / 1000)) {
       throw new AuthError('Token has been revoked — please log in again', 401);
     }
+  }
+
+  // Global suspension (permanent or temporary ban).
+  if (user.bannedUntil && user.bannedUntil > Date.now()) {
+    const suffix = user.banReason ? ` — ${user.banReason}` : '';
+    throw new AuthError(`This account is suspended${suffix}`, 403);
   }
 
   return {
@@ -123,8 +135,18 @@ export async function requireAdmin(
   reply: FastifyReply,
 ): Promise<void> {
   const db = getDb();
-  const caller = db.select().from(schema.users).where(eq(schema.users.id, request.userId)).get();
-  if (!caller || caller.isAdmin !== 1) {
+  const caller = db.select({
+    isAdmin: schema.users.isAdmin,
+    staffRole: schema.users.staffRole,
+  }).from(schema.users).where(eq(schema.users.id, request.userId)).get();
+  if (!caller) {
+    return reply.code(403).send({ error: 'Only instance admins can perform this action', statusCode: 403 });
+  }
+  const staffRank = caller.staffRole && STAFF_ROLES.includes(caller.staffRole as StaffRole)
+    ? STAFF_RANK[caller.staffRole as StaffRole]
+    : undefined;
+  const isStaffAdmin = staffRank !== undefined && staffRank >= STAFF_RANK.administrator;
+  if (caller.isAdmin !== 1 && !isStaffAdmin) {
     return reply.code(403).send({ error: 'Only instance admins can perform this action', statusCode: 403 });
   }
 }
