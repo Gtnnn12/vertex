@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Backspace — Connect</title>
+  <title>VERTEX — Connect</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
 
@@ -270,7 +270,7 @@
     <div class="container">
       <div class="card">
         <div class="header">
-          <h1>Welcome to Backspace</h1>
+          <h1>Welcome to VERTEX</h1>
           <p>Connect to your instance</p>
         </div>
 
@@ -280,7 +280,7 @@
             <input
               id="url-input"
               type="text"
-              placeholder="backspace.example.com"
+              placeholder="vertex.example.com"
               autocomplete="off"
               spellcheck="false"
               autofocus
@@ -360,7 +360,7 @@
         // Update header copy to reflect the "switch" intent rather than the
         // first-run "welcome" framing.
         document.querySelector('.header h1').textContent = 'Switch instance';
-        document.querySelector('.header p').textContent = 'Connect to a different Backspace instance, or cancel to stay.';
+        document.querySelector('.header p').textContent = 'Connect to a different VERTEX instance, or cancel to stay.';
       }
     }
     init();
@@ -399,7 +399,7 @@
         const data = await res.json();
 
         if (!data.name) {
-          throw new Error('Not a Backspace instance');
+          throw new Error('Not a VERTEX instance');
         }
 
         // Show instance info

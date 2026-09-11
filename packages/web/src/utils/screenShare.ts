@@ -6,6 +6,8 @@ import { getPublisherPC, getMediaStreamTrack } from './livekitInternals';
 import { broadcastVoiceStatus } from './voice';
 import { activate as activateHwOverdrive, deactivate as deactivateHwOverdrive } from './hwOverdrive';
 import { useUIStore } from '../stores/uiStore';
+import type { MediaProvider } from '../media/MediaProvider';
+import { getActiveRoom } from '../hooks/useLiveKit';
 import {
   STANDARD_RESOLUTIONS, STANDARD_FRAMERATES, WIDTH_MAP,
   BITRATE_MATRIX_KBPS,
@@ -165,8 +167,13 @@ export function buildScreenShareOptions(config: ScreenShareConfig): ScreenShareB
 }
 
 // ---------------------------------------------------------------------------
-// Shared helper: resolve native-mode overdrive from actual track dimensions
-// Used by both applyScreenShareOverdrive (screenShare.ts) and updateActiveTracks (useLiveKit.ts)
+// Shared helper: reconcile the overdrive bitrate with the ACTUAL capture
+// dimensions read from track.getSettings(). Used by both
+// applyScreenShareOverdrive (screenShare.ts) and updateActiveTracks (useLiveKit.ts).
+// Runs for every mode (native AND standard): when the OS/Electron cannot honor
+// an exact resolution (e.g. 4K requested on a 1080p panel), the sender bitrate
+// follows the real captured width/height so the stream stays the best available
+// without over- or under-allocating bandwidth.
 // ---------------------------------------------------------------------------
 
 export function resolveNativeOverdrive(
@@ -176,7 +183,7 @@ export function resolveNativeOverdrive(
 ): void {
   const limits = getStreamingLimits();
   const effectiveCustom = limits.allowCustomBitrate ? config.customBitrateKbps : null;
-  if (config.height !== 'native' || effectiveCustom != null || !mediaTrack) return;
+  if (effectiveCustom != null || !mediaTrack) return;
   const settings = mediaTrack.getSettings();
   if (!settings.width || !settings.height) return;
 
@@ -234,12 +241,37 @@ export async function applyOverdrive(
 }
 
 // ---------------------------------------------------------------------------
-// Start screen sharing — single path via setScreenShareEnabled()
-// In Electron, getDisplayMedia() is intercepted by setDisplayMediaRequestHandler
-// in the main process, which shows the custom picker automatically.
+// Resolve the real LiveKit Room from the call target. Callers pass either the
+// current MediaProvider (voice-bar / picker path — a LiveKitMediaProvider has
+// NO localParticipant) or the Room itself (codec-restart path in useLiveKit).
+// LiveKitMediaProvider is NOT structurally a Room, so casting it blindly breaks
+// at runtime. getActiveRoom() returns the Room bound by useLiveKit on connect.
 // ---------------------------------------------------------------------------
 
-export async function startScreenShare(room: Room): Promise<boolean> {
+function resolveScreenShareRoom(target: MediaProvider | Room): Room | null {
+  const maybeRoom = target as Room;
+  if (typeof maybeRoom.localParticipant?.setScreenShareEnabled === 'function') {
+    return maybeRoom;
+  }
+  return getActiveRoom();
+}
+
+// ---------------------------------------------------------------------------
+// Start screen sharing — single path via setScreenShareEnabled()
+// In Electron, the ScreenSharePicker has already recorded the chosen source via
+// 'screen-share-pending-set'; getDisplayMedia() is intercepted by
+// setDisplayMediaRequestHandler in the main process, which consumes that pending
+// selection and returns the source (no native picker). In the browser, the
+// native OS picker appears instead.
+// ---------------------------------------------------------------------------
+
+export async function startScreenShare(target: MediaProvider | Room): Promise<boolean> {
+  // LiveKit path - use Room API
+  const room = resolveScreenShareRoom(target);
+  if (!room) {
+    console.error('[ScreenShare] No active LiveKit room to start screen share in');
+    return false;
+  }
   console.log('[SS] startScreenShare called, room state:', room.state);
   const config = useVoiceStore.getState().screenShareConfig;
   const hwOverdrive = useVoiceStore.getState().hwOverdrive;
@@ -415,7 +447,15 @@ function scheduleEncoderDetection(room: Room): void {
 // Stop screen sharing
 // ---------------------------------------------------------------------------
 
-export async function stopScreenShare(room: Room): Promise<void> {
+export async function stopScreenShare(target: MediaProvider | Room): Promise<void> {
+  // LiveKit path
+  const room = resolveScreenShareRoom(target);
+  if (!room) {
+    // No room (e.g. already disconnected) — clear local state and unblock UI.
+    deactivateHwOverdrive();
+    useVoiceStore.setState({ isScreenSharing: false, hwOverdrive: false });
+    return;
+  }
   try {
     await room.localParticipant.setScreenShareEnabled(false);
   } catch (err) {
@@ -429,10 +469,10 @@ export async function stopScreenShare(room: Room): Promise<void> {
 // Change screen share source — stops current stream, re-triggers picker
 // ---------------------------------------------------------------------------
 
-export async function changeScreenShare(room: Room): Promise<void> {
-  await stopScreenShare(room);
+export async function changeScreenShare(provider: MediaProvider | Room): Promise<void> {
+  await stopScreenShare(provider);
   setTimeout(async () => {
-    await startScreenShare(room);
+    await startScreenShare(provider);
   }, 200);
 }
 

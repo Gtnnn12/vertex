@@ -92,9 +92,19 @@ export function GlobalAudioRenderer() {
   // Only render audio for remote participants
   const remoteParticipants = participants.filter((p) => !p.isLocal);
 
+  console.log('[VERTEX GlobalAudioRenderer] rendering, remoteParticipants count:', remoteParticipants.length);
+  for (const rp of remoteParticipants) {
+    console.log('[VERTEX GlobalAudioRenderer]   remoteParticipant:', rp.identity);
+    console.log('[VERTEX GlobalAudioRenderer]     audioTrack:', rp.audioTrack?.id ?? 'null', 'readyState:', rp.audioTrack?.readyState ?? 'n/a', 'enabled:', rp.audioTrack?.enabled ?? 'n/a');
+    console.log('[VERTEX GlobalAudioRenderer]     screenAudioTrack:', rp.screenAudioTrack?.id ?? 'null', 'readyState:', rp.screenAudioTrack?.readyState ?? 'n/a');
+    console.log('[VERTEX GlobalAudioRenderer]     watchingStreams.has:', watchingStreams.has(rp.userId));
+  }
+
   return (
     <>
       {remoteParticipants.map((p: ParticipantInfo) => {
+        console.log('[VERTEX GlobalAudioRenderer] rendering AudioTrackElement for:', p.identity);
+        console.log('[VERTEX GlobalAudioRenderer]   hasAudioTrack:', !!p.audioTrack, 'audioTrack.id:', p.audioTrack?.id ?? 'null');
         const micVolume = participantVolumes.get(p.userId) ?? 100;
         const isMicMuted = participantMutes.get(p.userId) ?? false;
         const streamVol = streamVolumes.get(p.userId) ?? 100;

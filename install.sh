@@ -650,7 +650,7 @@ if [[ "${VERTEX_BUILD:-false}" == "true" ]]; then
   info "VERTEX_BUILD=true — building from source (skipping the prebuilt image)."
   build_from_source
 else
-  image_ref="${VERTEX_IMAGE:-ghcr.io/thezwiss/VERTEX}:${VERTEX_IMAGE_TAG:-latest}"
+  image_ref="${VERTEX_IMAGE:-ghcr.io/gtnn12/vertex}:${VERTEX_IMAGE_TAG:-latest}"
   info "Fetching prebuilt image ${image_ref} ..."
   if $COMPOSE pull VERTEX; then
     success "Pulled prebuilt image"

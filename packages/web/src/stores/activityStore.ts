@@ -67,9 +67,22 @@ export const useActivityStore = create<ActivityState>((set, get) => ({
 
   pushActivities: (activities) => {
     if (!get().showActivity) return;
+    // [TEMP-TRACE b] what the bridge actually put in the store
+    for (const a of activities) {
+      if (a.type === 'spotify' || /spotify/i.test(a.name)) {
+        // eslint-disable-next-line no-console
+        console.log(`[activity-emit] type=${a.type} name="${a.name}" payload=${a.spotify ? `song="${a.spotify.song}" artist="${a.spotify.artist}" cover=${a.spotify.albumCover ? 'yes' : 'no'}` : 'NONE'}`);
+      }
+    }
     set({ myActivities: activities });
     if (pushTimer) clearTimeout(pushTimer);
     pushTimer = setTimeout(() => {
+      // [TEMP-TRACE b] what is actually sent to the server after the 5s debounce
+      const rich = activities.find((a) => a.type === 'spotify' && a.spotify);
+      if (rich || activities.some((a) => /spotify/i.test(a.name))) {
+        // eslint-disable-next-line no-console
+        console.log(`[activity-emit] ws_send activities=${activities.length} richSpotify=${rich ? `song="${rich.spotify!.song}"` : 'none'}`);
+      }
       wsSendAll({ type: 'activity_update', activities });
       pushTimer = null;
     }, 5000);

@@ -12,21 +12,22 @@ interface SourceCodeLinkProps {
 }
 
 /**
- * AGPL-3.0 § 13 "network-use source offer".
+ * VERTEX brand footer with the AGPL-3.0 § 13 "network-use source offer".
  *
  * Renders an accessible external link to the Corresponding Source of the version
  * the instance is actually running. The URL is operator-configurable server-side
- * (BACKSPACE_SOURCE_URL) and surfaced via GET /api/instance/info, so a modified
+ * (VERTEX_SOURCE_URL) and surfaced via GET /api/instance/info, so a modified
  * self-hosted fork points humans at its own source.
  *
  * Rendered on every network-facing surface (settings sidebars, pre-auth pages)
  * so any network user — authenticated or anonymous — can reach the source.
  */
-export function SourceCodeLink({ sourceCodeUrl, version, commit, className }: SourceCodeLinkProps) {
+export function SourceCodeLink({ sourceCodeUrl, version, className }: SourceCodeLinkProps) {
   const { t } = useLanguage();
-  const build = version ? `v${version}${commit ? ` (${commit})` : ''}` : '';
-  const sourceLabel = t('source_code_agpl');
-  const label = build ? `${sourceLabel} · ${build}` : sourceLabel;
+  // Brand label: "VERTEX v1.0" (patch segment trimmed, 1.0.0 → 1.0). The § 13
+  // obligation lives in the link target, not the label wording.
+  const shortVersion = version ? version.split('.').slice(0, 2).join('.') : null;
+  const label = shortVersion ? `VERTEX v${shortVersion}` : 'VERTEX';
 
   return (
     <a

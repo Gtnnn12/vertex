@@ -2,8 +2,10 @@ import type { VideoCaptureOptions } from 'livekit-client';
 import { useVoiceStore } from '../stores/voiceStore';
 import { useUIStore } from '../stores/uiStore';
 import { getActiveRoom } from '../hooks/useLiveKit';
+import { getCurrentProvider } from '../media/providerFactory';
 import { wsSend } from '../hooks/useWebSocket';
 import { getChannelOrigin } from '../stores/spaceStore';
+import { isElectron, getElectronAPI } from '../platform/platform';
 import { broadcastVoiceStatus, broadcastDeafenViaLiveKit } from './voice';
 import { CAMERA_PRESET, startScreenShare, stopScreenShare } from './screenShare';
 
@@ -51,8 +53,9 @@ export function handleDeafenAction(isSpaceDeafened: boolean): void {
 }
 
 /**
- * Toggle camera. Requires LiveKit room. Sole canonical camera-toggle path —
- * the voice-bar button, mobile button, and keybind all funnel through here.
+ * Toggle camera. Uses the current media provider (LiveKit).
+ * Sole canonical camera-toggle path — the voice-bar button, mobile button,
+ * and keybind all funnel through here.
  */
 export async function handleCameraAction(): Promise<void> {
   const room = getActiveRoom();
@@ -67,24 +70,16 @@ export async function handleCameraAction(): Promise<void> {
         frameRate: CAMERA_PRESET.encoding.maxFramerate,
       };
       if (cameraDeviceId) captureOpts.deviceId = cameraDeviceId;
-      await room.localParticipant.setCameraEnabled(
-        true,
-        captureOpts,
-        {
-          videoCodec: CAMERA_PRESET.codec,
-          videoEncoding: CAMERA_PRESET.encoding,
-          simulcast: true,
-        }
-      );
+      await room.localParticipant.setCameraEnabled(true, captureOpts, {
+        videoCodec: CAMERA_PRESET.codec,
+        videoEncoding: CAMERA_PRESET.encoding,
+        simulcast: true,
+      });
     } else {
-      // Mark this disable as intentional so the track-`ended` handler skips
-      // its unplug/permission-revoke probe + toast.
       markIntentionalCameraOff();
       try {
         await room.localParticipant.setCameraEnabled(false);
       } catch (err) {
-        // Disable rejected — consume the flag so it doesn't poison the
-        // next genuine unplug. Re-throw to the outer catch for logging.
         consumeIntentionalCameraOff();
         throw err;
       }
@@ -97,42 +92,41 @@ export async function handleCameraAction(): Promise<void> {
 }
 
 /**
- * Toggle screen share. Requires LiveKit room.
+ * Toggle screen share. Uses the current media provider (LiveKit or WebRTC).
+ * In Electron, starting a share opens the custom VERTEX ScreenSharePicker
+ * (real sources via desktopCapturer) before capture is requested; the picker
+ * itself drives startScreenShare after the user confirms a source.
  * Note: startScreenShare/stopScreenShare manage voiceStore.isScreenSharing internally.
  * Do NOT call toggleScreenShare() here — it would double-flip the state.
  */
 export async function handleScreenShareAction(): Promise<void> {
-  const room = getActiveRoom();
-  if (!room) return;
   const isScreenSharing = useVoiceStore.getState().isScreenSharing;
   try {
-    if (!isScreenSharing) {
-      const started = await startScreenShare(room);
-      if (started) broadcastVoiceStatus();
-    } else {
-      await stopScreenShare(room);
+    if (isScreenSharing) {
+      await stopScreenShare(getCurrentProvider());
       broadcastVoiceStatus();
+      return;
     }
+    if (isElectron()) {
+      const api = getElectronAPI();
+      if (api) api.requestScreenShareSources();
+      return;
+    }
+    const started = await startScreenShare(getCurrentProvider());
+    if (started) broadcastVoiceStatus();
   } catch (err) {
     console.error('[voiceActions] Failed to toggle screen share:', err);
   }
 }
 
 /**
- * Disconnect from voice. Handles DM call teardown and fullscreen exit.
+ * Disconnect from voice. Handles server voice channel leave and fullscreen exit.
  */
 export function handleDisconnectAction(): void {
   const voice = useVoiceStore.getState();
-  const { activeDmCall, currentVoiceChannelId, disconnectFn } = voice;
+  const { currentVoiceChannelId, disconnectFn } = voice;
 
-  if (activeDmCall) {
-    const origin = voice.callOrigin || getChannelOrigin(activeDmCall.dmChannelId);
-    wsSend(
-      { type: 'dm_call_end', dmChannelId: activeDmCall.dmChannelId, federatedCallId: voice.federatedCallId },
-      origin
-    );
-    voice.setActiveDmCall(null);
-  } else if (currentVoiceChannelId) {
+  if (currentVoiceChannelId) {
     const origin = getChannelOrigin(currentVoiceChannelId);
     wsSend({ type: 'voice_leave' }, origin);
     voice.leaveVoice();

@@ -60,3 +60,13 @@ export function getMediaStreamTrack(track: unknown): MediaStreamTrack | null {
   const t = track as any;
   return t.mediaStreamTrack ?? t._mediaStreamTrack ?? null;
 }
+
+/**
+ * Parse a LiveKit identity string into userId and username components.
+ * Identity format: "userId:username" (username is optional after the colon).
+ * Used by both useLiveKit.ts and useCall.ts for federated identity resolution.
+ */
+export function parseIdentity(identity: string): { userId: string; username: string } {
+  const parts = identity.split(':');
+  return { userId: parts[0] ?? identity, username: parts[1] ?? identity };
+}

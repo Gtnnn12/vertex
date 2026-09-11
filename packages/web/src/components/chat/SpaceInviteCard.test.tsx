@@ -6,7 +6,7 @@ import { SpaceInviteCard } from './SpaceInviteCard';
 const { mockJoinByCode, mockGetApiForOrigin, mockNavigate } = vi.hoisted(() => ({
   mockJoinByCode: vi.fn(),
   mockGetApiForOrigin: vi.fn(() => ({
-    spaces: { invitePreview: vi.fn() },
+    spaces: { invitePreview: () => new Promise(() => {}) },
   })),
   mockNavigate: vi.fn(),
 }));
@@ -47,7 +47,7 @@ describe('SpaceInviteCard', () => {
 
   it('renders snapshot fields immediately on mount (snapshot-only state)', () => {
     mockGetApiForOrigin.mockReturnValue({
-      spaces: { invitePreview:() => new Promise(() => {}) }, // never resolves
+      spaces: { invitePreview: () => new Promise(() => {}) },
     });
     render(<MemoryRouter><SpaceInviteCard payload={basePayload} senderName="Alice" /></MemoryRouter>);
     expect(screen.getByText('Aether')).toBeInTheDocument();

@@ -200,7 +200,7 @@ export function JoinPage() {
   if (isLoadingPreview) {
     return (
       <div className="min-h-full flex items-center justify-center bg-surface-base relative">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(124,108,246,0.06)_0%,transparent_50%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgb(var(--accent-primary-glow)/0.06)_0%,transparent_50%)]" />
         <div className="text-center relative z-10">
           <svg className="animate-spin w-10 h-10 text-accent-primary mx-auto mb-4" viewBox="0 0 24 24" fill="none">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -216,7 +216,7 @@ export function JoinPage() {
   if (previewError || !preview) {
     return (
       <div className="min-h-full flex items-center justify-center bg-surface-base relative">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(124,108,246,0.06)_0%,transparent_50%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgb(var(--accent-primary-glow)/0.06)_0%,transparent_50%)]" />
         <div className="w-full max-w-[480px] bg-surface-elevated rounded-md p-8 shadow-elevation-high relative z-10 text-center">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-accent-rose/10 flex items-center justify-center">
             <svg className="w-8 h-8 text-accent-rose" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -232,7 +232,7 @@ export function JoinPage() {
               onClick={() => navigate('/channels/@me')}
               className="px-6 py-2.5 bg-accent-primary hover:bg-accent-primary/80 text-white font-medium rounded transition-colors"
             >
-              {t('back_to_backspace')}
+              {t('back_to_vertex')}
             </button>
           ) : (
             <Link
@@ -250,7 +250,7 @@ export function JoinPage() {
   // Main invite page
   return (
     <div className="min-h-full flex items-center justify-center bg-surface-base relative">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(124,108,246,0.06)_0%,transparent_50%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgb(var(--accent-primary-glow)/0.06)_0%,transparent_50%)]" />
       <div className="w-full max-w-[480px] bg-surface-elevated rounded-md p-8 shadow-elevation-high relative z-10">
         {/* Space preview */}
         <div className="text-center mb-6">

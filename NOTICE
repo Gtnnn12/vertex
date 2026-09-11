@@ -1,9 +1,14 @@
 VERTEX
-Copyright (c) 2026 Jannis Braun
 
-VERTEX is free and open source software under the GNU Affero General Public
-License v3.0 (AGPL-3.0-only); see the LICENSE file. A separate commercial license
-is also available; see LICENSE-COMMERCIAL.md.
+Parts of this codebase are adapted from the Backspace project
+(https://github.com/TheZwiss/backspace), licensed under the GNU Affero General
+Public License v3.0 (AGPL-3.0-only). This attribution is provided to satisfy
+the notice requirements of that license for the inherited code. It does not
+imply endorsement, and VERTEX is an independent project — see README.md.
+
+VERTEX as a whole is free and open source software under the GNU Affero General
+Public License v3.0 (AGPL-3.0-only); see the LICENSE file. A separate commercial
+license is also available; see LICENSE-COMMERCIAL.md.
 
 It bundles, depends on, or redistributes the third-party components listed
 below. Each remains under its own license.
@@ -34,7 +39,7 @@ Icons and brand assets
 
 The VERTEX name, logo, and app icons (assets/brand/,
 packages/web/public/icons/, packages/desktop build resources) are original
-works and trademarks of the project. Neither the AGPL nor the commercial license
+works of the VERTEX project. Neither the AGPL nor the commercial license
 grants any right to use these trademarks; trademark use is governed separately by
 applicable law.
 

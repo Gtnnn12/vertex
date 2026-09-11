@@ -272,20 +272,8 @@ export function MobileVoiceFullScreen() {
   }
 
   const handleDisconnect = () => {
-    const { activeDmCall, disconnectFn, federatedCallId, callOrigin } =
-      useVoiceStore.getState();
-    if (activeDmCall) {
-      const origin = callOrigin || getChannelOrigin(activeDmCall.dmChannelId);
-      wsSend(
-        {
-          type: 'dm_call_end',
-          dmChannelId: activeDmCall.dmChannelId,
-          federatedCallId,
-        },
-        origin,
-      );
-      useVoiceStore.getState().setActiveDmCall(null);
-    } else if (currentVoiceChannelId) {
+    const { disconnectFn } = useVoiceStore.getState();
+    if (currentVoiceChannelId) {
       wsSend({ type: 'voice_leave' }, getChannelOrigin(currentVoiceChannelId));
       leaveVoice();
     }

@@ -40,6 +40,15 @@ function applyMigrations(db: Database.Database): void {
       if (clean) db.exec(clean);
     }
   }
+
+  // The profile-board column comes from the runtime ensureColumn migration,
+  // not a drizzle file — mirror it here for tests that seed users through the
+  // drizzle schema (which now includes profileBoard).
+  try {
+    db.prepare('SELECT profile_board FROM users LIMIT 1').get();
+  } catch {
+    db.exec('ALTER TABLE users ADD COLUMN profile_board TEXT');
+  }
 }
 
 function seedSettings(): void {

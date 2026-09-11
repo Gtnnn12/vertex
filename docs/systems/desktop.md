@@ -240,7 +240,7 @@ Powered by `electron-updater`. Loaded via `require()` (not import) for graceful 
 ```
 autoDownload: true
 autoInstallOnAppQuit: true
-Publish: GitHub (TheZwiss/VERTEX)
+Publish: GitHub (gtnn12/VERTEX)
 ```
 
 **Signing status (as of v1.0.0):** all builds are unsigned. Consequences:
@@ -439,14 +439,14 @@ The main process intercepts `getDisplayMedia()` via `session.defaultSession.setD
 
 ### Flow
 
-1. Handler invoked by Chromium when renderer calls `navigator.mediaDevices.getDisplayMedia()`
+1. User taps the screen-share button in the renderer. `handleScreenShareAction()` (`utils/voiceActions`) sees Electron and calls `requestScreenShareSources()` — it does **not** call `getDisplayMedia()` directly.
 2. Main process enumerates sources via `desktopCapturer.getSources({ types: ['screen', 'window'], thumbnailSize: { width: 320, height: 180 }, fetchWindowIcons: true })`
 3. Sources serialized (id, name, thumbnail data URL, app icon data URL, isScreen flag) and sent to renderer via `screen-share-sources` IPC
-4. Renderer shows custom picker UI, user selects a source
-5. Renderer sends `screen-share-selected` IPC with `sourceId` (or `null` to cancel) and `shareAudio` flag
-6. Main process calls `callback({ video: selectedSource, audio: 'loopback' })` (audio only if `shareAudio` is true)
+4. Renderer opens the `ScreenSharePicker` (mounted once in `App.tsx`): tabs for screens/windows, thumbnails, window search, and the stream-quality controls (resolution, FPS, content mode, codec, bitrate, system audio — `ScreenShareSettingsControls`). User selects a source and previews/toggles settings.
+5. On "Share" (or double-click), the renderer sends `screen-share-pending-set` IPC with `sourceId` and the `shareAudio` flag, then closes the picker and calls `startScreenShare(provider)`, which triggers `getDisplayMedia()`.
+6. `setDisplayMediaRequestHandler` consumes the pending selection **once** and calls `callback({ video: selectedSource, audio: 'loopback' })` (audio only if `shareAudio` is true), then clears the pending state.
 
-No sources (0 results) typically means Screen Recording permission not granted on macOS.
+If there is **no** pending selection when `getDisplayMedia()` fires (defensive path), the request is denied with `callback({})`. No sources (0 results) typically means the Screen Recording permission is not granted on macOS.
 
 For full screen share configuration (resolution, bitrate, codec), see `voice.md`.
 
@@ -490,7 +490,8 @@ All handlers registered in `main.ts:registerIpcHandlers()`.
 | `close-window` | R->M | — | Close (hides to tray) |
 | `install-update` | R->M | — | `autoUpdater.quitAndInstall()` |
 | `check-for-updates` | R->M | — | `autoUpdater.checkForUpdates()` |
-| `screen-share-selected` | R->M | `sourceId, shareAudio?` | Safety net (actual handler is `ipcMain.once` in display media flow) |
+| `screen-share-request` | R->M | — | Ask main to enumerate screen/window sources via `desktopCapturer` |
+| `screen-share-pending-set` | R->M | `(sourceId, shareAudio?)` | Record the picker's source selection for the next `getDisplayMedia()` request |
 | `keybinds-sync` | R->M | `KeybindConfig[]` | `keybindManager.updateKeybinds()` |
 | `set-connected-origins` | R->M | `string[]` | Update `knownInstanceOrigins` set (used by in-instance `/join/` interception) |
 | `renderer-ready` | R->M | — | Boot-completion ping; disarms boot timer |
@@ -519,7 +520,7 @@ All handlers registered in `main.ts:registerIpcHandlers()`.
 | `update-available` | `{ version }` | electron-updater |
 | `update-downloaded` | `{ version }` | electron-updater |
 | `update-error` | `{ message, releaseUrl }` | electron-updater (only after confirmed update) |
-| `screen-share-sources` | `ElectronScreenSource[]` | Display media handler |
+| `screen-share-sources` | `ElectronScreenSource[]` | `screen-share-request` handler |
 | `activity-detected` | `Activity \| null` | Activity detector poll |
 | `keybind-action` | `{ actionId, pressed }` | KeybindManager match |
 | `accessibility-status` | `{ trusted }` | macOS accessibility check result |
@@ -554,7 +555,8 @@ Detection: `typeof window.VERTEX !== 'undefined'` (see `platform.ts:isElectron()
 | `onWindowFocusChange(cb)` | listen | M->R | |
 | `onDeepLink(cb)` | listen | M->R | |
 | `onScreenShareSources(cb)` | listen | M->R | |
-| `selectScreenSource(id, audio?)` | fire | R->M | |
+| `requestScreenShareSources()` | fire | R->M | Enumerate via `desktopCapturer`; result via `screen-share-sources` |
+| `setScreenSharePendingSelection(id, audio?)` | fire | R->M | Primes the display-media handler with the picker's source |
 | `getInstanceUrl()` | invoke | R->M | Returns `Promise<string \| null>` |
 | `setInstanceUrl(url)` | invoke | R->M | Returns `Promise<void>` |
 | `clearInstanceUrl()` | invoke | R->M | Returns `Promise<void>` |
@@ -612,7 +614,7 @@ interface GameEntry {
 
 ### Remote Sync (`syncDictionary()`)
 
-**Remote URL:** `https://raw.githubusercontent.com/TheZwiss/VERTEX/main/packages/desktop/resources/games.json`
+**Remote URL:** `https://raw.githubusercontent.com/gtnn12/VERTEX/main/packages/desktop/resources/games.json`
 
 ```
 Step 1: Determine best local version (cache vs seed, whichever has higher version)
@@ -942,7 +944,7 @@ See `scripts/gen-icons.README.md` for the regeneration workflow and version-bump
 ```yaml
 publish:
   - provider: github
-    owner: TheZwiss
+    owner: gtnn12
     repo: VERTEX
 ```
 

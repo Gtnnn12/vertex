@@ -96,6 +96,51 @@ function mimetypeFromFilename(originalName: string): string {
   return EXT_MIMETYPES[ext] ?? 'application/octet-stream';
 }
 
+// ─── Windows-safe commit of a staged tus file ────────────────────────────────
+// Node v24 (and libvips/sharp) can leave the staging file open on Windows when
+// onUploadFinish runs — the tus write stream's fd isn't necessarily released
+// and sharp keeps a mapped handle on real images. `fs.renameSync` then throws
+// EBUSY ("resource busy or locked"), which surfaced as an HTTP 500 on every
+// avatar/banner upload. Rename is preferred (atomic, cheap); on EBUSY/EPERM we
+// back off briefly and, if still locked, fall back to a copy (Windows share-read
+// allows copying a locked file) followed by a best-effort unlink. The copy
+// leaves the source in .tus/ when it can't be unlinked — the tus expiration
+// sweep reaps it because the sidecar's stored offset (0 at create) still
+// differs from size. Returns true if the source was removed (atomic path).
+const RENAME_RETRY_MS = 50;
+const RENAME_MAX_ATTEMPTS = 4;
+const RENAME_WINDOWS_CODES = new Set(['EBUSY', 'EPERM', 'EACCES']);
+
+async function commitStagedFile(src: string, dst: string): Promise<boolean> {
+  for (let attempt = 1; attempt <= RENAME_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      fs.renameSync(src, dst);
+      return true;
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code ?? '';
+      if (!RENAME_WINDOWS_CODES.has(code)) throw err;
+      if (attempt < RENAME_MAX_ATTEMPTS) {
+        await new Promise<void>((r) => {
+          setTimeout(r, RENAME_RETRY_MS * attempt);
+        });
+      }
+    }
+  }
+  // File still locked — copy (works while source is shared-readable) and
+  // unlink best-effort. The caller must leave the tus sidecar in place so the
+  // expiration sweep knows this staging entry is still incomplete.
+  console.warn(
+    `[files] rename of ${path.basename(src)} is EBUSY/EPERM after retries — committing via copy`,
+  );
+  fs.copyFileSync(src, dst);
+  try {
+    fs.unlinkSync(src);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function filesRoutes(app: FastifyInstance): Promise<void> {
   // Ensure tus staging directory exists
   fs.mkdirSync(config.tusUploadDir, { recursive: true });
@@ -224,9 +269,18 @@ export async function filesRoutes(app: FastifyInstance): Promise<void> {
       const requestUserId: string = (req as NodeJS.Dict<unknown> & typeof req).userId as string;
       const meta = upload.metadata ?? {};
 
+      console.log('[VERTEX AVATAR UPLOAD TRACE] onUploadFinish called');
+      console.log('[VERTEX AVATAR UPLOAD TRACE] requestUserId:', requestUserId);
+      console.log('[VERTEX AVATAR UPLOAD TRACE] upload metadata:', meta);
+      console.log('[VERTEX AVATAR UPLOAD TRACE] upload id:', upload.id);
+
       const snowflakeId = meta.snowflakeId ?? null;
       const storedUserId = meta.userId ?? null;
       const originalName = meta.originalName ?? 'upload';
+
+      console.log('[VERTEX AVATAR UPLOAD TRACE] snowflakeId:', snowflakeId);
+      console.log('[VERTEX AVATAR UPLOAD TRACE] storedUserId:', storedUserId);
+      console.log('[VERTEX AVATAR UPLOAD TRACE] originalName:', originalName);
 
       // Defense in depth: re-verify ownership
       if (!snowflakeId || !storedUserId || storedUserId !== requestUserId) {
@@ -295,10 +349,14 @@ export async function filesRoutes(app: FastifyInstance): Promise<void> {
         width = null; height = null; duration = null; playable = null;
       }
 
-      // ── Commit point: rename .tus/<id> → uploads/<snowflakeId><ext> ──────
+      // ── Commit point: move .tus/<id> → uploads/<snowflakeId><ext> ────────
       // After this succeeds we own a permanent file. If anything below
       // throws we must delete it (or the unlinked-attachment janitor will).
-      fs.renameSync(srcPath, dstPath);
+      // Windows-safe: on EBUSY/EPERM the file is committed via copy instead of
+      // rename (see commitStagedFile). A copy-committed source is left in
+      // .tus/ when unlink fails — the sidecar is then kept (see below) so the
+      // tus expiration sweep reaps the pair.
+      const committed = await commitStagedFile(srcPath, dstPath);
 
       // The thumb generators name their output `<basename(srcPath)>_thumb.webp`
       // — i.e. `<uploadId>_thumb.webp`. Rename it to the canonical
@@ -309,8 +367,11 @@ export async function filesRoutes(app: FastifyInstance): Promise<void> {
         const finalThumbName = thumbFilename(filename);
         const finalThumbPath = path.join(config.uploadDir, finalThumbName);
         try {
-          fs.renameSync(stagedThumbPath, finalThumbPath);
-          thumbnailFilename = finalThumbName;
+          const thumbCommitted = await commitStagedFile(stagedThumbPath, finalThumbPath);
+          thumbnailFilename = thumbCommitted ? finalThumbName : null;
+          if (!thumbCommitted) {
+            try { fs.unlinkSync(stagedThumbPath); } catch { /* ignore */ }
+          }
         } catch (err) {
           console.error('[files] Thumbnail rename failed (non-fatal):', err);
           try { fs.unlinkSync(stagedThumbPath); } catch { /* ignore */ }
@@ -318,10 +379,15 @@ export async function filesRoutes(app: FastifyInstance): Promise<void> {
         }
       }
 
-      // Best-effort: delete tus .json sidecar
-      const sidecarPath = `${srcPath}.json`;
-      if (fs.existsSync(sidecarPath)) {
-        try { fs.unlinkSync(sidecarPath); } catch { /* ignore */ }
+      // Best-effort: delete tus .json sidecar. Only when the staging file was
+      // fully removed — if it was copy-committed and the lock prevented the
+      // source unlink, the sidecar must stay so the expiration sweep cleans the
+      // orphan (its stored offset still differs from size).
+      if (committed) {
+        const sidecarPath = `${srcPath}.json`;
+        if (fs.existsSync(sidecarPath)) {
+          try { fs.unlinkSync(sidecarPath); } catch { /* ignore */ }
+        }
       }
 
       const size = upload.size ?? fs.statSync(dstPath).size;
@@ -391,12 +457,54 @@ export async function filesRoutes(app: FastifyInstance): Promise<void> {
   // Delegate all /api/files and /api/files/* requests to tus.
   // reply.hijack() tells Fastify the response is being managed externally —
   // prevents lifecycle races (double-send, reply timing) under load.
+  //
+  // tus manages CORS itself and unconditionally sets
+  // `Access-Control-Expose-Headers` to its own constant list — which omits
+  // `Upload-Expires`. Without it the browser refuses to let tus-js-client read
+  // that header cross-origin. The response object is hijacked, so @fastify/cors
+  // and our own reply.header() calls are overwritten by tus before the headers
+  // are flushed. We therefore wrap res.setHeader: any time tus re-asserts the
+  // expose header, we immediately replace it with our expanded list.
+  const exposedHeaders = [
+    'Authorization',
+    'Content-Type',
+    'Location',
+    'Tus-Resumable',
+    'Tus-Version',
+    'Tus-Extension',
+    'Tus-Max-Size',
+    'Tus-Checksum-Algorithm',
+    'Upload-Offset',
+    'Upload-Length',
+    'Upload-Metadata',
+    'Upload-Expires',
+    'Upload-Concat',
+    'Upload-Defer-Length',
+    'X-HTTP-Method-Override',
+    'X-Requested-With',
+    'X-Forwarded-Host',
+    'X-Forwarded-Proto',
+    'Forwarded',
+  ].join(', ');
+
+  function exposeTusResponseHeaders(res: import('node:http').ServerResponse): void {
+    const origSetHeader = res.setHeader.bind(res);
+    res.setHeader = ((name: string | number | readonly string[], value: string | number | readonly string[]) => {
+      origSetHeader(name as string, value);
+      if (String(name).toLowerCase() === 'access-control-expose-headers') {
+        origSetHeader('Access-Control-Expose-Headers', exposedHeaders);
+      }
+    }) as typeof res.setHeader;
+  }
+
   app.all('/api/files', (request, reply) => {
     reply.hijack();
+    if (request.headers.origin) exposeTusResponseHeaders(reply.raw);
     tusServer.handle(request.raw, reply.raw);
   });
   app.all('/api/files/*', (request, reply) => {
     reply.hijack();
+    if (request.headers.origin) exposeTusResponseHeaders(reply.raw);
     tusServer.handle(request.raw, reply.raw);
   });
 }

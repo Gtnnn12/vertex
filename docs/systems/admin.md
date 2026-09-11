@@ -73,9 +73,9 @@ Settings are split into two API surfaces:
 | maxBitrateKbps | number | maxBitrateKbps | 500-1000000 | 20000 |
 | minBitrateKbps | number | minBitrateKbps | 100-1000000, must be < max | 500 |
 | bitrateStepKbps | number | bitrateStepKbps | 50-5000 | 500 |
-| allowedResolutions | (number\|'native')[] | allowedResolutions | Non-empty, values from STANDARD_RESOLUTIONS or 'native' | [540,720,1080] |
-| allowedFramerates | number[] | allowedFramerates | Non-empty, values from STANDARD_FRAMERATES | [30,45,60] |
-| maxResolution | number | maxResolution | Must be in STANDARD_RESOLUTIONS | 1080 |
+| allowedResolutions | (number\|'native')[] | allowedResolutions | Non-empty, values from STANDARD_RESOLUTIONS or 'native' | [720,1080,1440,2160] |
+| allowedFramerates | number[] | allowedFramerates | Non-empty, values from STANDARD_FRAMERATES | [30,60] |
+| maxResolution | number | maxResolution | Must be in STANDARD_RESOLUTIONS | 2160 |
 | maxFramerate | number | maxFramerate | Must be in STANDARD_FRAMERATES | 60 |
 | discoveryEnabled | boolean | discoveryEnabled | boolean | true |
 | bitrateMatrixOverrides | Record<string,number>\|null | bitrateMatrixOverrides | Keys: `{res}_{fps}`, values: 1-1000000 | null |
@@ -429,9 +429,9 @@ Zustand store managing two data objects:
   maxBitrateKbps: 20000,
   minBitrateKbps: 500,
   bitrateStepKbps: 500,
-  allowedResolutions: [540, 720, 1080],
-  allowedFramerates: [30, 45, 60],
-  maxResolution: 1080,
+  allowedResolutions: [720, 1080, 1440, 2160],
+  allowedFramerates: [30, 60],
+  maxResolution: 2160,
   maxFramerate: 60,
   discoveryEnabled: true,
   bitrateMatrixOverrides: null,
@@ -595,6 +595,25 @@ Manages: user list with search/filter/sort/pagination, admin promotion/demotion,
     → store.set({ streamingLimits: updated }) / set({ instanceSettings: updated })
   → UI re-renders from store, draft resets to match
 ```
+
+---
+
+## Admin Center staff roles & guardrails
+
+The Admin Center (`/api/admin-center/*`, `packages/server/src/routes/adminCenter.ts`) extends the flat `isAdmin` flag with a ranked staff model (`packages/server/src/utils/staffAuth.ts`):
+
+- **Roles** (`staff_roles.role`, mirrored on `users.staffRole`): `owner` → `administrator` → `senior_moderator` → `moderator` → `support`, ordered by `STAFF_RANK`.
+- **`isAdmin === 1` legacy users resolve as `administrator` rank** (via `resolveStaffIdentity`), so pre-existing admins keep full staff powers without a `staff_roles` row.
+- **Rank gates** (`requireStaffRank`): manage Netrex / manage staff = administrator rank; moderate = moderator rank; ban = senior_moderator rank. Plain `requireStaff` = any staff identity.
+
+**Change guardrails** (`staffChangeViolation` / `guardrailError`):
+- No self-promotion.
+- You cannot change staff at or above your own rank (owner exempt).
+- Only the owner grants the `owner` role to another user.
+- At least one administrator-capable identity must always remain.
+- Removing the **last** `owner` is rejected — but the owner guard deliberately does **not** fire when the instance has no owner yet (fresh bootstrap): the first staff promotions, including an eventual `owner`, are allowed so the role hierarchy can be seeded. This avoids the deadlock where "no owner exists" blocks appointing the first owner.
+
+**Audit:** every staff assignment/change/removal writes a `staff_assign` / `staff_change_role` / `staff_remove` `audit_log` row and broadcasts a user-updated WS event.
 
 ---
 

@@ -51,7 +51,13 @@ async function allocateEphemeralPort(): Promise<number> {
   });
 }
 
-async function waitForReady(origin: string, proc: ChildProcess, logPath: string, timeoutMs = 20_000): Promise<void> {
+async function waitForReady(
+  origin: string,
+  proc: ChildProcess,
+  logPath: string,
+  timeoutMs = 20_000,
+  getSpawnError?: () => Error | null,
+): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   let exited = false;
   let exitInfo: { code: number | null; signal: NodeJS.Signals | null } | null = null;
@@ -66,6 +72,11 @@ async function waitForReady(origin: string, proc: ChildProcess, logPath: string,
         throw new Error(
           `Instance ${origin} exited during boot (code=${exitInfo?.code}, signal=${exitInfo?.signal}). ` +
           `See log at ${logPath}`,
+        );
+      }
+      if (getSpawnError && getSpawnError()) {
+        throw new Error(
+          `Instance ${origin} failed to spawn: ${getSpawnError()!.message}. See log at ${logPath}`,
         );
       }
       try {
@@ -127,15 +138,24 @@ export async function spawnInstance(opts: {
   }
   // From packages/server/test/helpers → packages/server is up two levels.
   const serverDir = path.resolve(__dirname, '../../');
-  const proc = spawn('pnpm', ['exec', 'tsx', 'src/index.ts'], {
+  // Spawn tsx through the current Node executable instead of `pnpm exec tsx`.
+  // child_process.spawn cannot run .cmd/.ps1 shims on Windows (ENOENT without
+  // a shell), so `pnpm exec` never starts there. Launching the tsx CLI under
+  // the same Node binary is equivalent and fully cross-platform.
+  const tsxCli = path.join(serverDir, 'node_modules', 'tsx', 'dist', 'cli.mjs');
+  let spawnError: Error | null = null;
+  const proc = spawn(process.execPath, [tsxCli, 'src/index.ts'], {
     cwd: serverDir,
     env,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
+  proc.once('error', (err) => {
+    spawnError = err;
+  });
   const logStream = createWriteStream(opts.logPath);
   proc.stdout!.pipe(logStream);
   proc.stderr!.pipe(logStream);
-  await waitForReady(origin, proc, opts.logPath);
+  await waitForReady(origin, proc, opts.logPath, 20_000, () => spawnError);
   return {
     proc,
     port: opts.port,

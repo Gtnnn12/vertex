@@ -3,6 +3,7 @@ import https from 'https';
 import path from 'path';
 import fs from 'fs';
 import { app } from 'electron';
+import { getSpotifyEnrichment } from './spotifyDesktop';
 
 // ─── Local Activity type (structural match with @backspace/shared Activity) ─
 
@@ -17,6 +18,12 @@ interface Activity {
   details?: string;
   state?: string;
   timestamps?: ActivityTimestamps;
+  /** Desktop-detected Spotify track (Vía A — free accounts). */
+  spotify?: {
+    song: string;
+    artist: string;
+    albumCover?: string;
+  };
 }
 
 // ─── Game dictionary types ──────────────────────────────────────────────────
@@ -35,7 +42,7 @@ interface VersionedDictionary {
 
 const VALID_TYPES = new Set(['playing', 'listening', 'watching', 'streaming']);
 const POLL_INTERVAL_MS = 15_000;
-const REMOTE_URL = 'https://raw.githubusercontent.com/TheZwiss/backspace/main/packages/desktop/resources/games.json';
+const REMOTE_URL = 'https://raw.githubusercontent.com/gtnn12/VERTEX/main/packages/desktop/resources/games.json';
 
 // ─── Module state ───────────────────────────────────────────────────────────
 
@@ -43,10 +50,20 @@ let processMap: Map<string, GameEntry> = new Map();
 let gameEntries: GameEntry[] = [];
 let currentGameId: string | null = null;
 let currentActivity: Activity | null = null;
+/** Serialized current activity — dedupes async Spotify re-emits. */
+let activityKey: string | null = null;
 let intervalId: NodeJS.Timeout | null = null;
 let isPolling = false;
 let hasErrored = false;
 let onChangeCallback: ((activity: Activity | null) => void) | null = null;
+
+/**
+ * Spotify enrichment state: the last track parsed from Spotify's window
+ * title. Enrichment is async (title read + cover lookup), so the poll loop
+ * uses a keyed guard to avoid emitting stale or duplicate activities across
+ * 15s polls.
+ */
+let enrichmentJobId = 0;
 
 // ─── Dictionary loading ────────────────────────────────────────────────────
 
@@ -251,7 +268,7 @@ function fetchRemote(url: string, etag: string | null): Promise<{
 } | null> {
   return new Promise((resolve) => {
     const headers: Record<string, string> = {
-      'User-Agent': 'Backspace-Desktop/1.0',
+      'User-Agent': 'VERTEX-Desktop/1.0',
     };
     if (etag) {
       headers['If-None-Match'] = etag;
@@ -473,6 +490,34 @@ function poll(): void {
     }
 
     if (matchedEntry) {
+      const isSpotify = matchedEntry.id === 'spotify';
+      if (isSpotify) {
+        // ── Spotify: enrich with the window-title track (Vía A) ──
+        // Title read + cover lookup are async; build the activity when they
+        // resolve. Unparseable titles (ads, menus) clear any previous track
+        // and fall back to the generic "Spotify" activity.
+        const jobId = ++enrichmentJobId;
+        void getSpotifyEnrichment().then((enrichment) => {
+          if (jobId !== enrichmentJobId) return; // A newer poll superseded this one
+          const nextActivity: Activity = {
+            type: 'listening',
+            name: 'Spotify',
+            timestamps: { start: currentActivity?.timestamps?.start ?? Date.now() },
+            ...(enrichment
+              ? { spotify: { song: enrichment.song, artist: enrichment.artist, albumCover: enrichment.albumCover } }
+              : {}),
+          };
+          const nextKey = JSON.stringify(nextActivity);
+          if (nextKey !== activityKey) {
+            activityKey = nextKey;
+            currentGameId = matchedEntry!.id;
+            currentActivity = nextActivity;
+            onChangeCallback?.(nextActivity);
+          }
+        });
+        return; // Async path owns Spotify change-detection this poll
+      }
+
       if (matchedEntry.id !== currentGameId) {
         // New game detected (or game changed)
         currentGameId = matchedEntry.id;
@@ -481,6 +526,7 @@ function poll(): void {
           name: matchedEntry.name,
           timestamps: { start: Date.now() },
         };
+        activityKey = JSON.stringify(currentActivity);
         onChangeCallback?.(currentActivity);
       }
       // Same game still running — no change, skip IPC
@@ -489,6 +535,7 @@ function poll(): void {
         // Game exited
         currentGameId = null;
         currentActivity = null;
+        activityKey = null;
         onChangeCallback?.(null);
       }
       // No game was running before either — skip

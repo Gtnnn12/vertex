@@ -1,20 +1,26 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useLayoutEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import type { User } from '@backspace/shared';
 import { Avatar } from '../ui/Avatar';
 import { Username } from '../ui/Username';
+import { useProfileCardFX } from '../ui/useProfileCardFX';
+import { CountUp } from '../../utils/CountUp';
 import { useUIStore } from '../../stores/uiStore';
 import { useSpaceStore, getApiForOrigin, resolveUserOrigin } from '../../stores/spaceStore';
 import { api } from '../../api/client';
 import { useSocialStore, type TaggedFriend, type TaggedFriendRequest } from '../../stores/socialStore';
+import { SpotifyVinylBlock } from '../spotify/SpotifyVinylBlock';
 import { mapServerErrorToMessage } from '../../utils/friendErrors';
 import { useAuthStore } from '../../stores/authStore';
 import { getAvatarGradient, getSpaceGradient, adjustColor, mutedGradient } from '../../utils/gradients';
 import { parseFederatedUsername, isSelf, canonicalUserMatch } from '../../utils/identity';
 import { loadFederatedMutuals, type TaggedMutualFriend, type MutualSpace } from '../../utils/mutuals';
+import { StaffBadge, NetrexChip } from '../ui/StaffBadge';
+import { ProfileBoardTab } from '../profile/board/ProfileBoardTab';
+import { useLanguage } from '../../contexts/LanguageContext';
 
-type Tab = 'about' | 'friends' | 'spaces';
+type Tab = 'about' | 'board' | 'friends' | 'spaces';
 
 type FriendshipStatus =
   | { state: 'self' }
@@ -49,6 +55,44 @@ function getFriendshipStatus(
   return { state: 'none' };
 }
 
+/**
+ * Sliding tab indicator: measures the active tab button and positions the
+ * accent pill under it with a transform transition. Re-measures on tab
+ * change, mutuals load (counts change tab widths) and resize.
+ */
+function useSlidingIndicator(
+  activeTab: string,
+  loadingMutuals: boolean,
+) {
+  const barRef = useRef<HTMLDivElement | null>(null);
+  const tabsWrapRef = useRef<HTMLDivElement | null>(null);
+
+  const update = useCallback(() => {
+    const wrap = tabsWrapRef.current;
+    const bar = barRef.current;
+    if (!wrap || !bar) return;
+    const active = wrap.querySelector<HTMLButtonElement>(`[data-tab-key='${activeTab}']`);
+    if (!active) return;
+    bar.style.width = `${active.offsetWidth}px`;
+    bar.style.transform = `translateX(${active.offsetLeft}px)`;
+  }, [activeTab]);
+
+  useLayoutEffect(() => {
+    update();
+    const wrap = tabsWrapRef.current;
+    if (!wrap) return;
+    const ro = new ResizeObserver(update);
+    ro.observe(wrap);
+    window.addEventListener('resize', update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', update);
+    };
+  }, [update, loadingMutuals]);
+
+  return { barRef, tabsWrapRef };
+}
+
 export function UserProfileModal() {
   const activeModal = useUIStore((s) => s.activeModal);
   const modalData = useUIStore((s) => s.modalData);
@@ -71,6 +115,12 @@ export function UserProfileModal() {
   const [mutualSpaces, setMutualSpaces] = useState<MutualSpace[]>([]);
   const [loadingMutuals, setLoadingMutuals] = useState(false);
   const [friendActionLoading, setFriendActionLoading] = useState(false);
+
+  // “Listening now” — one shared block for every profile surface, with the
+  // exact lookup the activity panel uses (same store, same key). Must be
+  // mounted unconditionally — the block itself guards the null-user case.
+  const isSelfProfile = !!(user && currentUser && (user.id === currentUser.id || (user.homeUserId && user.homeUserId === (currentUser.homeUserId ?? currentUser.id))));
+  const profileUserId = (modalData?.userId as string | undefined) ?? (user?.homeUserId ?? user?.id) ?? '';
 
   const isOpen = activeModal === 'userProfile';
   const userId = modalData?.userId as string | undefined;
@@ -141,6 +191,13 @@ export function UserProfileModal() {
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
   }, [isOpen, closeModal]);
+
+  // Hooks MUST run unconditionally — calling these after the early return
+  // below changed the hook count between renders and crashed React.
+  const fx = useProfileCardFX();
+  const { t } = useLanguage();
+  const boardTabLabel = t('board_tab');
+  const { barRef, tabsWrapRef } = useSlidingIndicator(activeTab, loadingMutuals);
 
   if (!isOpen || !user) return null;
 
@@ -246,6 +303,7 @@ export function UserProfileModal() {
 
   const tabs: { key: Tab; label: string; count?: number }[] = [
     { key: 'about', label: 'About' },
+    { key: 'board', label: boardTabLabel },
     { key: 'friends', label: 'Mutual Friends', count: mutualFriends.length },
     { key: 'spaces', label: 'Mutual Spaces', count: mutualSpaces.length },
   ];
@@ -253,19 +311,30 @@ export function UserProfileModal() {
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center animate-fade-in">
       <div className="absolute inset-0 bg-black/50" onClick={closeModal} />
-      <div className="relative max-w-lg w-full mx-4 max-h-[calc(100vh-2rem)] flex flex-col glass-modal rounded-lg animate-slide-up overflow-hidden">
-        {/* Banner */}
-        <div
-          className="h-[100px] flex-shrink-0 relative"
-          style={bannerSrc
-            ? { backgroundImage: `url(${bannerSrc})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-            : { background: bannerFallback }
-          }
-        >
+      <div
+        ref={fx.ref}
+        onMouseMove={fx.onMouseMove}
+        onMouseLeave={fx.onMouseLeave}
+        className="profile-fx fx-animatable profile-stagger relative max-w-lg w-full mx-4 max-h-[calc(100vh-2rem)] flex flex-col glass-modal rounded-[14px] animate-slide-up overflow-hidden"
+      >
+        {/* Cursor glow layer */}
+        <span className="profile-fx-glow" aria-hidden />
+
+        {/* Banner — parallax layer + gradient overlay melting into the card */}
+        <div data-stagger="1" className="h-[110px] flex-shrink-0 relative overflow-hidden">
+          <div
+            className="profile-fx-banner"
+            style={bannerSrc
+              ? { backgroundImage: `url(${bannerSrc})` }
+              : { background: bannerFallback }
+            }
+          />
+          <div className="profile-fx-banner-overlay" aria-hidden />
           {/* Close button */}
           <button
             onClick={closeModal}
-            className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center transition-colors"
+            className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center transition-colors z-[3]"
+            aria-label="Close"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
               <path d="M18.4 4L12 10.4L5.6 4L4 5.6L10.4 12L4 18.4L5.6 20L12 13.6L18.4 20L20 18.4L13.6 12L20 5.6L18.4 4Z" />
@@ -274,40 +343,52 @@ export function UserProfileModal() {
         </div>
 
         {/* Header (avatar + name) */}
-        <div className="px-5 flex-shrink-0 relative">
-          <Avatar
-            src={user.avatar}
-            name={displayName}
-            size={96}
-            status={user.status as 'online' | 'idle' | 'dnd' | 'offline' | null}
-            userId={user.homeUserId ?? user.id}
-            user={user}
-            ring={{ width: 4, color: 'rgba(20,20,26,0.82)' }}
-            className="mt-[-52px] mb-2"
-          />
+        <div data-stagger="2" className="px-5 flex-shrink-0 relative">
+          <div
+            className="profile-presence-ring inline-block align-top -mt-[52px] mb-2 relative z-10"
+            data-status={user.status ?? 'offline'}
+          >
+            <Avatar
+              src={user.avatar}
+              name={displayName}
+              size={96}
+              status={user.status as 'online' | 'idle' | 'dnd' | 'offline' | null}
+              userId={user.homeUserId ?? user.id}
+              user={user}
+              ring={{ width: 3, color: 'rgba(20,20,26,0.82)' }}
+              className="block"
+            />
+          </div>
 
           <div className="mb-3">
-            <Username
-              username={displayName}
-              className="text-[20px] font-bold leading-tight"
-            />
-            <div className="text-[14px] text-txt-tertiary mt-0.5">
-              <Username username={user.username} showAt className="text-[14px] text-txt-tertiary" />
+            <div className="flex items-center gap-2 flex-wrap">
+              <Username
+                username={displayName}
+                className="text-[20px] font-bold leading-tight tracking-[-0.01em]"
+              />
+              {user.staffRole && <StaffBadge role={user.staffRole} />}
+              {user.netrexEnabled && <NetrexChip />}
             </div>
+            <span className="mt-1 inline-flex items-center h-[22px] px-2 rounded-md border border-white/[0.08] bg-white/[0.04] font-mono text-[12px] tracking-[0.01em] text-txt-secondary">
+              @{user.username}
+            </span>
             {user.customStatus && (
-              <div className="text-[13px] text-txt-secondary italic mt-1">
+              <div className="text-[13px] text-txt-secondary italic mt-1.5">
                 {user.customStatus}
               </div>
             )}
+            {/* Spotify vinyl — full-size showpiece in the modal header area. */}
+            <SpotifyVinylBlock lookupUserId={profileUserId} isSelf={isSelfProfile} />
           </div>
         </div>
 
-        {/* Tab bar */}
-        <div className="px-5 flex-shrink-0 border-b border-white/[0.06]">
-          <div className="flex gap-1">
+        {/* Tab bar — sliding accent indicator */}
+        <div data-stagger="3" className="px-5 flex-shrink-0 border-b border-white/[0.06]">
+          <div ref={tabsWrapRef} className="flex gap-1 relative">
             {tabs.map((tab) => (
               <button
                 key={tab.key}
+                data-tab-key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
                 className={`px-3 py-2 text-[13px] font-medium rounded-t-lg transition-colors relative ${
                   activeTab === tab.key
@@ -317,18 +398,18 @@ export function UserProfileModal() {
               >
                 {tab.label}
                 {tab.count !== undefined && !loadingMutuals && (
-                  <span className="ml-1 text-[11px] text-txt-tertiary">({tab.count})</span>
-                )}
-                {activeTab === tab.key && (
-                  <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-accent-primary rounded-full" />
+                  <span className="ml-1 text-[11px] text-txt-tertiary tabular-nums">
+                    (<CountUp value={tab.count} duration={500} />)
+                  </span>
                 )}
               </button>
             ))}
+            <div ref={barRef} className="profile-tab-indicator" aria-hidden />
           </div>
         </div>
 
         {/* Tab content */}
-        <div className="flex-1 overflow-y-auto scrollbar-thin p-5 min-h-[200px]">
+        <div data-stagger="4" className="flex-1 overflow-y-auto scrollbar-thin p-5 min-h-[200px]">
           {activeTab === 'about' && (
             <div className="space-y-4">
               {/* Bio */}
@@ -368,6 +449,16 @@ export function UserProfileModal() {
               </div>
 
             </div>
+          )}
+
+          {activeTab === 'board' && (
+            <ProfileBoardTab
+              user={user}
+              origin={userOrigin}
+              onBoardSaved={(widgets) => {
+                setUser((prev) => (prev ? { ...prev, profileBoard: widgets } : prev));
+              }}
+            />
           )}
 
           {activeTab === 'friends' && (
@@ -493,11 +584,11 @@ export function UserProfileModal() {
           )}
         </div>
 
-        {/* Action buttons */}
-        <div className="flex-shrink-0 px-5 py-3 border-t border-white/[0.06] flex gap-2">
+        {/* Action buttons — luminous hover */}
+        <div data-stagger="5" className="flex-shrink-0 px-5 py-3 border-t border-white/[0.06] flex gap-2">
           <button
             onClick={handleSendMessage}
-            className="flex-1 py-2 rounded-lg text-[13px] font-medium text-white bg-accent-primary hover:bg-accent-primary/80 transition-colors"
+            className="flex-1 py-2 rounded-lg text-[13px] font-medium text-white bg-accent-primary hover:bg-accent-primary/85 dm-icon-btn transition-colors"
           >
             Send Message
           </button>

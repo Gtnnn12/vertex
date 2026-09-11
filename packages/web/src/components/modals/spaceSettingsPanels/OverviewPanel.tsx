@@ -262,7 +262,7 @@ export function OverviewPanel({ spaceId }: OverviewPanelProps) {
     setTransferring(true);
     try {
       await transferOwnership(spaceId, transferTargetId);
-      addToast(t('ownership_transferred').replace('{name}', transferTarget?.user.displayName || transferTarget?.user.username), 'success', 3000);
+      addToast(t('ownership_transferred').replace('{name}', transferTarget?.user.displayName ?? transferTarget?.user.username ?? ''), 'success', 3000);
       setShowTransfer(false);
       setTransferTargetId(null);
       setTransferSearch('');

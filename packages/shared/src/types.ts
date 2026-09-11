@@ -19,6 +19,9 @@ export interface User {
   status: UserStatus;
   customStatus: string | null;
   isAdmin: boolean;
+  netrexEnabled?: boolean;
+  netrexExpiresAt?: number | null;
+  staffRole?: StaffRole | null;
   isDeleted?: boolean;
   discoverable?: boolean;
   profileUpdatedAt?: number;
@@ -29,6 +32,94 @@ export interface User {
   showActivity?: boolean;
   /** Self-view only: this federated account's home instance was reset/lost — it now operates as a sovereign local account (detach spec). */
   federationHomeOrphaned?: boolean;
+  /** Visual style of the profile music (Spotify) card. Server-validated against Netrex entitlement. */
+  musicWidgetStyle?: MusicWidgetStyle;
+  /** Profile board (Tablero) widgets — visible to everyone; editing is Netrex-gated server-side. */
+  profileBoard?: BoardWidget[];
+}
+
+/**
+ * Catalogue of music-widget (Spotify card) visual styles. `vinyl` is the free
+ * default; every other entry requires the Netrex entitlement. The SERVER is
+ * the authority: it validates the style on save and falls back to `vinyl`
+ * when the entitlement is missing.
+ */
+export const MUSIC_WIDGET_STYLES = [
+  'vinyl',
+  'cassette',
+  'holographic-cd',
+  'crystal-orbit',
+  'spectrum',
+  'boombox',
+  'glass-prism',
+  'arcade',
+] as const;
+export type MusicWidgetStyle = (typeof MUSIC_WIDGET_STYLES)[number];
+
+/** Styles that do NOT require the Netrex entitlement. */
+export const MUSIC_WIDGET_FREE_STYLES: readonly MusicWidgetStyle[] = ['vinyl', 'arcade'];
+
+// ─── Profile Board (Tablero) — Netrex-gated profile widgets ───────────────
+
+/**
+ * Catalogue of profile-board widget types. ONE registry entry per type on
+ * the client (WIDGET_REGISTRY); adding a widget = adding ONE entry here +
+ * one registry entry, nothing else.
+ */
+export const BOARD_WIDGET_TYPES = [
+  'favorite-game',
+  'now-song',
+  'quote',
+  'mood',
+  'social-links',
+  'badges',
+  'goal',
+  'friend-spotlight',
+  'top-games',
+  'wishlist',
+] as const;
+export type BoardWidgetType = (typeof BOARD_WIDGET_TYPES)[number];
+
+/** One instantiated widget on a user's board. Order is the array position. */
+export interface BoardWidget {
+  id: string;
+  type: BoardWidgetType;
+  visible: boolean;
+  /** Free-form per-type payload; validated server-side against BOARD_FIELD_LIMITS. */
+  config: Record<string, unknown>;
+}
+
+/** Clean boards, never saturated. */
+export const MAX_BOARD_WIDGETS = 6;
+
+/**
+ * Per-field validation limits shared by the server (authority) and the
+ * client editor (live feedback). Single source of truth — never duplicate.
+ */
+export const BOARD_FIELD_LIMITS = {
+  gameTitle: 60,
+  gameDesc: 140,
+  gameCoverUrl: 512,
+  quote: 160,
+  moodText: 80,
+  moodEmoji: 8,
+  moodColor: 7,
+  linkLabel: 24,
+  linkUrl: 512,
+  maxLinks: 4,
+  maxBadges: 3,
+  goalTitle: 60,
+  goalProgress: 100,
+  friendName: 32,
+  friendMessage: 120,
+  friendAvatarUrl: 512,
+  wishlistTitle: 60,
+  wishlistItem: 60,
+  maxWishlistItems: 5,
+} as const;
+
+export interface UpdateBoardRequest {
+  widgets: BoardWidget[];
 }
 
 export interface ReplicatedInstance {
@@ -52,6 +143,18 @@ export interface FederationRegistryEntry {
 }
 
 export type UserStatus = 'online' | 'idle' | 'dnd' | 'offline';
+
+export const STAFF_ROLES = ['moderator', 'senior_moderator', 'support', 'developer', 'administrator', 'owner'] as const;
+export type StaffRole = (typeof STAFF_ROLES)[number];
+
+export const STAFF_RANK: Record<StaffRole, number> = {
+  moderator: 1,
+  senior_moderator: 2,
+  support: 3,
+  developer: 4,
+  administrator: 5,
+  owner: 6,
+};
 
 export interface UserWithPassword extends User {
   passwordHash: string;
@@ -352,7 +455,7 @@ export interface DmMessageWithUser extends DmMessage {
 
 // ─── Activity Types ────────────────────────────────────────────────────────
 
-export type ActivityType = 'custom' | 'playing' | 'listening' | 'watching' | 'streaming';
+export type ActivityType = 'custom' | 'playing' | 'listening' | 'watching' | 'streaming' | 'spotify';
 
 export interface ActivityTimestamps {
   start?: number;
@@ -366,6 +469,19 @@ export interface ActivityAssets {
   smallText?: string;
 }
 
+/** Spotify “listening now” payload carried by a spotify-type activity. */
+export interface ActivitySpotify {
+  song: string;
+  artist: string;
+  albumName?: string;
+  albumCover: string;
+  progressMs: number;
+  durationMs: number;
+  isPlaying: boolean;
+  /** Server epoch ms when this snapshot was taken (client extrapolates). */
+  fetchedAt: number;
+}
+
 export interface Activity {
   type: ActivityType;
   name: string;
@@ -374,6 +490,7 @@ export interface Activity {
   timestamps?: ActivityTimestamps;
   assets?: ActivityAssets;
   url?: string;
+  spotify?: ActivitySpotify;
 }
 
 // ─── WebSocket Event Types ──────────────────────────────────────────────────
@@ -401,7 +518,7 @@ export type ClientEvent =
   | { type: 'message_edit'; messageId: string; content: string }
   | { type: 'message_delete'; messageId: string }
   | { type: 'typing_start'; channelId: string }
-  | { type: 'presence_update'; status: 'online' | 'idle' | 'dnd' }
+  | { type: 'presence_update'; status: 'online' | 'idle' | 'dnd' | 'offline' }
   | { type: 'voice_join'; channelId: string }
   | { type: 'voice_leave' }
   | { type: 'dm_message_create'; dmChannelId: string; content?: string; attachments?: string[]; replyToId?: string }
@@ -412,7 +529,7 @@ export type ClientEvent =
   | { type: 'reaction_remove'; messageId: string; emoji: string }
   | { type: 'channel_ack'; channelId: string; messageId: string }
   | { type: 'mark_unread'; channelId: string; messageId: string }
-  | { type: 'dm_call_start'; dmChannelId: string }
+  | { type: 'dm_call_start'; dmChannelId: string; video?: boolean }
   | { type: 'dm_call_accept'; dmChannelId: string | null; federatedCallId?: string | null }
   | { type: 'dm_call_reject'; dmChannelId: string | null; federatedCallId?: string | null }
   | { type: 'dm_call_end'; dmChannelId: string | null; federatedCallId?: string | null }
@@ -445,7 +562,7 @@ export type ServerEvent =
   | { type: 'channel_ack'; channelId: string; messageId: string }
   | { type: 'friend_request_received'; request: FriendRequest }
   | { type: 'friend_request_accepted'; friend: Friend; requestId: string }
-  | { type: 'dm_call_incoming'; dmChannelId: string | null; federatedCallId?: string; callerId: string; callerName: string; livekitUrl?: string; livekitToken?: string; callOrigin?: string }
+  | { type: 'dm_call_incoming'; dmChannelId: string | null; federatedCallId?: string; callerId: string; callerName: string; livekitUrl?: string; livekitToken?: string; callOrigin?: string; video?: boolean }
   | { type: 'dm_call_accepted'; dmChannelId: string | null; federatedCallId?: string }
   | { type: 'dm_call_rejected'; dmChannelId: string }
   | { type: 'dm_call_ended'; dmChannelId: string }
@@ -577,6 +694,12 @@ export interface UpdateUserRequest {
   profileUpdatedAt?: number;
   discoverable?: boolean;
   showActivity?: boolean;
+  /** Requested music-card style. Server validates the Netrex entitlement; on failure it saves 'vinyl' and responds 200. */
+  musicWidgetStyle?: string;
+}
+
+export interface UpdateBoardResponse {
+  widgets: BoardWidget[];
 }
 
 export interface UpdateMemberRequest {
@@ -924,6 +1047,207 @@ export interface AdminResetPasswordResponse {
   temporaryPassword: string;
 }
 
+// ─── Admin Center Types ────────────────────────────────────────────────────
+
+export type NetrexState = 'active' | 'permanent' | 'expired' | 'none';
+export type ModerationAction = 'warn' | 'timeout' | 'ban' | 'unban';
+
+export interface AdminCenterViewerCapabilities {
+  userId: string;
+  role: StaffRole;
+  rank: number;
+  canManageNetrex: boolean;
+  canManageStaff: boolean;
+  canModerate: boolean;
+  canBan: boolean;
+}
+
+export interface AdminCenterSummary {
+  totalUsers: number;
+  onlineUsers: number;
+  newUsers7d: number;
+  newUsers30d: number;
+  netrexActive: number;
+  netrexPermanent: number;
+  staffCount: number;
+  bannedUsers: number;
+  spacesCount: number;
+  viewer: AdminCenterViewerCapabilities;
+}
+
+export interface AdminCenterUserRow {
+  id: string;
+  username: string;
+  displayName: string | null;
+  avatar: string | null;
+  avatarColor: string | null;
+  status: string;
+  isAdmin: boolean;
+  isDeleted: boolean;
+  homeInstance: string | null;
+  createdAt: number;
+  netrexState: NetrexState;
+  netrexExpiresAt: number | null;
+  staffRole: StaffRole | null;
+  bannedUntil: number | null;
+  banReason: string | null;
+  lastSeenAt: number | null;
+}
+
+export interface AdminCenterUsersResponse {
+  users: AdminCenterUserRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface ModerationEvent {
+  id: string;
+  userId: string;
+  action: ModerationAction;
+  reason: string | null;
+  actorId: string;
+  actorUsername: string | null;
+  durationSeconds: number | null;
+  expiresAt: number | null;
+  createdAt: number;
+}
+
+export interface AdminCenterUserSpace {
+  id: string;
+  name: string;
+  icon: string | null;
+  avatarColor: string | null;
+  visibility: string;
+  role: 'owner' | 'member';
+  memberCount: number;
+  createdAt: number;
+}
+
+export interface AdminCenterUserDetail {
+  user: AdminCenterUserRow;
+  spaces: AdminCenterUserSpace[];
+  moderation: ModerationEvent[];
+}
+
+export interface AuditLogEntry {
+  id: string;
+  actorId: string;
+  actorUsername: string | null;
+  action: string;
+  targetId: string | null;
+  targetType: string | null;
+  metadata: string | null;
+  createdAt: number;
+}
+
+export interface AuditLogResponse {
+  entries: AuditLogEntry[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface StaffMember {
+  userId: string;
+  role: StaffRole;
+  grantedBy: string;
+  grantedByUsername: string | null;
+  grantedAt: number;
+  updatedAt: number;
+  username: string;
+  displayName: string | null;
+  avatar: string | null;
+  avatarColor: string | null;
+  isAdmin: boolean;
+}
+
+export interface AdminCenterSpaceRow {
+  id: string;
+  name: string;
+  icon: string | null;
+  avatarColor: string | null;
+  visibility: string;
+  ownerId: string;
+  ownerUsername: string;
+  memberCount: number;
+  createdAt: number;
+}
+
+export interface AdminCenterSpacesResponse {
+  spaces: AdminCenterSpaceRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface AdminCenterSpaceDetail {
+  id: string;
+  name: string;
+  icon: string | null;
+  banner: string | null;
+  avatarColor: string | null;
+  visibility: string;
+  description: string | null;
+  ownerId: string;
+  ownerUsername: string;
+  memberCount: number;
+  channelCount: number;
+  pendingJoinRequests: number;
+  bannedMembers: number;
+  createdAt: number;
+}
+
+export interface AdminCenterActivityRow {
+  userId: string;
+  username: string;
+  displayName: string | null;
+  avatar: string | null;
+  avatarColor: string | null;
+  status: string;
+  lastSeenAt: number | null;
+  createdAt: number;
+  isOnline: boolean;
+  activities: Activity[];
+}
+
+export interface AdminCenterActivityResponse {
+  recentActive: AdminCenterActivityRow[];
+  online: AdminCenterActivityRow[];
+  newUsers: AdminCenterActivityRow[];
+}
+
+export interface NetrexGrantRequest {
+  permanent?: boolean;
+  durationMinutes?: number;
+}
+
+export interface NetrexStatusResult {
+  userId: string;
+  netrexEnabled: boolean;
+  netrexExpiresAt: number | null;
+  netrexState: NetrexState;
+}
+
+export interface StaffAssignRequest {
+  role: StaffRole;
+}
+
+export interface StaffAssignResult {
+  staffMember: StaffMember;
+}
+
+export interface ModerationRequest {
+  action: ModerationAction;
+  reason?: string;
+  durationHours?: number;
+}
+
+export interface ModerationResult {
+  user: AdminCenterUserRow;
+  event: ModerationEvent;
+}
+
 // ─── Federation Relay Types ──────────────────────────────────────────────────
 
 export interface FederationRelayParticipant {
@@ -994,6 +1318,7 @@ export interface FederationRelayEvent {
 export interface FederationCallPayload {
   livekitUrl?: string;
   tokens?: Record<string, string>;  // homeUserId → LiveKit token
+  video?: boolean;                  // true = video call, false/undefined = voice call
   caller?: { homeUserId: string; homeInstance: string; displayName: string };
   acceptor?: { homeUserId: string; homeInstance: string };
   rejector?: { homeUserId: string; homeInstance: string };

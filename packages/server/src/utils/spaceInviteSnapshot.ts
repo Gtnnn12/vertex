@@ -32,7 +32,7 @@ export function getLocalInviteSnapshot(inviteCode: string): SpaceInviteSnapshot 
 
   const settings = db.select().from(schema.instanceSettings)
     .where(eq(schema.instanceSettings.id, 1)).get();
-  const instanceName = settings?.instanceName ?? 'Backspace';
+  const instanceName = settings?.instanceName ?? 'VERTEX';
 
   return {
     spaceId: space.id,
@@ -73,7 +73,7 @@ export async function fetchSpaceInviteSnapshot(
       icon: data.icon ?? null,
       avatarColor: data.avatarColor ?? null,
       memberCount: typeof data.memberCount === 'number' ? data.memberCount : 0,
-      instanceName: data.instanceName ?? 'Backspace',
+      instanceName: data.instanceName ?? 'VERTEX',
     };
   } catch {
     return null;

@@ -50,21 +50,29 @@ if (publicOrigin !== undefined) {
 
 // AGPL-3.0 § 13 "network-use source offer": users interacting over the network
 // must be able to obtain the Corresponding Source of the *running* version.
-// Operators who modify Backspace and self-host MUST point this at their own
-// fork's source so the offer stays accurate. Defaults to the upstream repo for
-// unmodified deployments.
-const UPSTREAM_SOURCE_URL = 'https://github.com/TheZwiss/backspace';
-const sourceCodeUrl = envOptional('BACKSPACE_SOURCE_URL') ?? UPSTREAM_SOURCE_URL;
+// Operators who modify VERTEX and self-host MUST point this at their own
+// fork's source so the offer stays accurate. Defaults to the project repo for
+// unmodified deployments. (BACKSPACE_SOURCE_URL remains accepted as a legacy
+// alias so existing deployments don't break on upgrade.)
+const UPSTREAM_SOURCE_URL = 'https://github.com/gtnn12/VERTEX';
+const sourceCodeUrl =
+  envOptional('VERTEX_SOURCE_URL') ?? envOptional('BACKSPACE_SOURCE_URL') ?? UPSTREAM_SOURCE_URL;
 if (!/^https?:\/\//i.test(sourceCodeUrl)) {
   throw new Error(
-    `BACKSPACE_SOURCE_URL must start with http:// or https:// — got: ${sourceCodeUrl}`
+    `VERTEX_SOURCE_URL must start with http:// or https:// — got: ${sourceCodeUrl}`
   );
 }
 
 // Short git SHA/tag of the running build, injected at Docker build time via the
-// BACKSPACE_COMMIT build arg (see Dockerfile / deploy.sh). Null in local dev
+// VERTEX_COMMIT build arg (BACKSPACE_COMMIT remains accepted as a legacy alias;
+// see Dockerfile / deploy.sh). Null in local dev
 // (no build step) — the § 13 offer still works via version + sourceCodeUrl.
-const commit = envOptional('BACKSPACE_COMMIT') ?? null;
+const commit = envOptional('VERTEX_COMMIT') ?? envOptional('BACKSPACE_COMMIT') ?? null;
+
+// VERTEX Owner bootstrap: the account whose username matches OWNER_EMAIL is
+// promoted to staffRole='owner' at boot (idempotent — see ensureDefaults in
+// db/migrate.ts). This is the backend source of truth for the Owner rank; the
+// frontend only *represents* it via StaffBadge.
 
 export const config = {
   port: envInt('PORT', 3000),
@@ -75,6 +83,12 @@ export const config = {
   publicOrigin,
   sourceCodeUrl,
   commit,
+  ownerEmail: envOptional('OWNER_EMAIL')?.trim().toLowerCase(),
+
+  // Gemini (web chat widget). When unset the /api/chat endpoint answers with
+  // its static fallback instead of calling the API — the widget stays usable.
+  googleApiKey: envOptional('GOOGLE_API_KEY')?.trim(),
+  geminiModel: envOptional('GEMINI_MODEL')?.trim() || 'gemini-2.0-flash',
 
   livekit: {
     url: envOptional('LIVEKIT_URL'),

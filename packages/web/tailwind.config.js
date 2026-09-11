@@ -9,6 +9,11 @@ export default {
       colors: {
         // ── AETHER DRIFT TOKENS ──
         // RGB-channel variables enable Tailwind opacity modifiers (e.g. bg-accent-rose/10)
+        // Netrex brand green (fixed, not accent-variable): #57f287
+        netrex: {
+          DEFAULT: '#57f287',
+          dim: '#2fbf63',
+        },
         surface: {
           base:     'rgb(var(--bg-base) / <alpha-value>)',
           channel:  'rgb(var(--bg-channel) / <alpha-value>)',

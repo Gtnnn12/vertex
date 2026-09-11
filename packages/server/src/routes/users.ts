@@ -3,8 +3,8 @@ import { eq, or, and, inArray } from 'drizzle-orm';
 import { getDb, schema } from '../db/index.js';
 import { authenticate, verifyPassword, hashPassword, signJwt } from '../utils/auth.js';
 import { connectionManager } from '../ws/handler.js';
-import type { UpdateUserRequest, VerifyPasswordRequest, VerifyPasswordResponse, ChangePasswordRequest, ChangePasswordResponse, DeleteAccountRequest, ReplicatedInstance, SpaceLayoutItem, SpaceFolder, Activity, FederationIdentityDeleteRequest, FederationIdentityDeleteResponse, FederationIdentityDeleteResult, FederationProfileUpdatePayload } from '@backspace/shared';
-import { AVATAR_COLORS } from '@backspace/shared';
+import type { UpdateUserRequest, VerifyPasswordRequest, VerifyPasswordResponse, ChangePasswordRequest, ChangePasswordResponse, DeleteAccountRequest, ReplicatedInstance, SpaceLayoutItem, SpaceFolder, Activity, FederationIdentityDeleteRequest, FederationIdentityDeleteResponse, FederationIdentityDeleteResult, FederationProfileUpdatePayload, MusicWidgetStyle, BoardWidget, UpdateBoardRequest, UpdateBoardResponse } from '@backspace/shared';
+import { AVATAR_COLORS, MUSIC_WIDGET_STYLES, MUSIC_WIDGET_FREE_STYLES, BOARD_WIDGET_TYPES, MAX_BOARD_WIDGETS, BOARD_FIELD_LIMITS } from '@backspace/shared';
 import { sanitizeUser } from '../utils/sanitize.js';
 import { deleteUploadFile, deleteAttachmentByFilename } from '../utils/fileCleanup.js';
 import { tombstoneUser, collectDeletionBroadcastTargets, collectProfileBroadcastTargetIds } from '../utils/userDeletion.js';
@@ -25,6 +25,183 @@ export function isValidAssetUrl(url: string | null | undefined): boolean {
   // Accept bare filenames (the existing convention) — no slashes, no traversal
   if (!trimmed.includes('/') && !trimmed.includes('\\') && !trimmed.includes('..')) return true;
   return false;
+}
+
+/**
+ * Real Netrex entitlement for a user row: an explicit admin/billing grant
+ * (netrexEnabled=1, unexpired) or a purchased plan (netrexUntil in the
+ * future). Used by the music-widget style gate — the entitlement must be
+ * granted server-side; the client can never mint it.
+ */
+function computeNetrexEntitlement(row: typeof schema.users.$inferSelect): boolean {
+  const granted = row.netrexEnabled === 1 && (row.netrexExpiresAt == null || row.netrexExpiresAt > Date.now());
+  const purchased = row.netrexUntil != null && row.netrexUntil > Date.now();
+  return granted || purchased;
+}
+
+// ─── Profile board (Tablero) validation ────────────────────────────────────
+
+const BOARD_TYPE_SET = new Set<string>(BOARD_WIDGET_TYPES);
+
+/** http/https ONLY — never data:, javascript:, vbscript:, etc. */
+function isSafeHttpUrl(value: unknown): boolean {
+  if (typeof value !== 'string' || value.length === 0 || value.length > BOARD_FIELD_LIMITS.linkUrl) return false;
+  try {
+    const u = new URL(value);
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+/** Cover/avatar images: http/https OR an internal upload path/filename. */
+function isSafeImageUrl(value: unknown): boolean {
+  if (typeof value !== 'string') return false;
+  if (value.length === 0 || value.length > BOARD_FIELD_LIMITS.gameCoverUrl) return false;
+  if (isSafeHttpUrl(value)) return true;
+  // Internal assets: bare filename (existing convention) or /api/uploads/ path.
+  return !value.includes('/') || value.startsWith('/api/uploads/');
+}
+
+function cleanText(value: unknown, max: number): string | null {
+  if (typeof value !== 'string') return null;
+  // Strip control characters (defensive) and trim.
+  // eslint-disable-next-line no-control-regex
+  const cleaned = value.replace(/[\u0000-\u001f\u007f]/g, '').trim();
+  if (cleaned.length === 0) return null;
+  return cleaned.slice(0, max);
+}
+
+function isHexColor(value: unknown): boolean {
+  return typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value);
+}
+
+/**
+ * Validate + normalize one widget's config per type. Returns null when the
+ * widget is unrecoverable (unknown type / malformed config). Fields are
+ * individually dropped when invalid — a widget with an empty config after
+ * cleaning is still accepted (the renderer shows its empty state).
+ */
+function sanitizeBoardWidgetConfig(type: string, raw: Record<string, unknown>): Record<string, unknown> | null {
+  const L = BOARD_FIELD_LIMITS;
+  switch (type) {
+    case 'favorite-game': {
+      const cfg: Record<string, unknown> = {};
+      const title = cleanText(raw.title, L.gameTitle);
+      const description = cleanText(raw.description, L.gameDesc);
+      if (title) cfg.title = title;
+      if (description) cfg.description = description;
+      if (typeof raw.coverUrl === 'string' && raw.coverUrl.length > 0 && isSafeImageUrl(raw.coverUrl)) cfg.coverUrl = raw.coverUrl;
+      return cfg;
+    }
+    case 'now-song':
+      // No config: the block reads the live activity store.
+      return {};
+    case 'quote': {
+      const cfg: Record<string, unknown> = {};
+      const text = cleanText(raw.text, L.quote);
+      const author = cleanText(raw.author, L.friendName);
+      if (text) cfg.text = text;
+      if (author) cfg.author = author;
+      return cfg;
+    }
+    case 'mood': {
+      const cfg: Record<string, unknown> = {};
+      const text = cleanText(raw.text, L.moodText);
+      if (text) cfg.text = text;
+      if (typeof raw.emoji === 'string' && raw.emoji.length > 0 && raw.emoji.length <= L.moodEmoji && !/[\u0000-\u001f]/.test(raw.emoji)) cfg.emoji = raw.emoji;
+      if (isHexColor(raw.color)) cfg.color = raw.color;
+      return cfg;
+    }
+    case 'social-links': {
+      if (!Array.isArray(raw.links)) return { links: [] };
+      const links: Array<{ label: string; url: string }> = [];
+      for (const item of raw.links.slice(0, L.maxLinks)) {
+        if (!item || typeof item !== 'object') continue;
+        const l = item as Record<string, unknown>;
+        const label = cleanText(l.label, L.linkLabel);
+        if (!label || !isSafeHttpUrl(l.url)) continue;
+        links.push({ label, url: l.url as string });
+      }
+      return { links };
+    }
+    case 'badges': {
+      if (!Array.isArray(raw.badges)) return { badges: [] };
+      const VALID = new Set(['owner', 'administrator', 'developer', 'senior_moderator', 'moderator', 'support', 'netrex']);
+      const badges = raw.badges
+        .filter((b): b is string => typeof b === 'string' && VALID.has(b))
+        .slice(0, L.maxBadges);
+      return { badges: [...new Set(badges)] };
+    }
+    case 'goal': {
+      const cfg: Record<string, unknown> = {};
+      const title = cleanText(raw.title, L.goalTitle);
+      if (title) cfg.title = title;
+      const progress = typeof raw.progress === 'number' && Number.isFinite(raw.progress)
+        ? Math.min(L.goalProgress, Math.max(0, Math.round(raw.progress)))
+        : 0;
+      cfg.progress = progress;
+      return cfg;
+    }
+    case 'friend-spotlight': {
+      const cfg: Record<string, unknown> = {};
+      const name = cleanText(raw.name, L.friendName);
+      const message = cleanText(raw.message, L.friendMessage);
+      if (name) cfg.name = name;
+      if (message) cfg.message = message;
+      if (typeof raw.avatarUrl === 'string' && raw.avatarUrl.length > 0 && isSafeImageUrl(raw.avatarUrl)) cfg.avatarUrl = raw.avatarUrl;
+      if (typeof raw.userId === 'string' && /^["][a-zA-Z0-9_-]{1,64}$/.test(raw.userId)) cfg.userId = raw.userId;
+      return cfg;
+    }
+    case 'top-games': {
+      if (!Array.isArray(raw.games)) return { games: [] };
+      const games: Array<{ title: string; coverUrl?: string }> = [];
+      for (const item of raw.games.slice(0, 3)) {
+        if (!item || typeof item !== 'object') continue;
+        const g = item as Record<string, unknown>;
+        const title = cleanText(g.title, L.gameTitle);
+        if (!title) continue;
+        const game: { title: string; coverUrl?: string } = { title };
+        if (typeof g.coverUrl === 'string' && g.coverUrl.length > 0 && isSafeImageUrl(g.coverUrl)) game.coverUrl = g.coverUrl;
+        games.push(game);
+      }
+      return { games };
+    }
+    case 'wishlist': {
+      if (!Array.isArray(raw.items)) return { items: [] };
+      const items = raw.items
+        .map((i) => cleanText(i, L.wishlistItem))
+        .filter((i): i is string => i !== null)
+        .slice(0, L.maxWishlistItems);
+      return { items };
+    }
+    default:
+      return null;
+  }
+}
+
+/**
+ * Validate a full board payload. Returns null when unrecoverable (e.g. not
+ * an array) — callers reject with 400. Over-limit boards are truncated to
+ * MAX_BOARD_WIDGETS rather than rejected (matches the music-style gate's
+ * "agree on the stored value" philosophy).
+ */
+export function sanitizeBoardPayload(widgets: unknown): BoardWidget[] | null {
+  if (!Array.isArray(widgets)) return null;
+  const seenIds = new Set<string>();
+  const out: BoardWidget[] = [];
+  for (const item of widgets.slice(0, MAX_BOARD_WIDGETS)) {
+    if (!item || typeof item !== 'object') continue;
+    const w = item as Record<string, unknown>;
+    if (typeof w.id !== 'string' || w.id.length === 0 || w.id.length > 64) continue;
+    if (!BOARD_TYPE_SET.has(w.type as string) || typeof w.type !== 'string') continue;
+    if (seenIds.has(w.id)) continue;
+    seenIds.add(w.id);
+    const config = sanitizeBoardWidgetConfig(w.type, (w.config && typeof w.config === 'object' ? w.config : {}) as Record<string, unknown>);
+    if (config === null) continue;
+    out.push({ id: w.id, type: w.type as BoardWidget['type'], visible: w.visible !== false, config });
+  }
+  return out;
 }
 
 export async function userRoutes(app: FastifyInstance): Promise<void> {
@@ -187,7 +364,7 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.patch<{ Body: UpdateUserRequest }>('/api/users/@me', { preHandler: authenticate }, async (request, reply) => {
-    const { displayName, avatar, banner, accentColor, avatarColor, bio, customStatus, status, replicatedInstances, homeUserId, profileUpdatedAt, discoverable, showActivity } = request.body;
+    const { displayName, avatar, banner, accentColor, avatarColor, bio, customStatus, status, replicatedInstances, homeUserId, profileUpdatedAt, discoverable, showActivity, musicWidgetStyle } = request.body;
     const db = getDb();
 
     const updateData: Record<string, string | null | undefined> = {};
@@ -426,6 +603,17 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
       (updateData as Record<string, unknown>).showActivity = showActivity ? 1 : 0;
     }
 
+    if (musicWidgetStyle !== undefined) {
+      // Server-side Netrex gate. Premium styles silently fall back to 'vinyl'
+      // when the caller lacks the entitlement — the request still succeeds
+      // (200) so the client and the server agree on the stored value.
+      const entitlement = computeNetrexEntitlement(preUpdateUser);
+      const style = MUSIC_WIDGET_STYLES.includes(musicWidgetStyle as MusicWidgetStyle)
+        ? (musicWidgetStyle as MusicWidgetStyle)
+        : 'vinyl';
+      updateData.musicWidgetStyle = MUSIC_WIDGET_FREE_STYLES.includes(style) || entitlement ? style : 'vinyl';
+    }
+
     if (Object.keys(updateData).length === 0) {
       return reply.code(400).send({ error: 'No fields to update', statusCode: 400 });
     }
@@ -569,6 +757,31 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
     }
 
     return reply.code(200).send(sanitized);
+  });
+
+  // PUT /api/users/@me/board — save the profile board (Tablero).
+  // SERVER-SIDE NETREX GATE: only entitled users can write. Visitors can
+  // READ any board (it's the showcase); the entitlement is never trusted
+  // from the client.
+  app.put<{ Body: UpdateBoardRequest }>('/api/users/@me/board', { preHandler: authenticate }, async (request, reply) => {
+    const db = getDb();
+    const user = db.select().from(schema.users).where(eq(schema.users.id, request.userId)).get();
+    if (!user) {
+      return reply.code(404).send({ error: 'User not found', statusCode: 404 });
+    }
+    if (!computeNetrexEntitlement(user)) {
+      return reply.code(403).send({ error: 'Netrex entitlement required', statusCode: 403 });
+    }
+    const widgets = sanitizeBoardPayload(request.body?.widgets);
+    if (widgets === null) {
+      return reply.code(400).send({ error: 'widgets must be an array', statusCode: 400 });
+    }
+    db.update(schema.users)
+      .set({ profileBoard: JSON.stringify(widgets) })
+      .where(eq(schema.users.id, request.userId))
+      .run();
+    const response: UpdateBoardResponse = { widgets };
+    return reply.code(200).send(response);
   });
 
   // GET /api/users/@me/federation-registry — retrieve persistent federation registry

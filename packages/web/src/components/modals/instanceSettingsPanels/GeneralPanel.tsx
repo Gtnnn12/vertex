@@ -79,7 +79,7 @@ export function GeneralPanel() {
             type="text"
             value={draft.instanceName}
             onChange={(e) => setDraft({ ...draft, instanceName: e.target.value.slice(0, 32) })}
-            placeholder="Backspace"
+            placeholder="VERTEX"
             className="input-standard w-full"
           />
           <div className="text-[11px] text-txt-tertiary text-right mt-1">{draft.instanceName.length}/32</div>

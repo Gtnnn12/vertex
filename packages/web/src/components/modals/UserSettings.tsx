@@ -14,11 +14,14 @@ import { DesktopPanel } from './settingsPanels/DesktopPanel';
 import { InstancePanel } from './settingsPanels/InstancePanel';
 import { KeybindsPanel } from './settingsPanels/KeybindsPanel';
 import { LanguagePanel } from './settingsPanels/LanguagePanel';
+import { BillingPanel } from './settingsPanels/BillingPanel';
+import { AdminDiscountsPanel } from './settingsPanels/AdminDiscountsPanel';
+import { AdminCenter } from '../admin/AdminCenter';
 import { isElectron } from '../../platform/platform';
 import { SettingsSectionsProvider, useSettingsSectionsContext } from './SettingsSectionsContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 
-type SettingsTab = 'account' | 'voice' | 'privacy' | 'connections' | 'keybinds' | 'desktop' | 'instance' | 'language';
+type SettingsTab = 'account' | 'voice' | 'privacy' | 'connections' | 'keybinds' | 'desktop' | 'instance' | 'language' | 'billing' | 'adminDiscounts' | 'adminCenter';
 
 function SidebarSubLinks() {
   const ctx = useSettingsSectionsContext();
@@ -62,6 +65,9 @@ export function UserSettingsModal() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
 
+  const isStaff = !!user?.staffRole;
+  const canAdminCenter = isAdmin || isStaff;
+
   const [tab, setTab] = useState<SettingsTab>('account');
   const [mobileView, setMobileView] = useState<'tabs' | 'content'>('tabs');
   // AGPL § 13: home-instance source offer. Fetched from the public info endpoint
@@ -84,9 +90,11 @@ export function UserSettingsModal() {
   useEffect(() => {
     if (isOpen) {
       const requested = modalData.tab as SettingsTab | undefined;
-      if (requested && ['account', 'voice', 'privacy', 'connections', 'keybinds', 'instance', 'language'].includes(requested)) {
+      if (requested && ['account', 'voice', 'privacy', 'connections', 'keybinds', 'instance', 'language', 'adminCenter'].includes(requested)) {
         // Only allow instance tab for admins
         if (requested === 'instance' && !isAdmin) {
+          setTab('account');
+        } else if (requested === 'adminCenter' && !canAdminCenter) {
           setTab('account');
         } else {
           setTab(requested);
@@ -97,7 +105,7 @@ export function UserSettingsModal() {
       // On mobile, if deep-linking to a tab, show content directly
       setMobileView(requested ? 'content' : 'tabs');
     }
-  }, [isOpen, modalData.tab, isAdmin]);
+  }, [isOpen, modalData.tab, isAdmin, canAdminCenter]);
 
   const handleLogout = () => {
     logout();
@@ -145,15 +153,18 @@ export function UserSettingsModal() {
             <div className="border-t border-white/[0.04] my-2 mx-2" />
             <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-3 py-1">{t('app_settings')}</div>
             <button onClick={() => handleTabClick('connections')} className={tabClass('connections')}>{t('connections')}</button>
+            <button onClick={() => handleTabClick('billing')} className={tabClass('billing')}>{t('billing_tab')}</button>
             <button onClick={() => handleTabClick('keybinds')} className={tabClass('keybinds')}>{t('keybinds')}</button>
             {isElectron() && <button onClick={() => handleTabClick('desktop')} className={tabClass('desktop')}>{t('desktop')}</button>}
             <button onClick={() => handleTabClick('language')} className={tabClass('language')}>{t('language')}</button>
+            {isElectron() && <button onClick={() => handleTabClick('adminDiscounts')} className={tabClass('adminDiscounts')}>{t('admin_discounts_tab')}</button>}
 
-            {isAdmin && (
+            {(isAdmin || canAdminCenter) && (
               <>
                 <div className="border-t border-white/[0.04] my-2 mx-2" />
                 <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-3 py-1">{t('administration')}</div>
-                <button onClick={() => handleTabClick('instance')} className={tabClass('instance')}>{t('instance')}</button>
+                {isAdmin && <button onClick={() => handleTabClick('instance')} className={tabClass('instance')}>{t('instance')}</button>}
+                {canAdminCenter && <button onClick={() => handleTabClick('adminCenter')} className={tabClass('adminCenter')}>{t('admin_center')}</button>}
                 {tab === 'instance' && <SidebarSubLinks />}
               </>
             )}
@@ -203,15 +214,17 @@ export function UserSettingsModal() {
               <div className="border-t border-white/[0.04] my-2 mx-2" />
               <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-3 py-1">{t('app_settings')}</div>
               <button onClick={() => handleTabClick('connections')} className={tabClass('connections')}>{t('connections')}</button>
+              <button onClick={() => handleTabClick('billing')} className={tabClass('billing')}>{t('billing_tab')}</button>
               <button onClick={() => handleTabClick('keybinds')} className={tabClass('keybinds')}>{t('keybinds')}</button>
               {isElectron() && <button onClick={() => handleTabClick('desktop')} className={tabClass('desktop')}>{t('desktop')}</button>}
               <button onClick={() => handleTabClick('language')} className={tabClass('language')}>{t('language')}</button>
 
-              {isAdmin && (
+              {(isAdmin || canAdminCenter) && (
                 <>
                   <div className="border-t border-white/[0.04] my-2 mx-2" />
                   <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-3 py-1">{t('administration')}</div>
-                  <button onClick={() => handleTabClick('instance')} className={tabClass('instance')}>{t('instance')}</button>
+                  {isAdmin && <button onClick={() => handleTabClick('instance')} className={tabClass('instance')}>{t('instance')}</button>}
+                  {canAdminCenter && <button onClick={() => handleTabClick('adminCenter')} className={tabClass('adminCenter')}>{t('admin_center')}</button>}
                 </>
               )}
 
@@ -235,7 +248,7 @@ export function UserSettingsModal() {
         {/* Content area (desktop always, mobile only when viewing content) */}
         {(!isMobile || mobileView === 'content') && (
           <SettingsScrollContainer>
-            <div className="px-6 max-w-[640px] mx-auto">
+            <div className={`px-6 mx-auto ${tab === 'account' ? 'max-w-[900px]' : 'max-w-[640px]'}`}>
               {/* Mobile back button */}
               {isMobile && (
                 <button
@@ -257,6 +270,9 @@ export function UserSettingsModal() {
               {tab === 'desktop' && <DesktopPanel />}
               {tab === 'instance' && isAdmin && <InstancePanel />}
               {tab === 'language' && <LanguagePanel />}
+              {tab === 'billing' && <BillingPanel />}
+              {tab === 'adminDiscounts' && <AdminDiscountsPanel />}
+              {tab === 'adminCenter' && canAdminCenter && <AdminCenter />}
             </div>
           </SettingsScrollContainer>
         )}

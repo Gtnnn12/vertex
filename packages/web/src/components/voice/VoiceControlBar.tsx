@@ -1,9 +1,8 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { useVoiceStore } from '../../stores/voiceStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useSpaceStore, getChannelOrigin, getMyUserIdForOrigin } from '../../stores/spaceStore';
-import { ScreenShareSettingsPopover } from './ScreenShareSettingsPopover';
 import { hasPermissionBit, PermissionBits } from '../../utils/permissions';
 import { handleMuteAction, handleDeafenAction, handleCameraAction, handleScreenShareAction, handleDisconnectAction } from '../../utils/voiceActions';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -31,13 +30,9 @@ export function VoiceControlBar() {
   const spaceDeafenedUserIds = useVoiceStore((s) => s.spaceDeafenedUserIds);
   const isSpaceMuted = !!(myOriginId && spaceId && spaceMutedUserIds.has(`${spaceId}:${myOriginId}`));
   const isSpaceDeafened = !!(myOriginId && spaceId && spaceDeafenedUserIds.has(`${spaceId}:${myOriginId}`));
-  const activeDmCall = useVoiceStore((s) => s.activeDmCall);
   const channelPerms = useSpaceStore((s) => currentVoiceChannelId ? s.channelPermissions.get(currentVoiceChannelId) : undefined);
-  const isDmCall = !!activeDmCall;
-  const canSpeak = isDmCall || hasPermissionBit(channelPerms, PermissionBits.SPEAK);
-  const canStream = isDmCall || hasPermissionBit(channelPerms, PermissionBits.STREAM);
-  const [qualityOpen, setQualityOpen] = useState(false);
-  const qualityBtnRef = useRef<HTMLButtonElement>(null);
+  const canSpeak = hasPermissionBit(channelPerms, PermissionBits.SPEAK);
+  const canStream = hasPermissionBit(channelPerms, PermissionBits.STREAM);
 
   const handleMute = React.useCallback(() => {
     handleMuteAction(isSpaceMuted, isSpaceDeafened);
@@ -138,23 +133,6 @@ export function VoiceControlBar() {
             </svg>
           </button>
         )}
-
-        {/* Video Quality */}
-        <button
-          ref={qualityBtnRef}
-          onClick={() => setQualityOpen(!qualityOpen)}
-          className={qualityOpen
-            ? `${btnBase} bg-surface-channel text-txt-primary`
-            : btnDefault
-          }
-          title={t('video_quality')}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M3 5v14h18V5H3zm16 12H5V7h14v10z" />
-            <path d="M8 15l2.5-3.21L13 15l2-2.5L18 17H6z" />
-          </svg>
-        </button>
-        <ScreenShareSettingsPopover open={qualityOpen} onClose={() => setQualityOpen(false)} anchorRef={qualityBtnRef} />
 
         {/* Separator */}
         <div className="w-[1px] h-6 bg-white/10 mx-0.5" />

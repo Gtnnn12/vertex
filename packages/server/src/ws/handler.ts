@@ -243,7 +243,7 @@ class ConnectionManager {
 
     console.log(`[ConnectionManager] Finalizing disconnect for user ${userId}`);
     const db = getDb();
-    db.update(schema.users).set({ status: 'offline' }).where(eq(schema.users.id, userId)).run();
+    db.update(schema.users).set({ status: 'offline', lastSeenAt: Date.now() }).where(eq(schema.users.id, userId)).run();
 
     // Leave voice room if in one (handles both space and DM rooms)
     const left = this.leaveCurrentRoom(userId);
@@ -1729,12 +1729,19 @@ export async function registerWebSocket(app: FastifyInstance): Promise<void> {
             }
           }
 
+          // Global suspension (permanent or temporary ban)
+          if (userRow.bannedUntil && userRow.bannedUntil > Date.now()) {
+            ws.send(JSON.stringify({ type: 'error', message: 'This account is suspended' }));
+            ws.close();
+            return;
+          }
+
           authenticated = true;
           isFederated = !!userRow.homeInstance;
           clearTimeout(authTimeout);
 
           // Update user status to online
-          db.update(schema.users).set({ status: 'online' }).where(eq(schema.users.id, userId)).run();
+          db.update(schema.users).set({ status: 'online', lastSeenAt: Date.now() }).where(eq(schema.users.id, userId)).run();
 
           // Add connection
           connectionManager.addConnection(userId, ws);
@@ -1751,7 +1758,15 @@ export async function registerWebSocket(app: FastifyInstance): Promise<void> {
           }));
 
           // Broadcast online to friends + DM co-members + space co-members.
-          const onlinePayload = { type: 'presence_update' as const, userId, status: 'online' as const };
+          // Include current activities so late-connected / reconnected clients
+          // hydrate their activity panel without waiting for a client push.
+          const currentActivities = connectionManager.getUserActivities(userId);
+          const onlinePayload = {
+            type: 'presence_update' as const,
+            userId,
+            status: 'online' as const,
+            ...(currentActivities.length > 0 ? { activities: currentActivities } : {}),
+          };
           const onlineTargets = collectProfileBroadcastTargetIds(userId);
           for (const uid of onlineTargets) connectionManager.sendToUser(uid, onlinePayload);
 

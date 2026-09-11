@@ -5,6 +5,7 @@ import { wsSend } from '../../hooks/useWebSocket';
 import { MentionPopover } from './MentionPopover';
 import { TypingIndicator } from './TypingIndicator';
 import { InputPopover, type InputPopoverTab } from './InputPopover';
+import { TypingIndicatorSettingsPopover } from './TypingIndicatorSettingsPopover';
 import { AttachmentProgress } from './AttachmentProgress';
 import { hasPermissionBit, PermissionBits } from '../../utils/permissions';
 import { MAX_MESSAGE_LENGTH, type MemberWithUser } from '@backspace/shared';
@@ -68,6 +69,9 @@ export function MessageInput({ channelId, channelName, placeholder }: MessageInp
   // UI-only state stays local
   const [mentionState, setMentionState] = useState<MentionState | null>(null);
   const [activePopover, setActivePopover] = useState<InputPopoverTab | null>(null);
+  // DM personalization popover (typing-indicator style). Only offered in DMs.
+  const [typingSettingsOpen, setTypingSettingsOpen] = useState(false);
+  const typingSettingsAnchorRef = useRef<HTMLButtonElement | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -639,8 +643,8 @@ export function MessageInput({ channelId, channelName, placeholder }: MessageInp
       }
     : undefined;
   const composerClass =
-    'absolute left-2 right-2 z-[110] glass-bubble rounded-[14px]' +
-    ' md:left-3 md:right-3 md:bottom-3';
+    'composer-focus-glow absolute left-2 right-2 z-[110] border border-white/[0.08] bg-surface-elevated/95 backdrop-blur-[18px] rounded-[18px] shadow-[0_2px_12px_rgba(0,0,0,0.3),0_8px_36px_-8px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.08)]' +
+    ' md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[min(920px,calc(100%-64px))] md:bottom-6';
 
   // Dynamic message-list bottom padding ("composer clearance"):
   //
@@ -775,16 +779,19 @@ export function MessageInput({ channelId, channelName, placeholder }: MessageInp
       )}
 
       {chatReplyTo && (
-        <div className="bg-interactive-hover rounded-t-lg px-4 py-2 flex items-center justify-between border-b border-white/[0.06]">
-          <div className="flex items-center gap-1 text-[14px] text-txt-message truncate">
-            <span className="opacity-60">{t('replying_to')}</span>
-            <span className="font-bold">
+        <div className="bg-white/[0.04] rounded-t-[17px] px-4 py-2.5 flex items-center justify-between border-b border-white/[0.06]">
+          <div className="flex items-center gap-1.5 text-[14px] text-txt-message truncate">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-accent-primary/80 flex-shrink-0">
+              <path d="M10 9V5L3 12L10 19V14.9C15 14.9 18.5 16.5 21 20C20 15 17 10 10 9Z" />
+            </svg>
+            <span className="opacity-70">{t('replying_to')}</span>
+            <span className="font-semibold">
               {chatReplyTo.user.displayName ?? chatReplyTo.user.username}
             </span>
           </div>
           <button
             onClick={() => chatSetReplyTo(null)}
-            className="text-txt-tertiary hover:text-txt-primary transition-colors"
+            className="w-7 h-7 flex items-center justify-center text-txt-tertiary hover:text-txt-primary hover:bg-white/[0.05] rounded-[7px] transition-colors"
             aria-label={t('cancel_reply')}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -795,7 +802,7 @@ export function MessageInput({ channelId, channelName, placeholder }: MessageInp
       )}
       <div
         ref={inputContainerRef}
-        className={`relative ${chatReplyTo ? 'rounded-b-lg' : ''} overflow-visible`}
+        className={`relative ${chatReplyTo ? 'rounded-b-[17px]' : ''} overflow-visible`}
         onDrop={canAttachFiles ? handleDrop : undefined}
         onDragOver={canAttachFiles ? handleDragOver : undefined}
       >
@@ -811,7 +818,7 @@ export function MessageInput({ channelId, channelName, placeholder }: MessageInp
 
         {/* Staged transfer tiles */}
         {stagedTransfers.length > 0 && (
-          <div className="p-4 flex flex-wrap gap-4 bg-surface-channel/30">
+          <div className="p-3 flex flex-wrap gap-2.5 bg-white/[0.02] border-t border-white/[0.04]">
             {stagedTransfers.map((tr) => {
               const isImage = tr.file.mimetype.startsWith('image/');
               const isFinal = tr.state === 'completed';
@@ -820,7 +827,7 @@ export function MessageInput({ channelId, channelName, placeholder }: MessageInp
               return (
                 <div
                   key={tr.id}
-                  className="relative group bg-surface-channel rounded-lg p-2 max-w-[200px] shadow-elevation-low border border-border-hard overflow-hidden"
+                  className="relative group bg-surface-channel rounded-xl p-2 max-w-[200px] shadow-elevation-low border border-white/[0.06] overflow-hidden"
                 >
                   {isImage ? (
                     <div className="w-[150px] h-[150px] bg-surface-input/40 rounded flex items-center justify-center text-txt-tertiary overflow-hidden">
@@ -882,12 +889,12 @@ export function MessageInput({ channelId, channelName, placeholder }: MessageInp
           </div>
         )}
 
-        <div className="flex items-center gap-1 md:gap-0 pl-2 md:pl-[10px] pr-2 md:pr-1">
+        <div className="flex items-center gap-0.5 md:gap-1 pl-2 pr-1.5 md:pr-2">
           {/* File attach button */}
           {canAttachFiles && (
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="w-10 h-10 md:w-[34px] md:h-[34px] flex items-center justify-center rounded-[6px] text-txt-tertiary hover:text-txt-secondary transition-colors flex-shrink-0"
+              className="dm-icon-btn w-9 h-9 md:w-[38px] md:h-[38px] flex items-center justify-center rounded-[11px] text-txt-tertiary hover:text-txt-secondary hover:bg-white/[0.06] flex-shrink-0"
               title={t('attach_file')}
               aria-label={t('attach_file')}
             >
@@ -918,7 +925,7 @@ export function MessageInput({ channelId, channelName, placeholder }: MessageInp
             onKeyDown={handleKeyDown}
             onPaste={canAttachFiles ? handlePaste : undefined}
             placeholder={placeholder ?? `Message ${channelName.startsWith('@') ? channelName : `#${channelName}`}`}
-            className="input-embedded flex-1 py-[10px] px-1 resize-none text-[15px] leading-[1.375rem] max-h-[50vh] scrollbar-thin"
+            className="input-embedded flex-1 py-[13px] px-1.5 resize-none text-[15px] leading-[1.375rem] caret-accent-primary max-h-[50vh] scrollbar-thin"
             rows={1}
           />
 
@@ -955,8 +962,8 @@ export function MessageInput({ channelId, channelName, placeholder }: MessageInp
           {gifEnabled && (
             <button
               onClick={() => togglePopover('gif')}
-              className={`w-10 h-10 md:w-[34px] md:h-[34px] flex items-center justify-center rounded-[6px] transition-colors flex-shrink-0 ${
-                activePopover === 'gif' ? 'text-accent-primary' : 'text-txt-tertiary hover:text-txt-secondary'
+              className={`dm-icon-btn w-9 h-9 md:w-[38px] md:h-[38px] flex items-center justify-center rounded-[11px] flex-shrink-0 ${
+                activePopover === 'gif' ? 'text-accent-primary bg-white/[0.08]' : 'text-txt-tertiary hover:text-txt-secondary hover:bg-white/[0.06]'
               }`}
               title="GIF"
               aria-label={t('gif_picker')}
@@ -967,12 +974,28 @@ export function MessageInput({ channelId, channelName, placeholder }: MessageInp
             </button>
           )}
 
+          {/* DM typing-indicator personalization (DMs only) */}
+          {isDm && (
+            <button
+              ref={typingSettingsAnchorRef}
+              onClick={() => setTypingSettingsOpen((v) => !v)}
+              className={`dm-icon-btn w-9 h-9 md:w-[38px] md:h-[38px] flex items-center justify-center rounded-[11px] flex-shrink-0 ${
+                typingSettingsOpen ? 'text-accent-primary bg-white/[0.08]' : 'text-txt-tertiary hover:text-txt-secondary hover:bg-white/[0.06]'
+              }`}
+              title={t('dm_personalization_title')}
+              aria-label={t('dm_personalization_title')}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M13.5 2c-5.62 0-10.21 4.36-10.66 9.86L.9 17.54c-.13.6.42 1.13 1.01.99l3.1-.77c1.34 3.06 4.4 5.24 7.99 5.24 4.97 0 9-4.03 9-9 0-6.09-4.6-12-8.5-12zm1.5 15h-5v-1.5h5V17zm1-3.5H9V12h7v1.5zm0-3.5H9V8.5h7V10z" />
+              </svg>
+            </button>
+          )}
+
           {/* Emoji button */}
           <button
-            onClick={() => togglePopover('emoji')}
-            className={`w-10 h-10 md:w-[34px] md:h-[34px] flex items-center justify-center rounded-[6px] transition-colors flex-shrink-0 ${
-              activePopover === 'emoji' ? 'text-accent-primary' : 'text-txt-tertiary hover:text-txt-secondary'
-            }`}
+            onClick={() => togglePopover('emoji')}            className={`dm-icon-btn w-9 h-9 md:w-[38px] md:h-[38px] flex items-center justify-center rounded-[11px] flex-shrink-0 ${
+                activePopover === 'emoji' ? 'text-accent-primary bg-white/[0.08]' : 'text-txt-tertiary hover:text-txt-secondary hover:bg-white/[0.06]'
+              }`}
             title="Emoji"
             aria-label={t('emoji_picker')}
           >
@@ -986,7 +1009,7 @@ export function MessageInput({ channelId, channelName, placeholder }: MessageInp
             <button
               onClick={() => void handleSubmit()}
               disabled={anyUnshippable}
-              className="w-10 h-10 md:w-[34px] md:h-[34px] flex items-center justify-center rounded-[6px] bg-accent-primary hover:bg-accent-primary-hover text-white transition-all duration-150 flex-shrink-0 disabled:opacity-50"
+              className="w-9 h-9 md:w-[38px] md:h-[38px] flex items-center justify-center rounded-[11px] bg-accent-primary hover:bg-accent-primary-hover text-white transition-all duration-150 flex-shrink-0 disabled:opacity-50 shadow-[0_4px_16px_-2px_rgb(var(--accent-primary-glow)/0.45)] active:scale-[0.96]"
               aria-label={t('send')}
               title={t('send')}
             >
@@ -997,6 +1020,14 @@ export function MessageInput({ channelId, channelName, placeholder }: MessageInp
           )}
         </div>
       </div>
+
+      {/* DM personalization popover (portal) */}
+      {typingSettingsOpen && (
+        <TypingIndicatorSettingsPopover
+          anchorEl={typingSettingsAnchorRef.current}
+          onClose={() => setTypingSettingsOpen(false)}
+        />
+      )}
     </div>
   );
 }

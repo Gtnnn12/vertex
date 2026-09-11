@@ -188,7 +188,7 @@ export function DmRosterPanel() {
   return (
     <div
       data-dm-roster-panel
-      className="w-60 bg-surface-members flex-shrink-0 overflow-y-auto select-none no-scrollbar hidden md:block border-l border-border-hard"
+      className="w-60 bg-surface-members flex-shrink-0 overflow-y-auto select-none no-scrollbar hidden md:block border-l border-white/[0.05]"
     >
       <div className="p-3">
         <h3

@@ -373,9 +373,9 @@ The user INSERT, `usedCount` increment, and redemption row INSERT all run in a s
 | maxBitrateKbps | integer NOT NULL | 20000 | |
 | minBitrateKbps | integer NOT NULL | 500 | |
 | bitrateStepKbps | integer NOT NULL | 500 | |
-| allowedResolutions | text NOT NULL | `'540,720,1080'` | CSV |
-| allowedFramerates | text NOT NULL | `'30,45,60'` | CSV |
-| maxResolution | integer NOT NULL | 1080 | |
+| allowedResolutions | text NOT NULL | `'720,1080,1440,2160'` | CSV |
+| allowedFramerates | text NOT NULL | `'30,60'` | CSV |
+| maxResolution | integer NOT NULL | 2160 | |
 | maxFramerate | integer NOT NULL | 60 | |
 | registrationOpen | integer | | Local-anonymous-signup gate. null = use env (`config.registrationOpen`); 0/1 = explicit admin override. |
 | federatedRegistrationOpen | integer NOT NULL | 1 | Independent gate for federated identity replication via Connections (`POST /api/auth/register` with `homeInstance` set). Existing federated accounts always log in regardless of this value. |

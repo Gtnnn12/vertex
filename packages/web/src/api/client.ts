@@ -42,6 +42,20 @@ import type {
   AdminUserListResponse,
   AdminUser,
   AdminResetPasswordResponse,
+  AdminCenterSummary,
+  AdminCenterUsersResponse,
+  AdminCenterUserDetail,
+  NetrexGrantRequest,
+  NetrexStatusResult,
+  StaffAssignResult,
+  StaffMember,
+  StaffRole,
+  ModerationRequest,
+  ModerationResult,
+  AuditLogResponse,
+  AdminCenterSpacesResponse,
+  AdminCenterSpaceDetail,
+  AdminCenterActivityResponse,
   ExploreSpace,
   JoinRequest,
   Role,
@@ -74,9 +88,15 @@ import type {
 } from '@backspace/shared';
 import { getApiForOrigin, getOwnerInstanceForDm } from '../utils/crossStoreResolvers';
 
-export type { FederationPeer, FederationOrphanedAccount, FederationResetEvent, FederationResetEventsResponse, ApprovalRequest, PeeringSubscription, PeeringNotification };
+export type { FederationPeer, FederationOrphanedAccount, FederationResetEvent, FederationResetEventsResponse, ApprovalRequest, PeeringSubscription, PeeringNotification };/** The server could not be reached at all (down, DNS, proxy refused). */
+export class NetworkError extends Error {
+  constructor() {
+    super('Cannot reach the server');
+    this.name = 'NetworkError';
+  }
+}
 
-export class RateLimitError extends Error {
+export class RateLimitError extends Error {
   readonly retryAfter: number;
   constructor(retryAfter: number) {
     super('Rate limit exceeded');
@@ -113,6 +133,7 @@ export class BackspaceApiClient {
     changePassword: (data: ChangePasswordRequest) => Promise<ChangePasswordResponse>;
     deleteAccount: (data: DeleteAccountRequest) => Promise<{ success: boolean }>;
     getMutuals: (id: string, homeUserId?: string) => Promise<{ mutualFriends: User[]; mutualSpaces: { id: string; name: string; icon: string | null; avatarColor: string | null }[] }>;
+    saveBoard: (widgets: unknown[]) => Promise<{ widgets: unknown[] }>;
     getFederationRegistry: () => Promise<{ registry: FederationRegistryEntry[]; updatedAt: number }>;
     putFederationRegistry: (data: { registry: FederationRegistryEntry[]; updatedAt: number }) => Promise<{ ok: boolean; updatedAt: number }>;
     deleteFederationIdentity: (data: FederationIdentityDeleteRequest) => Promise<FederationIdentityDeleteResponse>;
@@ -326,6 +347,24 @@ export class BackspaceApiClient {
     deleteUser: (userId: string) => Promise<{ success: boolean }>;
   };
 
+  readonly adminCenter: {
+    summary: () => Promise<AdminCenterSummary>;
+    users: (params?: { q?: string; filter?: string; presence?: string; sort?: string; page?: number; pageSize?: number }) => Promise<AdminCenterUsersResponse>;
+    userDetail: (userId: string) => Promise<AdminCenterUserDetail>;
+    netrex: (params?: { q?: string; filter?: string; page?: number; pageSize?: number }) => Promise<AdminCenterUsersResponse>;
+    grantNetrex: (userId: string, body: NetrexGrantRequest) => Promise<NetrexStatusResult>;
+    revokeNetrex: (userId: string) => Promise<NetrexStatusResult>;
+    staff: () => Promise<{ staff: StaffMember[] }>;
+    assignStaff: (userId: string, role: StaffRole) => Promise<StaffAssignResult>;
+    changeStaffRole: (userId: string, role: StaffRole) => Promise<{ success: boolean }>;
+    removeStaff: (userId: string) => Promise<{ success: boolean }>;
+    moderate: (userId: string, body: ModerationRequest) => Promise<ModerationResult>;
+    auditLog: (params?: { q?: string; action?: string; actor?: string; from?: number; to?: number; page?: number; pageSize?: number }) => Promise<AuditLogResponse>;
+    spaces: (params?: { q?: string; sort?: string; visibility?: string; page?: number; pageSize?: number }) => Promise<AdminCenterSpacesResponse>;
+    spaceDetail: (spaceId: string) => Promise<AdminCenterSpaceDetail>;
+    activity: () => Promise<AdminCenterActivityResponse>;
+  };
+
   constructor(baseUrl: string, getToken: () => string | null, onUnauthorized?: () => void) {
     async function request<T>(
       method: string,
@@ -362,7 +401,10 @@ export class BackspaceApiClient {
         if (err instanceof DOMException && err.name === 'AbortError') {
           throw new Error('Request timed out');
         }
-        throw err;
+        // Network-level failure (server down, DNS, proxy refused): surface a
+        // recognisable error type so UIs can say "cannot reach the server"
+        // instead of the browser's raw "Failed to fetch".
+        throw new NetworkError();
       }
       clearTimeout(timeoutId);
 
@@ -376,7 +418,13 @@ export class BackspaceApiClient {
             ?? (parseInt(response.headers.get('retry-after') || '', 10) || 60);
           throw new RateLimitError(retryAfter);
         }
-        const error = await response.json().catch(() => ({ error: 'Request failed' }));
+        const error = await response.json().catch(() => ({}));
+        // 5xx (typically the dev proxy failing to reach the backend) or a body
+        // without any error text means the server itself is unreachable —
+        // surface NetworkError so UIs show "cannot reach the server".
+        if (response.status >= 500) {
+          throw new NetworkError();
+        }
         throw new HttpError(response.status, (error as { error?: string }).error || `HTTP ${response.status}`, error);
       }
 
@@ -428,6 +476,8 @@ export class BackspaceApiClient {
         ),
       reattach: (data: ReattachRequest) =>
         request<ReattachResponse>('POST', '/users/@me/reattach', data),
+      saveBoard: (widgets: unknown[]) =>
+        request<{ widgets: unknown[] }>('PUT', '/users/@me/board', { widgets }),
     };
 
     this.spaceLayout = {
@@ -814,6 +864,64 @@ export class BackspaceApiClient {
         request<AdminResetPasswordResponse>('POST', `/admin/users/${userId}/reset-password`),
       deleteUser: (userId) =>
         request<{ success: boolean }>('DELETE', `/admin/users/${userId}`),
+    };
+
+    this.adminCenter = {
+      summary: () => request<AdminCenterSummary>('GET', '/admin-center/summary'),
+      users: (params) => {
+        const qs = new URLSearchParams();
+        if (params?.q) qs.set('q', params.q);
+        if (params?.filter) qs.set('filter', params.filter);
+        if (params?.presence) qs.set('presence', params.presence);
+        if (params?.sort) qs.set('sort', params.sort);
+        if (params?.page !== undefined) qs.set('page', String(params.page));
+        if (params?.pageSize !== undefined) qs.set('pageSize', String(params.pageSize));
+        return request<AdminCenterUsersResponse>('GET', `/admin-center/users?${qs}`);
+      },
+      userDetail: (userId) => request<AdminCenterUserDetail>('GET', `/admin-center/users/${userId}`),
+      netrex: (params) => {
+        const qs = new URLSearchParams();
+        if (params?.q) qs.set('q', params.q);
+        if (params?.filter) qs.set('filter', params.filter);
+        if (params?.page !== undefined) qs.set('page', String(params.page));
+        if (params?.pageSize !== undefined) qs.set('pageSize', String(params.pageSize));
+        return request<AdminCenterUsersResponse>('GET', `/admin-center/netrex?${qs}`);
+      },
+      grantNetrex: (userId, body) =>
+        request<NetrexStatusResult>('POST', `/admin-center/users/${userId}/netrex`, body),
+      revokeNetrex: (userId) =>
+        request<NetrexStatusResult>('POST', `/admin-center/users/${userId}/netrex/revoke`),
+      staff: () => request<{ staff: StaffMember[] }>('GET', '/admin-center/staff'),
+      assignStaff: (userId, role) =>
+        request<StaffAssignResult>('POST', '/admin-center/staff', { userId, role }),
+      changeStaffRole: (userId, role) =>
+        request<{ success: boolean }>('PATCH', `/admin-center/staff/${userId}`, { role }),
+      removeStaff: (userId) =>
+        request<{ success: boolean }>('DELETE', `/admin-center/staff/${userId}`),
+      moderate: (userId, body) =>
+        request<ModerationResult>('POST', `/admin-center/users/${userId}/moderation`, body),
+      auditLog: (params) => {
+        const qs = new URLSearchParams();
+        if (params?.q) qs.set('q', params.q);
+        if (params?.action) qs.set('action', params.action);
+        if (params?.actor) qs.set('actor', params.actor);
+        if (params?.from !== undefined) qs.set('from', String(params.from));
+        if (params?.to !== undefined) qs.set('to', String(params.to));
+        if (params?.page !== undefined) qs.set('page', String(params.page));
+        if (params?.pageSize !== undefined) qs.set('pageSize', String(params.pageSize));
+        return request<AuditLogResponse>('GET', `/admin-center/audit-log?${qs}`);
+      },
+      spaces: (params) => {
+        const qs = new URLSearchParams();
+        if (params?.q) qs.set('q', params.q);
+        if (params?.sort) qs.set('sort', params.sort);
+        if (params?.visibility) qs.set('visibility', params.visibility);
+        if (params?.page !== undefined) qs.set('page', String(params.page));
+        if (params?.pageSize !== undefined) qs.set('pageSize', String(params.pageSize));
+        return request<AdminCenterSpacesResponse>('GET', `/admin-center/spaces?${qs}`);
+      },
+      spaceDetail: (spaceId) => request<AdminCenterSpaceDetail>('GET', `/admin-center/spaces/${spaceId}`),
+      activity: () => request<AdminCenterActivityResponse>('GET', '/admin-center/activity'),
     };
   }
 }

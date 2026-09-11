@@ -83,6 +83,7 @@ export function processDmCallStartEvent(
         callerName: callerStub.displayName ?? callerStub.username,
         livekitUrl: event.call!.livekitUrl,
         livekitToken: token,
+        video: !!event.call?.video,
         callOrigin: event.call!.caller.homeInstance,
       });
       ringedUserIds.push(member.userId);
@@ -166,6 +167,7 @@ export function processDmCallStartEvent(
         callerName: callerStub.displayName ?? callerStub.username,
         livekitUrl: event.call!.livekitUrl,
         livekitToken: token,
+        video: !!event.call?.video,
         callOrigin: event.call!.caller.homeInstance,
       });
       ringedUserIds.push(localUser.id);

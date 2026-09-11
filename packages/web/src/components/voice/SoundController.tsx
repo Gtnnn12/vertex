@@ -60,11 +60,6 @@ export function SoundController() {
     selfWatchers: new Set<string>(),
   });
 
-  const incomingCallLoop = useRef<AudioBufferSourceNode | null>(null);
-  const incomingCallLoading = useRef(false);
-  const outgoingCallLoop = useRef<AudioBufferSourceNode | null>(null);
-  const outgoingCallLoading = useRef(false);
-
   useEffect(() => {
     const timer = setTimeout(() => {
       isInitialMount.current = false;
@@ -189,48 +184,6 @@ export function SoundController() {
       } else {
         prev.current.selfWatchers = new Set();
       }
-
-      // -------- Incoming Call (Ringing) --------
-      if (state.incomingCall && !incomingCallLoop.current && !incomingCallLoading.current) {
-        incomingCallLoading.current = true;
-        audioManager
-          .playSound('call_ringing', { loop: true, volume: getSfxVolume() })
-          .then((source) => {
-            if (!useVoiceStore.getState().incomingCall) {
-              source?.stop();
-            } else {
-              incomingCallLoop.current = source;
-            }
-            incomingCallLoading.current = false;
-          });
-      } else if (!state.incomingCall) {
-        if (incomingCallLoop.current) {
-          incomingCallLoop.current.stop();
-          incomingCallLoop.current = null;
-        }
-        incomingCallLoading.current = false;
-      }
-
-      // -------- Outgoing Call (Calling) --------
-      if (state.outgoingCall && !outgoingCallLoop.current && !outgoingCallLoading.current) {
-        outgoingCallLoading.current = true;
-        audioManager
-          .playSound('call_calling', { loop: true, volume: getSfxVolume() })
-          .then((source) => {
-            if (!useVoiceStore.getState().outgoingCall) {
-              source?.stop();
-            } else {
-              outgoingCallLoop.current = source;
-            }
-            outgoingCallLoading.current = false;
-          });
-      } else if (!state.outgoingCall) {
-        if (outgoingCallLoop.current) {
-          outgoingCallLoop.current.stop();
-          outgoingCallLoop.current = null;
-        }
-        outgoingCallLoading.current = false;
-      }
     });
 
     // -------- Chat: message sound (DM + mention default, federation-aware) --------
@@ -267,8 +220,6 @@ export function SoundController() {
       clearTimeout(timer);
       unsubscribeVoice();
       unsubscribeChat();
-      if (incomingCallLoop.current) incomingCallLoop.current.stop();
-      if (outgoingCallLoop.current) outgoingCallLoop.current.stop();
     };
   }, [currentUser?.id, currentUser?.homeUserId]);
 

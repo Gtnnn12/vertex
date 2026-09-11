@@ -1,6 +1,7 @@
 import type { Activity } from '@backspace/shared';
 import { getPrimaryActivity } from '@backspace/shared/src/activities.js';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { SpotifyMiniRow } from '../spotify/SpotifyVinyl';
 
 interface ActivityCardProps {
   activities: Activity[];
@@ -22,6 +23,7 @@ export function getActivityAccentClass(type: Activity['type']): string {
     case 'listening': return 'border-l-accent-sky';
     case 'watching': return 'border-l-accent-lavender';
     case 'streaming': return 'border-l-accent-rose';
+    case 'spotify': return 'border-l-[#1DB954]';
     default: return '';
   }
 }
@@ -50,6 +52,11 @@ export function ActivityCard({ activities, fallbackCustomStatus }: ActivityCardP
   // Custom status — plain text, no card treatment
   if (primary.type === 'custom') {
     return <div className="text-[11px] leading-[1.3] text-txt-tertiary truncate">{primary.name}</div>;
+  }
+
+  // Spotify — mini cover + “song — artist” row (spinning vinyl lives in profiles)
+  if (primary.type === 'spotify' && primary.spotify) {
+    return <SpotifyMiniRow spotify={primary.spotify} />;
   }
 
   // Rich activity — app name + elapsed (card wrapper is on the parent row)

@@ -2,6 +2,9 @@ import { create } from 'zustand';
 import type { MessageWithUser, Reaction, ReadState } from '@backspace/shared';
 import { wsSend } from '../hooks/useWebSocket';
 import { isDmChannel, getChannelOrigin, getApiForOrigin, useSpaceStore } from './spaceStore';
+import { getOwnerInstanceForDm } from '../utils/crossStoreResolvers';
+import { useUIStore } from './uiStore';
+import { translateStatic } from '../contexts/LanguageContext';
 import { useAuthStore } from './authStore';
 import { normalizeMessageAssets } from '../utils/assetUrls';
 import { sortDmChannels } from '../utils/dmSorting';
@@ -405,7 +408,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
   deleteMessage: async (messageId: string, channelId: string) => {
     const isDm = isDmChannel(channelId);
     const origin = getChannelOrigin(channelId);
-    const client = getApiForOrigin(origin);
+    // DM deletions must hit the owner's home instance (same authority routing
+    // as sendMessage — see BackspaceApiClient.dm.deleteMessage docs). Server
+    // messages are served by the channel's pinned origin.
+    const client = isDm
+      ? getApiForOrigin(getOwnerInstanceForDm(channelId))
+      : getApiForOrigin(origin);
 
     // Optimistic: remove locally first
     const messages = get().messages.get(channelId);
@@ -418,11 +426,20 @@ export const useChatStore = create<ChatState>((set, get) => ({
         await client.messages.delete(messageId);
       }
       // Real deletion will arrive via WebSocket (already removed locally)
-    } catch {
-      // Rollback: re-add the message on failure
+    } catch (err) {
+      console.error('[chatStore] Message deletion failed:', err);
+      // Rollback: re-add the message so the user isn't misled — the delete
+      // visibly failed instead of silently resurrecting on next reload.
       if (savedMessage) {
         get().addMessage(channelId, savedMessage);
       }
+      // Tell the user the deletion didn't go through. translateStatic works
+      // outside React (stores), and getState keeps the import one-way.
+      useUIStore.getState().addToast(
+        translateStatic('message_delete_failed'),
+        'warning',
+        4500
+      );
     }
   },
 

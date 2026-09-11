@@ -132,7 +132,7 @@ function buildComponents(): Components {
           href={href}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-txt-link hover:underline"
+          className="dm-link font-medium"
         >
           {children}
         </a>

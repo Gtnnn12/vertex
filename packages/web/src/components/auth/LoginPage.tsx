@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
-import { api, RateLimitError } from '../../api/client';
+import { api, RateLimitError, NetworkError } from '../../api/client';
 import type { InstanceInfoResponse } from '@backspace/shared';
 import { SourceCodeLink } from '../ui/SourceCodeLink';
+import { requestPostLoginCards } from './postLoginCardsHost';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { Mascot, type MascotState } from '../mascot/Mascot';
 
 export function LoginPage() {
   const { t } = useLanguage();
@@ -12,11 +14,28 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [retryAfter, setRetryAfter] = useState(0);
+
+  // Original VERTEX login ritual: the mascot lives with the form and reacts
+  // to it — covering its eyes whenever the password field is focused.
+  const [passwordFocused, setPasswordFocused] = useState(false);
   const login = useAuthStore((s) => s.login);
   const isLoading = useAuthStore((s) => s.isLoading);
+  const mascotState: MascotState = error
+    ? 'error'
+    : isLoading
+      ? 'loading'
+      : passwordFocused
+        ? 'password'
+        : username
+          ? 'typing'
+          : 'idle';
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirect = searchParams.get('redirect');
+
+  // Redirect target captured at login time; the card-ritual overlay uses it
+  // to navigate into the app when it finishes.
+  const pendingRedirectRef = useRef<string | null>(null);
 
   // AGPL § 13: anonymous users must be able to reach the source of the running
   // version. Fetched from the unauthenticated public info endpoint.
@@ -58,17 +77,29 @@ export function LoginPage() {
 
     try {
       await login(username.trim(), password);
-      if (redirect && redirect.startsWith('/') && !redirect.startsWith('//')) {
-        navigate(redirect);
-      } else {
-        navigate('/channels/@me');
-      }
+      // Remember where to go and request the card ritual. The overlay is an
+      // App-level singleton (mounted in main.tsx): it survives the route swap
+      // that the session token triggers, and it owns the navigation into the
+      // app when it finishes. If anything fails, the bus navigates directly —
+      // login is never blocked.
+      pendingRedirectRef.current =
+        redirect && redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/channels/@me';
+      requestPostLoginCards({
+        displayName: username.trim(),
+        fast: new URLSearchParams(window.location.search).has('fastcards'),
+        onDone: () => {
+          const r = pendingRedirectRef.current;
+          if (r) navigate(r);
+        },
+      });
     } catch (err) {
       if (err instanceof RateLimitError) {
         setRetryAfter(err.retryAfter);
         setError('');
+      } else if (err instanceof NetworkError) {
+        setError(t('login_server_unreachable'));
       } else {
-        setError(err instanceof Error ? err.message : 'Login failed');
+        setError(err instanceof Error ? err.message : t('login_failed'));
       }
     }
   };
@@ -79,7 +110,8 @@ export function LoginPage() {
     <div className="min-h-full flex items-center justify-center bg-surface-base relative">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(124,108,246,0.06)_0%,transparent_50%)]" />
       <div className="w-full max-w-[480px] bg-surface-elevated rounded-md p-8 shadow-elevation-high relative z-10">
-        <div className="text-center mb-6">
+        <div className="flex flex-col items-center text-center mb-6">
+          <Mascot state={mascotState} className="mb-4" />
           <h1 className="text-2xl font-bold text-txt-primary">{t('welcome_back')}</h1>
           <p className="text-txt-tertiary mt-1">{t('welcome_back_subtitle')}</p>
         </div>
@@ -122,6 +154,8 @@ export function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               className="input-standard w-full py-2.5"
               autoComplete="current-password"
+              onFocus={() => setPasswordFocused(true)}
+              onBlur={() => setPasswordFocused(false)}
             />
           </div>
 
@@ -151,6 +185,10 @@ export function LoginPage() {
           </div>
         )}
       </div>
+
+      <p className="absolute bottom-4 inset-x-0 text-center text-[11px] text-txt-tertiary/70 select-none">
+        created by gitano
+      </p>
     </div>
   );
 }

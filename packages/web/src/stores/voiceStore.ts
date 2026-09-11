@@ -3,7 +3,6 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import type { ParticipantInfo } from '../hooks/useLiveKit';
 import { AudioManager } from '../audio/AudioManager';
 import { useSpaceStore, getChannelOrigin, getMyUserIdForOrigin } from './spaceStore';
-import { useAuthStore } from './authStore';
 import { isElectron } from '../platform/platform';
 
 export interface ScreenShareConfig {
@@ -67,21 +66,6 @@ interface VoiceState {
   clearStreamMute: (userId: string) => void;
   setStreamAttenuationEnabled: (enabled: boolean) => void;
   setStreamAttenuationStrength: (strength: number) => void;
-  // DM call state
-  incomingCall: { dmChannelId: string | null; callerId: string; callerName: string } | null;
-  outgoingCall: { dmChannelId: string } | null;
-  activeDmCall: { dmChannelId: string } | null;
-  setIncomingCall: (call: { dmChannelId: string | null; callerId: string; callerName: string } | null) => void;
-  setOutgoingCall: (call: { dmChannelId: string } | null) => void;
-  setActiveDmCall: (call: { dmChannelId: string } | null) => void;
-  federatedCallToken: string | null;
-  federatedCallUrl: string | null;
-  federatedCallId: string | null;
-  callOrigin: string | null;
-  setFederatedCallData: (token: string, url: string) => void;
-  clearFederatedCallData: () => void;
-  setFederatedCallId: (id: string | null) => void;
-  setCallOrigin: (origin: string | null) => void;
   setVoiceUsers: (channelId: string, userIds: string[]) => void;
   addVoiceUser: (channelId: string, userId: string) => void;
   removeVoiceUser: (channelId: string, userId: string) => void;
@@ -146,9 +130,11 @@ interface VoiceState {
   micPermissionDenied: boolean;
   setMicPermissionDenied: (denied: boolean) => void;
   // Gesture-aware connect/disconnect refs — registered by AppLayout from useLiveKit()
-  connectFn: ((channelId: string, isDm?: boolean) => Promise<void>) | null;
+  // startWithVideo: initial camera intent for DM WebRTC calls (true for videocalls,
+  // false for voice calls — camera then stays OFF until the user presses the camera button).
+  connectFn: ((channelId: string, isDm?: boolean, isCaller?: boolean, startWithVideo?: boolean) => Promise<void>) | null;
   disconnectFn: (() => Promise<void>) | null;
-  setConnectFn: (fn: ((channelId: string, isDm?: boolean) => Promise<void>) | null) => void;
+  setConnectFn: (fn: ((channelId: string, isDm?: boolean, isCaller?: boolean, startWithVideo?: boolean) => Promise<void>) | null) => void;
   setDisconnectFn: (fn: (() => Promise<void>) | null) => void;
   reset: () => void;
 }
@@ -305,22 +291,6 @@ export const useVoiceStore = create<VoiceState>()(
       setStreamAttenuationEnabled: (enabled) => set({ streamAttenuationEnabled: enabled }),
       setStreamAttenuationStrength: (strength) => set({ streamAttenuationStrength: strength }),
 
-      incomingCall: null,
-      outgoingCall: null,
-      activeDmCall: null,
-      federatedCallToken: null,
-      federatedCallUrl: null,
-      federatedCallId: null,
-      callOrigin: null,
-
-      setIncomingCall: (call) => set({ incomingCall: call }),
-      setOutgoingCall: (call) => set({ outgoingCall: call }),
-      setActiveDmCall: (call) => set({ activeDmCall: call }),
-      setFederatedCallData: (token, url) => set({ federatedCallToken: token, federatedCallUrl: url }),
-      clearFederatedCallData: () => set({ federatedCallToken: null, federatedCallUrl: null, federatedCallId: null, callOrigin: null }),
-      setFederatedCallId: (id) => set({ federatedCallId: id }),
-      setCallOrigin: (origin) => set({ callOrigin: origin }),
-
       setVoiceUsers: (channelId, userIds) => {
         set((state) => {
           const newMap = new Map(state.voiceUsers);
@@ -351,7 +321,6 @@ export const useVoiceStore = create<VoiceState>()(
 
       setCurrentVoiceChannel: (channelId) => set({ 
         currentVoiceChannelId: channelId,
-        activeDmCall: null // Clear active DM call when joining a server channel
       }),
 
       setParticipants: (participants) => set({ participants }),
@@ -523,14 +492,6 @@ export const useVoiceStore = create<VoiceState>()(
         isLiveKitConnected: false,
         connectionQuality: 'unknown',
         focusedParticipantId: null,
-        // Call state
-        incomingCall: null,
-        outgoingCall: null,
-        activeDmCall: null,
-        federatedCallToken: null,
-        federatedCallUrl: null,
-        federatedCallId: null,
-        callOrigin: null,
         // Per-session media state
         isCameraOn: false,
         isScreenSharing: false,
@@ -563,6 +524,7 @@ export const useVoiceStore = create<VoiceState>()(
 
       // Leave voice without wiping the voiceUsers map (so sidebar still shows others)
       leaveVoice: () => {
+        console.error('[VERTEX CALL TRACE] leaveVoice CALLED', { stack: new Error().stack });
         const channelId = get().currentVoiceChannelId;
         const myId = channelId ? getMyUserIdForOrigin(getChannelOrigin(channelId)) : undefined;
 
@@ -588,12 +550,6 @@ export const useVoiceStore = create<VoiceState>()(
             isLiveKitConnected: false,
             connectionQuality: 'unknown',
             focusedParticipantId: null,
-            activeDmCall: null,
-            outgoingCall: null,
-            federatedCallToken: null,
-            federatedCallUrl: null,
-            federatedCallId: null,
-            callOrigin: null,
             deafenedUserIds: new Set(),
             participantMutes: new Map(),
             streamVolumes: new Map(),
@@ -635,12 +591,6 @@ export const useVoiceStore = create<VoiceState>()(
           isLiveKitConnected: false,
           connectionQuality: 'unknown',
           focusedParticipantId: null,
-          activeDmCall: null,
-          outgoingCall: null,
-          federatedCallToken: null,
-          federatedCallUrl: null,
-          federatedCallId: null,
-          callOrigin: null,
           deafenedUserIds: new Set(),
           participantMutes: new Map(),
           streamVolumes: new Map(),
@@ -673,13 +623,6 @@ export const useVoiceStore = create<VoiceState>()(
         focusedParticipantId: null,
         participantVolumes: new Map(),
         participantMutes: new Map(),
-        incomingCall: null,
-        outgoingCall: null,
-        activeDmCall: null,
-        federatedCallToken: null,
-        federatedCallUrl: null,
-        federatedCallId: null,
-        callOrigin: null,
         deafenedUserIds: new Set(),
         voiceUserStates: new Map(),
         streamVolumes: new Map(),
@@ -805,6 +748,11 @@ export const useVoiceStore = create<VoiceState>()(
         merged.watchingStreams = currentState.watchingStreams;
         merged.unwatchedCameras = currentState.unwatchedCameras;
         return merged;
+      },
+      onRehydrateStorage: () => (state) => {
+        if (state && typeof navigator !== 'undefined' && typeof navigator.mediaDevices?.enumerateDevices === 'function') {
+          void state.pruneStaleDevices();
+        }
       },
     }
   )

@@ -23,10 +23,18 @@ import { invitesRoutes } from './routes/invites.js';
 import { exploreRoutes } from './routes/explore.js';
 import { searchRoutes } from './routes/search.js';
 import { adminRoutes } from './routes/admin.js';
+import { webRoutes } from './routes/web.js';
+import { webChatRoutes } from './routes/webChat.js';
+import { webThreadRoutes } from './routes/webThreads.js';
+import { adminCenterRoutes } from './routes/adminCenter.js';
 import { gifRoutes } from './routes/gif.js';
 import { federationRoutes } from './routes/federation.js';
+import { netrexRoutes } from './routes/netrex.js';
+import { spotifyRoutes } from './routes/spotify.js';
 import { startFederationWorkers, stopFederationWorkers } from './utils/federationWorker.js';
 import { startBackupWorker, stopBackupWorker } from './utils/backupWorker.js';
+import { startNetrexExpiryWorker } from './utils/netrexWorker.js';
+import { startSpotifyPoller } from './utils/spotifyPoller.js';
 import './utils/federationRollback.js'; // Side-effect: registers rollback callbacks for outbox terminal failures.
 import { registerCallRelayHooks } from './ws/events.js';
 import { resetStalePresenceOnBoot } from './utils/presenceBoot.js';
@@ -134,8 +142,14 @@ async function main(): Promise<void> {
   await app.register(exploreRoutes);
   await app.register(searchRoutes);
   await app.register(adminRoutes);
+  await app.register(webRoutes);
+  await app.register(webChatRoutes);
+  await app.register(webThreadRoutes);
+  await app.register(adminCenterRoutes);
   await app.register(gifRoutes);
   await app.register(federationRoutes);
+  await app.register(netrexRoutes);
+  await app.register(spotifyRoutes);
   await app.register(registerWebSocket);
 
   app.get('/api/health', async () => {
@@ -154,7 +168,7 @@ async function main(): Promise<void> {
 
   try {
     await app.listen({ port: config.port, host: config.host });
-    console.log(`Backspace server running at http://${config.host}:${config.port}`);
+    console.log(`VERTEX server running at http://${config.host}:${config.port}`);
   } catch (err) {
     app.log.error(err);
     process.exit(1);
@@ -179,6 +193,8 @@ async function main(): Promise<void> {
   }
 
   startBackupWorker();
+  startNetrexExpiryWorker();
+  startSpotifyPoller();
 
   const shutdown = async () => {
     console.log('Shutting down...');

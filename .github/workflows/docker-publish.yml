@@ -61,8 +61,8 @@ jobs:
         id: docker_meta
         uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.10.0
         with:
-          # github.repository is "TheZwiss/VERTEX"; metadata-action lowercases
-          # it → ghcr.io/thezwiss/VERTEX (GHCR requires lowercase).
+          # github.repository is "gtnn12/VERTEX"; metadata-action lowercases
+          # it → ghcr.io/gtnn12/vertex (GHCR requires lowercase).
           images: ghcr.io/${{ github.repository }}
           tags: |
             type=semver,pattern={{version}}
@@ -73,7 +73,7 @@ jobs:
           labels: |
             org.opencontainers.image.title=VERTEX
             org.opencontainers.image.description=Self-hosted Discord alternative — text, voice, video, and federation.
-            org.opencontainers.image.source=https://github.com/TheZwiss/VERTEX
+            org.opencontainers.image.source=https://github.com/gtnn12/VERTEX
             org.opencontainers.image.licenses=AGPL-3.0-only
             org.opencontainers.image.revision=${{ github.sha }}
 

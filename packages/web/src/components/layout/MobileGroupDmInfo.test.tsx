@@ -341,7 +341,7 @@ describe('MobileGroupDmInfo — cancel', () => {
     // No upload + no PATCH must have fired.
     expect(mockStartUpload).not.toHaveBeenCalled();
     expect(mockUpdateMetadata).not.toHaveBeenCalled();
-    const uploadCalls = fetchSpy.mock.calls.filter(([url]: [string]) =>
+    const uploadCalls = fetchSpy.mock.calls.filter(([url]) =>
       typeof url === 'string' && url.includes('/api/uploads'),
     );
     expect(uploadCalls.length).toBe(0);

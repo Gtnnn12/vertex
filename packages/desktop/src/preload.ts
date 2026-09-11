@@ -65,8 +65,14 @@ contextBridge.exposeInMainWorld('backspace', {
   onScreenShareSources: (callback: (sources: unknown[]) => void) => {
     ipcRenderer.on('screen-share-sources', (_event, sources) => callback(sources));
   },
-  selectScreenSource: (sourceId: string | null, shareAudio?: boolean) => {
-    ipcRenderer.send('screen-share-selected', sourceId, shareAudio ?? true);
+  requestScreenShareSources: () => {
+    ipcRenderer.send('screen-share-request');
+  },
+
+  // Pending selection from ScreenSharePicker — stored in main process
+  // and consumed by setDisplayMediaRequestHandler when getDisplayMedia() is called.
+  setScreenSharePendingSelection: (sourceId: string | null, shareAudio?: boolean) => {
+    ipcRenderer.send('screen-share-pending-set', sourceId, shareAudio ?? true);
   },
 
   // Instance URL management
@@ -125,5 +131,67 @@ contextBridge.exposeInMainWorld('backspace', {
 
   recoveryAction: (action: string): void => {
     ipcRenderer.send('recovery-action', action);
+  },
+
+  // Netrex Premium — in-app purchase + license verification
+  openNetrexCheckout: (plan: string): Promise<{ ok: boolean; purchased?: boolean }> => {
+    return ipcRenderer.invoke('netrex-open-checkout', plan);
+  },
+  openNetrexCheckoutWithEmail: (plan: string, email: string | null): Promise<{ ok: boolean; purchased?: boolean }> => {
+    return ipcRenderer.invoke('netrex-open-checkout-email', plan, email);
+  },
+  isNetrexCheckoutOpen: (): Promise<boolean> => {
+    return ipcRenderer.invoke('netrex-is-checkout-open');
+  },
+  netrexPlansConfig: (): Promise<Array<{ plan: string; configured: boolean }>> => {
+    return ipcRenderer.invoke('netrex-plans-config');
+  },
+  activateNetrexLicense: (key: string): Promise<unknown> => {
+    console.log('[license-ipc 2/3 preload] invoke netrex-activate-license, key len:', key.length);
+    return ipcRenderer.invoke('netrex-activate-license', key).then(
+      (r: unknown) => { console.log('[license-ipc 2/3 preload] resolved:', JSON.stringify(r)); return r; },
+      (e: unknown) => { console.error('[license-ipc 2/3 preload] rejected:', e); throw e; },
+    );
+  },
+  checkNetrexLicense: (): Promise<unknown> => {
+    return ipcRenderer.invoke('netrex-check-license');
+  },
+  openExternalUrl: (url: string): Promise<{ ok: boolean }> => {
+    return ipcRenderer.invoke('open-external-url', url);
+  },
+  openNetrexBilling: (): Promise<{ ok: boolean }> => {
+    return ipcRenderer.invoke('netrex-open-billing');
+  },
+
+  // Owner-only discount-code admin panel
+  adminCodesSetupState: (): Promise<{ hasAdminKey: boolean; hasToken: boolean }> => {
+    return ipcRenderer.invoke('admin-codes-setup-state');
+  },
+  adminCodesSetAccessKey: (key: string): Promise<{ ok: boolean; error?: string }> => {
+    return ipcRenderer.invoke('admin-codes-set-access-key', key);
+  },
+  adminCodesUnlock: (key: string): Promise<{ ok: boolean }> => {
+    return ipcRenderer.invoke('admin-codes-unlock', key);
+  },
+  adminCodesSetToken: (adminKey: string, token: string): Promise<{ ok: boolean; error?: string }> => {
+    return ipcRenderer.invoke('admin-codes-set-token', adminKey, token);
+  },
+  adminCodesProducts: (): Promise<{ plan: string; productId: string; url: string }[]> => {
+    return ipcRenderer.invoke('admin-codes-products');
+  },
+  adminCodesList: (
+    adminKey: string,
+    productId: string,
+  ): Promise<unknown> => {
+    return ipcRenderer.invoke('admin-codes-list', adminKey, productId);
+  },
+  adminCodesCreate: (adminKey: string, input: unknown): Promise<unknown> => {
+    return ipcRenderer.invoke('admin-codes-create', adminKey, input);
+  },
+  adminCodesDelete: (adminKey: string, productId: string, codeId: string): Promise<unknown> => {
+    return ipcRenderer.invoke('admin-codes-delete', adminKey, productId, codeId);
+  },
+  deactivateNetrexLicense: (): Promise<unknown> => {
+    return ipcRenderer.invoke('netrex-deactivate-license');
   },
 });

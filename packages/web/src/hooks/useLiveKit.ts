@@ -19,7 +19,7 @@ import { useVoiceStore } from '../stores/voiceStore';
 import { useAuthStore } from '../stores/authStore';
 import { useUIStore } from '../stores/uiStore';
 import type { User } from '@backspace/shared';
-import { broadcastVoiceStatus, clearSpaceVoiceForDmCall } from '../utils/voice';
+import { broadcastVoiceStatus } from '../utils/voice';
 import { consumeIntentionalCameraOff, markIntentionalCameraOff } from '../utils/voiceActions';
 import { AudioManager } from '../audio/AudioManager';
 import { SpeakingDetector } from '../audio/SpeakingDetector';
@@ -236,16 +236,7 @@ export function useLiveKit() {
 
       // Resolve identity: for federated calls rawId may be homeUserId from another instance.
       // Check DM members for a user whose homeUserId matches.
-      let userId = rawId;
-      const activeDmCall = useVoiceStore.getState().activeDmCall;
-      if (activeDmCall) {
-        const dmChannels = useSpaceStore.getState().dmChannels;
-        const dmChannel = dmChannels.find(d => d.id === activeDmCall.dmChannelId);
-        if (dmChannel) {
-          const match = dmChannel.members.find(m => m.homeUserId === rawId || m.id === rawId);
-          if (match) userId = match.id;
-        }
-      }
+      const userId = rawId;
 
       const memberMatch = useSpaceStore.getState().members.find(m => m.userId === userId);
       let cachedUser: User | null;
@@ -569,25 +560,20 @@ export function useLiveKit() {
     })();
   }, [cameraDeviceId, isCameraOn, isConnected]);
 
-  const connect = useCallback(async (channelId: string, isDm?: boolean) => {
-    const storedId = isDm ? `dm-${channelId}` : channelId;
-    if (connectedChannelRef.current === storedId && roomRef.current?.state === ConnectionState.Connected) return;
+  const connect = useCallback(async (channelId: string) => {
+    console.log('[VERTEX LIVEKIT CONNECT TRACE] CONNECT_START channelId=', channelId);
+    if (connectedChannelRef.current === channelId && roomRef.current?.state === ConnectionState.Connected) {
+      console.log('[VERTEX LIVEKIT CONNECT TRACE] CONNECT_SKIP_ALREADY_CONNECTED channelId=', channelId);
+      return;
+    }
 
-    // Entering a DM call: drop any space voice channel we're still "in" on the
-    // client. Done synchronously (before any await) so the sidebar updates
-    // immediately. See clearSpaceVoiceForDmCall for why currentVoiceChannelId
-    // must be cleared here — otherwise the DM call's participants render against
-    // the old space channel and we appear to still be sitting in it.
-    if (isDm) clearSpaceVoiceForDmCall();
-
-    // Register voice state with the WS server after LiveKit connects (not for DM calls)
     const registerWithServer = () => {
-      if (isDm) return;
       const origin = getChannelOrigin(channelId);
       wsSend({ type: 'voice_join', channelId }, origin);
       broadcastVoiceStatus(origin);
     };
     const gen = ++_connectGeneration;
+    console.log('[VERTEX LIVEKIT CONNECT TRACE] gen=', gen, '_connectGeneration=', _connectGeneration);
 
     // Ensure AudioContext is created and resumed before tracks arrive
     await AudioManager.getInstance().resumeContext();
@@ -626,24 +612,52 @@ export function useLiveKit() {
       let token: string;
       let url: string;
 
-      // For federated calls, use the stored token from S2S relay
-      const { federatedCallToken, federatedCallUrl, clearFederatedCallData } = useVoiceStore.getState();
-      if (isDm && federatedCallToken && federatedCallUrl) {
-        token = federatedCallToken;
-        url = federatedCallUrl;
-        clearFederatedCallData();
-      } else {
-        const client = getApiForOrigin(getChannelOrigin(channelId));
-        const resp = isDm ? await client.livekit.dmToken(channelId) : await client.livekit.token(channelId);
-        token = resp.token;
-        url = resp.url;
+      console.log('[VERTEX LIVEKIT CONNECT TRACE] TOKEN_REQUEST_START channelId=', channelId, 'gen=', gen);
+      const client = getApiForOrigin(getChannelOrigin(channelId));
+      const resp = await client.livekit.token(channelId);
+      token = resp.token;
+      url = resp.url;
+      console.log('[VERTEX LIVEKIT CONNECT TRACE] TOKEN_REQUEST_SUCCESS token.length=', token?.length ?? 0, 'url=', url, 'gen=', gen);
+      if (gen !== _connectGeneration) {
+        console.log('[VERTEX LIVEKIT CONNECT TRACE] GEN_CHANGED_AFTER_TOKEN gen=', gen, '_connectGeneration=', _connectGeneration, 'Returning early, isConnecting will be reset in finally');
+        return;
       }
-      if (gen !== _connectGeneration) return;
+      console.log('[VERTEX LIVEKIT CONNECT TRACE] ROOM_CREATING gen=', gen);
       const newRoom = new Room({ adaptiveStream: true, dynacast: true, publishDefaults: { videoCodec: 'h264', simulcast: true } });
       roomRef.current = newRoom;
+      console.log('[VERTEX LIVEKIT CONNECT TRACE] ROOM_CREATED room.state=', newRoom.state, 'gen=', gen);
 
       const guardedUpdate = () => { if (roomRef.current === newRoom) updateParticipants(); };
+      
+      // Comprehensive event logging for ALL LiveKit Room events
+      const logEvent = (event: RoomEvent, ...args: any[]) => {
+        console.log(`[VERTEX LIVEKIT EVENT] ${event} gen=${gen} args=`, args.map(a => {
+          if (a instanceof Error) return a.message;
+          if (typeof a === 'object') {
+            try { return JSON.stringify(a); } catch { return String(a); }
+          }
+          return String(a);
+        }));
+      };
+      
+      newRoom.on(RoomEvent.Connected, (...args) => {
+        console.log('[VERTEX LIVEKIT REAL STATE] RoomEvent.Connected gen=', gen, 'room.state=', newRoom.state);
+        logEvent(RoomEvent.Connected, ...args);
+      });
+      newRoom.on(RoomEvent.Disconnected, (...args) => {
+        console.log('[VERTEX LIVEKIT REAL STATE] RoomEvent.Disconnected gen=', gen, 'room.state=', newRoom.state);
+        logEvent(RoomEvent.Disconnected, ...args);
+      });
+      newRoom.on(RoomEvent.Reconnecting, (...args) => {
+        console.log('[VERTEX LIVEKIT REAL STATE] RoomEvent.Reconnecting gen=', gen, 'room.state=', newRoom.state);
+        logEvent(RoomEvent.Reconnecting, ...args);
+      });
+      newRoom.on(RoomEvent.Reconnected, (...args) => {
+        console.log('[VERTEX LIVEKIT REAL STATE] RoomEvent.Reconnected gen=', gen, 'room.state=', newRoom.state);
+        logEvent(RoomEvent.Reconnected, ...args);
+      });
       newRoom.on(RoomEvent.ParticipantConnected, (participant) => {
+        logEvent(RoomEvent.ParticipantConnected, participant.identity);
         guardedUpdate();
         // Notify new participant of our effective deafen state
         const vsConn = useVoiceStore.getState();
@@ -776,6 +790,7 @@ export function useLiveKit() {
         }
       });
       newRoom.on(RoomEvent.ConnectionStateChanged, (state) => {
+        console.log('[VERTEX LIVEKIT CONNECT TRACE] ConnectionStateChanged state=', state, 'roomRef.current === newRoom?', roomRef.current === newRoom);
         if (roomRef.current === newRoom) {
           setConnectionState(state);
           const connected = state === ConnectionState.Connected;
@@ -785,8 +800,10 @@ export function useLiveKit() {
           setIsConnecting(connecting);
 
           useVoiceStore.getState().setIsLiveKitConnected(connected);
+          console.log('[VERTEX LIVEKIT CONNECT TRACE] ConnectionStateChanged isConnected=', connected, 'isConnecting=', connecting);
 
           if (connected) {
+            console.log('[VERTEX LIVEKIT CONNECT TRACE] ConnectionStateChanged CONNECTED! registerWithServer and updateParticipants');
             // On LiveKit reconnect, re-register with WS server (server may have restarted)
             if (connectedChannelRef.current) {
               registerWithServer();
@@ -815,11 +832,29 @@ export function useLiveKit() {
         }
       });
 
-      await newRoom.connect(url, token, { autoSubscribe: false });
-      if (gen !== _connectGeneration) { destroyRoom(newRoom); return; }
+      console.log('[VERTEX LIVEKIT CONNECT TRACE] ROOM_CONNECT_START gen=', gen, 'url=', url, 'tokenLength=', token?.length ?? 0);
+      
+      // Wrap connect in try-catch to capture any thrown errors
+      try {
+        console.log('[VERTEX LIVEKIT REAL STATE] Before connect - room.state=', newRoom.state);
+        await newRoom.connect(url, token, { autoSubscribe: false });
+        console.log('[VERTEX LIVEKIT REAL STATE] After connect resolved - room.state=', newRoom.state);
+      } catch (connectErr) {
+        console.error('[VERTEX LIVEKIT CONNECT TRACE] ROOM_CONNECT_REJECTED gen=', gen, 'error=', connectErr, 'error.message=', (connectErr as Error)?.message);
+        console.error('[VERTEX LIVEKIT REAL STATE] After connect error - room.state=', newRoom.state);
+        throw connectErr; // Re-throw to let the outer catch handle it
+      }
+      console.log('[VERTEX LIVEKIT CONNECT TRACE] ROOM_CONNECT_RESOLVED gen=', gen, 'room.state=', newRoom.state);
+      if (gen !== _connectGeneration) {
+        console.log('[VERTEX LIVEKIT CONNECT TRACE] GEN_CHANGED_AFTER_CONNECT gen=', gen, '_connectGeneration=', _connectGeneration, 'Destroying room and returning');
+        destroyRoom(newRoom);
+        setIsConnecting(false);
+        return;
+      }
+      console.log('[VERTEX LIVEKIT CONNECT TRACE] ROOM_CONNECT_SUCCESS gen=', gen, 'Setting isConnected=true');
       _activeRoom = newRoom;
-      connectedChannelRef.current = storedId;
-      setConnectedChannelId(storedId);
+      connectedChannelRef.current = channelId;
+      setConnectedChannelId(channelId);
       setRoom(newRoom);
       setIsConnected(true);
       useVoiceStore.getState().setIsLiveKitConnected(true);
@@ -851,7 +886,9 @@ export function useLiveKit() {
       
       updateParticipants();
     } catch (err) {
+      console.error('[VERTEX LIVEKIT CONNECT TRACE] CONNECT_CATCH gen=', gen, 'error=', err);
       if (gen === _connectGeneration) {
+        console.log('[VERTEX LIVEKIT CONNECT TRACE] CONNECT_CATCH_HANDLING gen=', gen);
         setConnectionError('Failed to connect');
         useVoiceStore.getState().setConnectionError('Failed to connect');
         // For space voice channels, presence is WS-authoritative and must NOT
@@ -860,18 +897,16 @@ export function useLiveKit() {
         // inside the channel: register presence with the WS server and keep
         // them in the voiceUsers map (the optimistic addVoiceUser from
         // joinVoiceChannel) instead of calling leaveVoice(), which would erase
-        // them and pop currentVoiceChannelId back to null. DM calls have no
-        // non-media presence semantics, so those still tear down fully.
-        if (isDm) {
-          useVoiceStore.getState().leaveVoice();
-        } else {
-          try {
-            registerWithServer();
-          } catch { /* WS registration is best-effort here */ }
-        }
+        // them and pop currentVoiceChannelId back to null.
+        try {
+          registerWithServer();
+        } catch { /* WS registration is best-effort here */ }
       }
     }
-    finally { if (gen === _connectGeneration) setIsConnecting(false); }
+    finally {
+      console.log('[VERTEX LIVEKIT CONNECT TRACE] CONNECT_FINALLY gen=', gen, '_connectGeneration=', _connectGeneration, 'gen === _connectGeneration?', gen === _connectGeneration);
+      if (gen === _connectGeneration) setIsConnecting(false);
+    }
   }, [updateParticipants, handleDataReceived]);
 
   const disconnect = useCallback(async () => {

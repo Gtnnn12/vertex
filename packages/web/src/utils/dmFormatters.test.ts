@@ -37,7 +37,7 @@ describe('formatDmTimestamp', () => {
     vi.setSystemTime(new Date(2026, 3, 2, 16, 0)); // Apr 2 2026
 
     const marchDate = localTs(2026, 3, 15, 12, 0); // Mar 15 2026
-    const result = formatDmTimestamp(marchDate);
+    const result = formatDmTimestamp(marchDate, 'en-US');
     expect(result).toMatch(/Mar\s+15/);
   });
 
@@ -46,7 +46,7 @@ describe('formatDmTimestamp', () => {
     vi.setSystemTime(new Date(2026, 3, 2, 16, 0)); // Apr 2 2026
 
     const lastYear = localTs(2025, 12, 14, 12, 0); // Dec 14 2025
-    const result = formatDmTimestamp(lastYear);
+    const result = formatDmTimestamp(lastYear, 'en-US');
     expect(result).toMatch(/Dec\s+14/);
     expect(result).toMatch(/2025/);
   });
@@ -213,6 +213,8 @@ describe('formatDmSidebarPreview — name_changed system message', () => {
   it('happy path with newName → "<actor> renamed the group"', () => {
     const dm = makeGroupDm({
       type: 'system',
+      id: 'msg-1',
+      dmChannelId: 'dm-1',
       userId: 'U1',
       content: JSON.stringify({ event: 'name_changed', oldName: null, newName: 'Cool Group' }),
       createdAt: 1,
@@ -223,6 +225,8 @@ describe('formatDmSidebarPreview — name_changed system message', () => {
   it('newName=null (cleared) → "<actor> cleared the group name"', () => {
     const dm = makeGroupDm({
       type: 'system',
+      id: 'msg-2',
+      dmChannelId: 'dm-1',
       userId: 'U1',
       content: JSON.stringify({ event: 'name_changed', oldName: 'Old', newName: null }),
       createdAt: 1,
@@ -230,10 +234,12 @@ describe('formatDmSidebarPreview — name_changed system message', () => {
     expect(formatDmSidebarPreview(dm, { id: 'OTHER', username: 'other' })).toBe('Heidi cleared the group name');
   });
 
-  it('unresolvable actor → "Unknown renamed the group"', () => {
+it('unresolvable actor → "Unknown renamed the group"', () => {
     const dm = makeGroupDm({
       type: 'system',
-      userId: 'GHOST', // not in members roster
+      id: 'msg-3',
+      dmChannelId: 'dm-1',
+      userId: 'GHOST',
       content: JSON.stringify({ event: 'name_changed', oldName: null, newName: 'X' }),
       createdAt: 1,
     });
@@ -254,6 +260,7 @@ function makeMember(id: string, fields: Partial<User> = {}): User {
     avatarColor: null,
     bio: null,
     homeInstance: null,
+    homeUserId: null,
     status: 'offline',
     customStatus: null,
     isAdmin: false,
@@ -384,7 +391,7 @@ describe('formatDmInputLabel', () => {
 });
 
 describe('deleted 1-on-1 partner', () => {
-  const me: User = { id: 'me', username: 'me', displayName: 'Me' } as User;
+  const me: User = { id: 'me', username: 'me', displayName: 'Me', homeUserId: null } as User;
   const deleted: User = { id: 'x', username: 'Deleted User', displayName: null, isDeleted: true } as User;
   const dm = { id: 'd', ownerId: null, members: [me, deleted], createdAt: 0 } as unknown as DmChannel;
 
@@ -400,6 +407,8 @@ describe('formatDmSidebarPreview — icon_changed system message', () => {
   it('happy path → "<actor> updated the group icon"', () => {
     const dm = makeGroupDm({
       type: 'system',
+      id: 'msg-4',
+      dmChannelId: 'dm-1',
       userId: 'U1',
       content: JSON.stringify({ event: 'icon_changed' }),
       createdAt: 1,
@@ -410,6 +419,8 @@ describe('formatDmSidebarPreview — icon_changed system message', () => {
   it('unresolvable actor → "Unknown updated the group icon"', () => {
     const dm = makeGroupDm({
       type: 'system',
+      id: 'msg-5',
+      dmChannelId: 'dm-1',
       userId: 'GHOST',
       content: JSON.stringify({ event: 'icon_changed' }),
       createdAt: 1,

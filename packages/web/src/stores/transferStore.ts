@@ -242,6 +242,10 @@ export const useTransferStore = create<TransferStore>()(
           ? { name: file.name, size: file.size, mimetype: file.type || 'application/octet-stream' }
           : { name: 'upload', size: file.size, mimetype: (file as Blob).type || 'application/octet-stream' };
 
+        console.log('[VERTEX AVATAR UPLOAD TRACE] startUpload called');
+        console.log('[VERTEX AVATAR UPLOAD TRACE] file:', { name: fileLike.name, size: fileLike.size, type: fileLike.mimetype });
+        console.log('[VERTEX AVATAR UPLOAD TRACE] endpoint:', endpoint);
+
         const id = get().createTransfer({
           type: 'upload',
           file: fileLike,
@@ -276,14 +280,35 @@ export const useTransferStore = create<TransferStore>()(
             }
           },
           onSuccess: (payload) => {
+            console.log('[VERTEX AVATAR UPLOAD TRACE] onSuccess called');
+            console.log('[VERTEX AVATAR UPLOAD TRACE] payload keys:', Object.keys(payload));
+            console.log('[VERTEX AVATAR UPLOAD TRACE] lastResponse:', payload.lastResponse);
+            console.log('[VERTEX AVATAR UPLOAD TRACE] lastResponse type:', typeof payload.lastResponse);
+            if (payload.lastResponse) {
+              console.log('[VERTEX AVATAR UPLOAD TRACE] lastResponse.getBody:', typeof payload.lastResponse.getBody);
+              console.log('[VERTEX AVATAR UPLOAD TRACE] lastResponse keys:', Object.keys(payload.lastResponse));
+              console.log('[VERTEX AVATAR UPLOAD TRACE] lastResponse.getBody():', payload.lastResponse.getBody?.());
+            }
             try {
-              const body = payload.lastResponse?.getBody?.() ?? '';
+              const rawBody = payload.lastResponse?.getBody?.();
+              console.log('[VERTEX AVATAR UPLOAD TRACE] rawBody type:', typeof rawBody);
+              console.log('[VERTEX AVATAR UPLOAD TRACE] rawBody value:', rawBody);
+              const body = rawBody ?? '';
+              console.log('[VERTEX AVATAR UPLOAD TRACE] body after ??:', JSON.stringify(body));
+              if (!body || body.trim() === '') {
+                console.error('[VERTEX AVATAR UPLOAD TRACE] ERROR: Empty body from server!');
+                throw new Error('Empty response body from server');
+              }
               const att = JSON.parse(body) as Attachment;
+              console.log('[VERTEX AVATAR UPLOAD TRACE] Parsed attachment:', { id: att.id, filename: att.filename });
               get().setAttachmentRef(id, att.id, att.filename);
               get().setState_(id, 'completed');
               get().updateProgress(id, fileLike.size);
+              console.log('[VERTEX AVATAR UPLOAD TRACE] Transfer completed successfully');
             } catch (e) {
               const msg = e instanceof Error ? e.message : 'Could not parse upload response';
+              console.error('[VERTEX AVATAR UPLOAD TRACE] ERROR in onSuccess:', msg, e);
+              get().setState_(id, 'failed');
               get().setError(id, { message: msg, permanent: true });
             } finally {
               liveUploads.delete(id);
@@ -292,9 +317,11 @@ export const useTransferStore = create<TransferStore>()(
             }
           },
           onError: (err: Error) => {
+            console.error('[VERTEX AVATAR UPLOAD TRACE] onError called:', err.message);
             const msg = err.message ?? 'Upload error';
             // Treat 4xx as permanent (no retry past tus's own retry chain).
             const permanent = /\b4\d\d\b/.test(msg);
+            get().setState_(id, 'failed');
             get().setError(id, { message: msg, permanent });
             liveUploads.delete(id);
           },

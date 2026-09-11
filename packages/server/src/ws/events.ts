@@ -6,7 +6,7 @@ import { connectionManager } from './handler.js';
 import type { VoiceRoom, DmRoomMeta, SpaceRoomMeta } from './handler.js';
 import { isMember, getChannelSpaceId, isDmMember, isDeadOneOnOne, hasPermission, computePermissions, PermissionBits } from '../utils/permissions.js';
 import { broadcastDmMessage, getDmMessageWithUser } from '../routes/dm.js';
-import { MAX_MESSAGE_LENGTH, type MessageWithUser, type Attachment, type DmMessageWithUser, type Embed, type Activity, type ActivityType, type ActivityTimestamps, type ActivityAssets, type ServerEvent, type DmCallUndeliverableFailure, type DmCallUndeliverableReason } from '@backspace/shared';
+import { MAX_MESSAGE_LENGTH, type MessageWithUser, type Attachment, type DmMessageWithUser, type Embed, type Activity, type ActivityType, type ActivityTimestamps, type ActivityAssets, type ActivitySpotify, type ServerEvent, type DmCallUndeliverableFailure, type DmCallUndeliverableReason } from '@backspace/shared';
 import type { CallRelayResult, CallFanoutFailure } from '../utils/federationOutbox.js';
 import { mapCallReasonToEventReason } from '../utils/federationOutbox.js';
 import { ACTIVITY_LIMITS } from '@backspace/shared/src/activities.js';
@@ -439,7 +439,7 @@ function handleTypingStart(event: Record<string, unknown>, userId: string, usern
 
 // ─── Activity Validation ──────────────────────────────────────────────────
 
-const VALID_ACTIVITY_TYPES = new Set<string>(['custom', 'playing', 'listening', 'watching', 'streaming']);
+const VALID_ACTIVITY_TYPES = new Set<string>(['custom', 'playing', 'listening', 'watching', 'streaming', 'spotify']);
 const MAX_TIMESTAMP = 4102444800000;
 
 function validateActivities(raw: unknown): Activity[] | null {
@@ -480,6 +480,47 @@ function validateActivities(raw: unknown): Activity[] | null {
       if (Object.keys(assets).length > 0) activity.assets = assets;
     }
 
+    // Desktop Spotify "Vía A": the Electron main process parses Spotify's
+    // window title and the client pushes a spotify-type activity carrying
+    // { song, artist, albumCover? }. Without this branch the validator stripped
+    // the payload and every viewer (including the sender's own echo) saw only
+    // the generic "Spotify". Server-side poller pushes (utils/spotifyPoller.ts)
+    // bypass this validator, so OAuth data is never re-shaped here.
+    if (obj.type === 'spotify' && obj.spotify && typeof obj.spotify === 'object') {
+      const s = obj.spotify as Record<string, unknown>;
+      const song = typeof s.song === 'string' ? s.song.trim() : '';
+      const artist = typeof s.artist === 'string' ? s.artist.trim() : '';
+      // [TEMP-TRACE c] did the spotify payload reach the validator?
+      console.log(`[activity-validate] incoming spotify payload: song="${song}" artist="${artist}" cover=${typeof s.albumCover === 'string' && s.albumCover ? 'yes' : 'no'}`);
+      if (
+        song.length > 0 && song.length <= ACTIVITY_LIMITS.MAX_NAME_LENGTH &&
+        artist.length > 0 && artist.length <= ACTIVITY_LIMITS.MAX_NAME_LENGTH
+      ) {
+        const spotify: ActivitySpotify = {
+          song,
+          artist,
+          albumCover:
+            typeof s.albumCover === 'string' && s.albumCover.startsWith('https://')
+              ? s.albumCover.slice(0, ACTIVITY_LIMITS.MAX_URL_LENGTH)
+              : '',
+          progressMs:
+            typeof s.progressMs === 'number' && s.progressMs >= 0 && s.progressMs <= MAX_TIMESTAMP
+              ? Math.floor(s.progressMs)
+              : 0,
+          durationMs:
+            typeof s.durationMs === 'number' && s.durationMs >= 0 && s.durationMs <= MAX_TIMESTAMP
+              ? Math.floor(s.durationMs)
+              : 0,
+          isPlaying: s.isPlaying !== false,
+          fetchedAt:
+            typeof s.fetchedAt === 'number' && s.fetchedAt >= 0 && s.fetchedAt <= MAX_TIMESTAMP
+              ? Math.floor(s.fetchedAt)
+              : Date.now(),
+        };
+        activity.spotify = spotify;
+      }
+    }
+
     validated.push(activity);
   }
   return validated;
@@ -488,13 +529,16 @@ function validateActivities(raw: unknown): Activity[] | null {
 function handlePresenceUpdate(event: Record<string, unknown>, userId: string): void {
   const status = event.status as string;
 
-  if (!status || !['online', 'idle', 'dnd'].includes(status)) {
-    connectionManager.sendToUser(userId, { type: 'error', message: 'Status must be "online", "idle", or "dnd"' });
+  // 'offline' is the Invisible presence: the user stays connected but is shown
+  // as offline to others. Other clients receive 'offline' in the broadcast and
+  // treat this user as offline; the connection itself is untouched.
+  if (!status || !['online', 'idle', 'dnd', 'offline'].includes(status)) {
+    connectionManager.sendToUser(userId, { type: 'error', message: 'Status must be "online", "idle", "dnd", or "offline"' });
     return;
   }
 
   const db = getDb();
-  db.update(schema.users).set({ status }).where(eq(schema.users.id, userId)).run();
+  db.update(schema.users).set({ status, lastSeenAt: Date.now() }).where(eq(schema.users.id, userId)).run();
 
   connectionManager.setUserStatus(userId, status);
   const activities = connectionManager.getUserActivities(userId);
@@ -514,7 +558,7 @@ function handlePresenceUpdate(event: Record<string, unknown>, userId: string): v
 
   // S2S: project to all active peers
   void import('../utils/federationPresence.js').then(({ queuePresenceRelay }) => {
-    try { queuePresenceRelay(userId, status as 'online' | 'idle' | 'dnd', activities); } catch (e) { console.warn('[ws] queuePresenceRelay(manual) failed', e); }
+    try { queuePresenceRelay(userId, status as 'online' | 'idle' | 'dnd' | 'offline', activities); } catch (e) { console.warn('[ws] queuePresenceRelay(manual) failed', e); }
   });
 }
 
@@ -531,17 +575,47 @@ function handleActivityUpdate(event: Record<string, unknown>, userId: string): v
     return;
   }
 
-  connectionManager.setUserActivities(userId, activities);
+  // ── Spotify merge (poller vs. desktop Vía A) ──
+  // Two producers of the rich spotify activity:
+  //  • OAuth poller (utils/spotifyPoller.ts) — server-owned, stores REAL
+  //    progressMs/durationMs (durationMs > 0 on every real track).
+  //  • Desktop detector (Vía A) — client pushes a spotify activity parsed
+  //    from Spotify's window title; durationMs is always 0 (no playback
+  //    position from desktop detection).
+  // Priority: poller data beats a desktop push for the same user (real
+  // progress > title-only), the poller refreshes itself within its interval.
+  // A desktop track is the user's own live data and wins over a stored
+  // DESKTOP copy, but must NOT linger once the title stops parsing
+  // (ads/menus) — otherwise free accounts would show a song forever.
+  const storedSpotify = connectionManager.getUserActivities(userId).filter((a) => a.type === 'spotify');
+  const pollerOwned = storedSpotify.find((a) => (a.spotify?.durationMs ?? 0) > 0) ?? null;
+  const incomingSpotify = activities.find((a) => a.type === 'spotify' && a.spotify);
+  const others = activities.filter((a) => a.type !== 'spotify');
+
+  let merged: Activity[];
+  if (incomingSpotify && !pollerOwned) {
+    // Free-account desktop push (no poller data to protect): live replace.
+    merged = [incomingSpotify, ...others];
+  } else {
+    // Premium (poller owns the rich activity) and/or no rich spotify in
+    // this push: keep poller data, drop any stale desktop-pushed track.
+    merged = [...(pollerOwned ? [pollerOwned] : []), ...others];
+  }
+
+  connectionManager.setUserActivities(userId, merged);
+  // [TEMP-TRACE c] what the server stored + broadcasts after the merge
+  const mergedSpotify = merged.find((a) => a.type === 'spotify');
+  console.log(`[activity-validate] stored for ${userId}: ${mergedSpotify?.spotify ? `song="${mergedSpotify.spotify.song}" artist="${mergedSpotify.spotify.artist}"` : 'no rich spotify activity'}`);
   const status = connectionManager.getUserStatus(userId);
 
-  const payload = { type: 'presence_update' as const, userId, status, activities };
+  const payload = { type: 'presence_update' as const, userId, status, activities: merged };
   const targets = collectProfileBroadcastTargetIds(userId);
   for (const uid of targets) connectionManager.sendToUser(uid, payload);
   connectionManager.sendToUser(userId, payload);
 
-  // S2S: project to all active peers (activities + current status).
+  // S2S: project to all active peers (merged state = what local viewers see).
   void import('../utils/federationPresence.js').then(({ queuePresenceRelay }) => {
-    try { queuePresenceRelay(userId, status as 'online' | 'idle' | 'dnd' | 'offline', activities); } catch (e) { console.warn('[ws] queuePresenceRelay(activity) failed', e); }
+    try { queuePresenceRelay(userId, status as 'online' | 'idle' | 'dnd' | 'offline', merged); } catch (e) { console.warn('[ws] queuePresenceRelay(activity) failed', e); }
   });
 }
 
@@ -1408,6 +1482,7 @@ function handleMarkUnread(event: Record<string, unknown>, userId: string, isFede
 
 function handleDmCallStart(event: Record<string, unknown>, userId: string, username: string, ws: WebSocket): void {
   const dmChannelId = event.dmChannelId as string;
+  const video = !!event.video;
   if (!dmChannelId || typeof dmChannelId !== 'string') {
     connectionManager.sendToUser(userId, { type: 'error', message: 'dmChannelId is required' });
     return;
@@ -1456,10 +1531,11 @@ function handleDmCallStart(event: Record<string, unknown>, userId: string, usern
     dmChannelId,
     callerId: userId,
     callerName: username,
+    video,
   }, userId);
 
   // Federation: notify remote instances (fire-and-forget)
-  sendFederatedCallStart(dmChannelId, userId, username)
+  sendFederatedCallStart(dmChannelId, userId, username, video)
     .catch(err => console.error('[federation] sendFederatedCallStart error:', err));
 }
 
@@ -1794,6 +1870,7 @@ async function sendFederatedCallStart(
   dmChannelId: string,
   callerId: string,
   callerName: string,
+  video?: boolean,
 ): Promise<void> {
   const db = getDb();
   const ourOrigin = getOurOrigin();
@@ -1909,6 +1986,7 @@ async function sendFederatedCallStart(
         homeInstance: ourOrigin,
         displayName: callerName,
       },
+      video: !!video,
       participants,
     },
   });

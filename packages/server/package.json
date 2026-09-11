@@ -3,7 +3,7 @@
     "version":  "1.0.0",
     "private":  true,
     "license":  "AGPL-3.0-only",
-    "author":  "Jannis Braun",
+    "author":  "gtnn12",
     "type":  "module",
     "scripts":  {
                     "dev":  "cross-env PORT=3005 tsx watch src/index.ts",

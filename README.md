@@ -4,22 +4,24 @@
 
 # VERTEX
 
-**A self-hosted communication platform you own. Text, voice, video, and federation.**
+**Your own communication platform. Text, voice, video, federation — designed, not assembled.**
 
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-3da639.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6.svg)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/node-20_LTS-339933.svg)](https://nodejs.org/)
-[![Version](https://img.shields.io/badge/version-1.0.0-16a34a.svg)](#project-status)
+[![Version](https://img.shields.io/badge/version-1.0-16a34a.svg)](#project-status)
 
 </div>
 
 ---
 
-VERTEX is a self-hosted, open-source Discord alternative: a Discord-style chat
-platform you run on your own hardware. Spaces, channels, roles, voice and video,
-screen sharing, direct messages, friends, file sharing, and message search. On top
-of that, **server-to-server federation** lets independent VERTEX instances talk
-to each other while each stays under its own control.
+VERTEX is a self-hosted communication platform you run on your own hardware —
+and a design project first. Every surface, from the login mascot to the compact
+member grid, was drawn, animated, and tuned by hand. Underneath the design sits
+a complete platform: spaces, channels, roles, voice and video, screen sharing,
+direct messages, friends, file sharing, and message search. Server-to-server
+**federation** lets independent VERTEX instances talk to each other while each
+stays under its own control.
 
 It is **free and open source** under the **GNU AGPL-3.0**, and dual-licensed: a
 commercial license is available if the AGPL doesn't fit your use. See
@@ -30,28 +32,44 @@ commercial license is available if the AGPL doesn't fit your use. See
 
 ## What makes VERTEX different
 
-Self-hosted chat usually forces a trade-off: gaming-grade voice and video, *or* a
-polished Discord-style experience, *or* federation between independent servers.
-Rarely all three, and rarely with the fine-grained media controls people expect.
+VERTEX is built around a simple bet: a chat platform should feel like *your*
+place, not like a rented template. So it ships with a design language of its own
+— motion-first, mascot-branded, endlessly personalizable — and refuses to trade
+that polish for capability.
 
-VERTEX does all three at once:
-
-- **Voice and video with a real control surface.** This goes past a screen-share
-  button. Choose resolution, frame rate, codec (VP9 or hardware H.264), and
-  bitrate; set independent 0-200% volume for every person and every screen-share;
-  RNNoise noise suppression; a live connection inspector (bitrate, codec, ping,
-  packet loss, jitter); and a per-tile badge showing each stream's measured
-  resolution and frame-rate. Screen sharing goes up to 4K/120fps within admin-set
-  bounds.
-- **Federation, not a walled garden.** Run your own instance and peer it with
-  others for cross-instance friends, DMs, calls, and presence. Each server stays
+- **Complete personalization.** Themes and accent colors, custom profile
+  banners, bios, and per-user effects, customizable sidebar layouts with
+  personal color-coded folders — the interface bends to the person using it,
+  not the other way around.
+- **Netrex, the built-in premium layer.** An opt-in membership with its own
+  admin-managed subscription system: premium profile effects, extended
+  personalization, and priority features — controlled by the instance owner,
+  not an external billing service.
+- **A home screen that is actually a home.** An animated landing for returning
+  users: quick access, recent DMs, social feed, and your live activity —
+  rendered as a compact, glanceable grid instead of an empty channel list.
+- **Compact member grid.** The member sidebar becomes a dense, animated grid
+  with per-tile activity, presence, and stream badges — built for servers that
+  want people, not whitespace.
+- **A redesigned DM experience.** Conversations are the first-class citizen:
+  a dedicated roster, activity-aware DM rows, live typing and call state, and
+  group DMs with their own info surface.
+- **Profiles with effects.** User popouts carry banner art, accent color, and
+  motion effects — including the premium set for Netrex members.
+- **An animated home and login.** The login greets you with the VERTEX mascot
+  (who covers her eyes while you type your password), and the first sign-in
+  deals a six-card shuffle that reveals where you've landed.
+- **Voice and video with a real control surface.** Choose resolution, frame
+  rate, codec (VP9 or hardware H.264), and bitrate; set independent 0-200%
+  volume for every person and every screen-share; RNNoise noise suppression; a
+  live connection inspector; and per-tile stream quality badges. Screen sharing
+  goes up to 4K/120fps within admin-set bounds.
+- **Federation, not a walled garden.** Peer your instance with others for
+  cross-instance friends, DMs, calls, and presence. Each server stays
   independently owned, and requests are HMAC-authenticated.
-- **A complete platform, not a demo.** Role-based permissions with per-category
-  and per-channel overrides, friends and group DMs, inline playable media,
-  moderation with audit trails, search, a desktop app, and an installable mobile
-  PWA, all in the warm, calm "Aether Drift" interface.
 
-You own the server, the data, and the network it federates into.
+You own the server, the data, the network it federates into — and the look of
+the whole thing.
 
 ## Screenshots
 
@@ -100,6 +118,16 @@ You own the server, the data, and the network it federates into.
 
 ## Features
 
+### Design & personalization
+- Mascot-branded login with the eye-covering password animation
+- Six-card post-login shuffle ritual (Framer Motion)
+- Animated home screen with quick access, recent DMs, social feed, and live activity
+- Themes, accent colors, and a warm, calm "Aether Drift" design system
+- User profiles with banner, bio, accent color, and motion effects
+- Netrex premium tier: admin-managed memberships with premium profile effects
+- Compact member grid with per-tile activity and presence
+- Customizable user sidebar layout with personal color-coded space folders
+
 ### Communication
 - Real-time text channels over WebSocket, with `@mention` autocomplete and mention highlighting
 - Markdown formatting with syntax highlighting
@@ -122,7 +150,6 @@ You own the server, the data, and the network it federates into.
 ### Organization
 - Spaces with channel categories
 - Role-based permissions: bitwise RBAC with category- and channel-level overrides
-- Customizable user sidebar layout, with personal color-coded folders that group whole spaces
 - Space discovery (public, request-to-join, and private)
 - Shareable invite codes
 
@@ -130,7 +157,6 @@ You own the server, the data, and the network it federates into.
 - Friend requests and friendships
 - User search and discovery
 - Mutual friends and mutual spaces
-- User profiles with banner, bio, and accent color
 - Presence and rich activities (playing, listening, watching, streaming, custom)
 - Manual status (Online, Idle, or Do Not Disturb) with a custom status message
 - Privacy controls: toggle discoverability and activity-status sharing
@@ -140,6 +166,7 @@ You own the server, the data, and the network it federates into.
 - Voice restrictions (space-level mute/deafen, persisted)
 - Member move and force-disconnect
 - Join-request approval for gated spaces
+- Admin center with audit log and moderation events
 
 ### Federation
 - Multi-instance peering with HMAC-signed server-to-server requests
@@ -188,7 +215,7 @@ source automatically if the image can't be pulled.
 ### 1. Run the installer
 
 ```bash
-git clone https://github.com/TheZwiss/VERTEX.git
+git clone https://github.com/gtnn12/VERTEX.git
 cd VERTEX
 ./install.sh
 ```
@@ -249,7 +276,7 @@ by hand, you can skip it and drive Docker Compose directly, but then DNS,
 responsibility:
 
 ```bash
-git clone https://github.com/TheZwiss/VERTEX.git
+git clone https://github.com/gtnn12/VERTEX.git
 cd VERTEX
 
 cp .env.example .env
@@ -263,7 +290,7 @@ The stack runs three services via Docker Compose:
 
 | Service     | Role                                              |
 |-------------|---------------------------------------------------|
-| `VERTEX` | The app (API + WebSocket + built web client) on internal port `3000` |
+| `vertex`    | The app (API + WebSocket + built web client) on internal port `3000` |
 | `caddy`     | Reverse proxy with automatic HTTPS for your `DOMAIN` (ports `80`/`443`) |
 | `livekit`   | Voice/video server; optional, enabled with `COMPOSE_PROFILES=voice` |
 
@@ -359,13 +386,13 @@ chat.example.com {
 ```yaml
 http:
   routers:
-    VERTEX:
+    vertex:
       rule: "Host(`chat.example.com`)"
       entryPoints: [websecure]
-      service: VERTEX
+      service: vertex
       tls: { certResolver: letsencrypt }
   services:
-    VERTEX:
+    vertex:
       loadBalancer:
         servers:
           - url: "http://127.0.0.1:8080"
@@ -461,7 +488,7 @@ docker compose up -d --build
 
 Because `COMPOSE_FILE` lives in `.env`, these commands automatically use the
 right compose files in every mode, with no `-f` flags to remember. A redeploy
-briefly restarts the `VERTEX` container (clients reconnect automatically).
+briefly restarts the `vertex` container (clients reconnect automatically).
 
 ## Development
 
@@ -529,7 +556,7 @@ The most important:
 | `HOST`               | no       | `0.0.0.0`   | Bind address |
 | `REGISTRATION_OPEN`  | no       | `true`      | Set `false` to close signups after setup |
 | `MAX_UPLOAD_SIZE`    | no       | `104857600` | Max upload size in bytes (100 MB; 90 MB in `tunnel` mode) |
-| `VERTEX_IMAGE` / `VERTEX_IMAGE_TAG` | no | `ghcr.io/thezwiss/VERTEX` / `latest` | Prebuilt image to pull; pin a tag or point at your fork's registry |
+| `VERTEX_IMAGE` / `VERTEX_IMAGE_TAG` | no | `ghcr.io/gtnn12/vertex` / `latest` | Prebuilt image to pull; pin a tag or point at your fork's registry |
 | `LIVEKIT_URL` / `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` | no | none | Enable voice/video |
 | `COMPOSE_PROFILES`   | no       | none        | Set to `voice` to start the bundled LiveKit service |
 
@@ -569,7 +596,7 @@ notifications, global keybinds, and activity detection.
 ### Download
 
 Grab the installer for your platform from the
-[**latest release**](https://github.com/TheZwiss/VERTEX/releases/latest):
+[**latest release**](https://github.com/gtnn12/VERTEX/releases/latest):
 
 | Platform | File | Notes |
 |----------|------|-------|
@@ -622,7 +649,7 @@ packages/
 | Server       | Node.js 20+, Fastify 4, TypeScript (strict) |
 | Database     | SQLite (better-sqlite3) + Drizzle ORM |
 | Auth         | JWT + bcrypt |
-| Frontend     | React 18, Vite 6, Tailwind CSS 3, Zustand 5 |
+| Frontend     | React 18, Vite 6, Tailwind CSS 3, Zustand 5, Framer Motion |
 | Voice/Video  | LiveKit |
 | Media        | sharp (thumbnails), Cheerio (embeds) |
 | Desktop      | Electron 40 |
@@ -636,15 +663,14 @@ understand or extend a subsystem.
 
 ## FAQ
 
-**Is VERTEX a self-hosted Discord alternative?**
-Yes. It gives you a Discord-style experience (spaces, channels, roles, voice,
+**Is VERTEX a self-hosted chat platform?**
+Yes. It gives you a modern chat experience (spaces, channels, roles, voice,
 video, screen sharing, DMs, friends) that you run entirely on your own server, so
 you own the data and set the rules.
 
-**How is it different from Revolt, Spacebar, Matrix, or Mumble?**
-See the full [comparison](docs/comparison.md), including where each of those is the
-better choice. In short: VERTEX pairs a Discord-style client with a serious
-voice and screen-share control surface and optional server-to-server federation.
+**Can I make my instance look different?**
+That's the point. Themes, accents, profiles with effects, sidebar layouts,
+folders — plus the Netrex tier if you want a premium layer on your community.
 
 **Does it have screen sharing and high-quality video?**
 Yes. Screen sharing goes up to 4K/120fps within admin-set bounds, with per-stream
@@ -672,13 +698,7 @@ independently owned. Requests between servers are HMAC-authenticated.
 ## Contributing
 
 Contributions are welcome. Please read [`CONTRIBUTING.md`](CONTRIBUTING.md)
-first. VERTEX is a single-owner project, so all contributors sign a
-[Contributor License Agreement](CLA.md), a one-time comment on your pull
-request, handled automatically by a bot. **You keep the copyright to your
-contribution** and grant the maintainer (Jannis Braun) an exclusive license to
-it, which is what lets VERTEX be offered under both the AGPL and a commercial
-license. You also receive a perpetual license to reuse the specific code you
-wrote in your own other projects.
+first.
 
 ## Security
 
@@ -698,7 +718,7 @@ In plain terms:
 - Yes: redistribute it and your changes under the same AGPL-3.0 license.
 - Note: if you run a **modified** version as a network service, you must offer your
   users its complete corresponding source (AGPL § 13). VERTEX makes this easy:
-  set `VERTEX_SOURCE_URL` to your fork so the in-app "Source code" link points
+  set `VERTEX_SOURCE_URL` to your fork so the in-app footer link points
   at what you actually run.
 - Note: preserve the copyright and license notices.
 
@@ -708,19 +728,9 @@ modifications, or an organization that can't use AGPL software), a separate
 commercial license is available on request. See
 [`LICENSE-COMMERCIAL.md`](LICENSE-COMMERCIAL.md).
 
-> **Our open-source commitment.** Every released version of VERTEX is, and
-> will remain, available under the AGPL-3.0. The Contributor License Agreement
-> exists to enable a commercial license and optional enterprise add-ons, **not**
-> to take the open-source edition private. If this project is ever abandoned, or
-> the open-source edition is relicensed under non-free terms, the community stays
-> free to fork the last AGPL release.
+Copyright © 2026 VERTEX.
 
-Copyright © 2026 Jannis Braun. Contributions are made under the
-[Contributor License Agreement](CLA.md): you keep your copyright and grant the
-maintainer an exclusive license, which is what lets VERTEX be offered under
-both the AGPL and a commercial license.
-
-"VERTEX", the VERTEX logo, and app icons are trademarks of Jannis Braun and
+"VERTEX", the VERTEX logo, and app icons are trademarks of the project and
 are not licensed under either the AGPL or the commercial license. Bundled
 third-party components retain their own licenses; see [`NOTICE`](NOTICE).
 
@@ -729,6 +739,6 @@ third-party components retain their own licenses; see [`NOTICE`](NOTICE).
 Built on the shoulders of [Fastify](https://fastify.dev/),
 [Drizzle ORM](https://orm.drizzle.team/), [React](https://react.dev/),
 [LiveKit](https://livekit.io/), [Tailwind CSS](https://tailwindcss.com/),
-[Electron](https://www.electronjs.org/), and the broader open-source ecosystem.
-The interface uses the [DM Sans](https://github.com/googlefonts/dm-fonts) font
-(SIL Open Font License 1.1).
+[Framer Motion](https://motion.dev/), [Electron](https://www.electronjs.org/),
+and the broader open-source ecosystem. The interface uses the
+[DM Sans](https://github.com/googlefonts/dm-fonts) font (SIL Open Font License 1.1).

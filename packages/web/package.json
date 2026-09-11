@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "license": "AGPL-3.0-only",
-  "author": "Jannis Braun",
+  "author": "gtnn12",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -15,11 +15,13 @@
     "e2e:identity-deletion": "playwright test e2e/identity-deletion.spec.ts"
   },
   "dependencies": {
-    "@vertex/shared": "workspace:*",
+    "@backspace/shared": "workspace:*",
     "@emoji-mart/data": "^1.2.1",
     "@emoji-mart/react": "^1.1.1",
     "@livekit/components-react": "^2.7.4",
     "@sapphi-red/web-noise-suppressor": "^0.3.5",
+    "firebase": "^11.2.0",
+    "framer-motion": "^13.2.0",
     "idb": "^8.0.3",
     "livekit-client": "^2.9.0",
     "prism-react-renderer": "^2.4.1",

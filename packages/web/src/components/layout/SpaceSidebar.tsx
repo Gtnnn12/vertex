@@ -64,23 +64,16 @@ function SidebarItem({ id, name, icon, avatarColor, active, onClick, onContextMe
   const [isHovered, setIsHovered] = useState(false);
   const firstLetter = name.charAt(0).toUpperCase();
 
-  const getPillHeight = () => {
-    if (active) return 'h-8';
-    if (isHovered) return 'h-4';
-    if (hasUnread && !active) return 'h-2';
-    return 'h-2 scale-0';
-  };
-
   const backgroundStyle = useMemo((): React.CSSProperties | undefined => {
     if (type === 'action') {
       return {
-        background: isHovered ? 'rgba(134, 239, 172, 0.12)' : 'rgba(255, 255, 255, 0.04)',
+        background: isHovered ? 'rgba(134, 239, 172, 0.10)' : 'rgba(255, 255, 255, 0.03)',
       };
     }
 
     if (type === 'dm') {
-      const lit = active || isHovered;
-      return { background: lit ? 'rgb(var(--accent-primary))' : 'rgb(var(--interactive-muted))' };
+      if (active) return { background: 'rgb(var(--accent-primary))' };
+      return { background: isHovered ? 'rgba(255, 255, 255, 0.07)' : 'rgba(255, 255, 255, 0.04)' };
     }
 
     // Space type — if it has a custom icon image, no gradient needed
@@ -91,27 +84,44 @@ function SidebarItem({ id, name, icon, avatarColor, active, onClick, onContextMe
   }, [type, id, name, icon, avatarColor, isHovered, active]);
 
   const getButtonClasses = () => {
-    const base = 'w-10 h-10 flex items-center justify-center duration-200 overflow-hidden [transition:border-radius_0.2s,background_0.2s,color_0.2s]';
+    const base = 'w-10 h-10 flex items-center justify-center overflow-hidden rounded-[12px] transition-all duration-200';
 
     if (type === 'dm') {
-      return `${base} text-white ${active ? 'rounded-[13px]' : 'rounded-[20px] hover:rounded-[13px]'}`;
+      return `${base} text-white border ${
+        active
+          ? 'border-accent-primary/50 shadow-[0_4px_20px_-4px_rgb(var(--accent-primary-glow)/0.5)]'
+          : 'border-white/[0.06] hover:border-white/[0.14] hover:brightness-[1.07]'
+      }`;
     }
 
     if (type === 'action') {
-      return `${base} rounded-[20px] hover:rounded-[13px] text-accent-mint`;
+      return `${base} text-accent-mint border ${
+        active
+          ? 'ring-1 ring-accent-primary/30 border-accent-primary/30'
+          : 'border-white/[0.045] hover:border-white/[0.11]'
+      }`;
     }
 
+    // Space type — keep the gradient/icon clean and mark state with a subtle halo
     if (icon) {
-      return `${base} ${active ? 'rounded-[13px]' : 'rounded-[20px] hover:rounded-[13px]'}`;
+      return `${base} ${
+        active
+          ? 'ring-1 ring-accent-primary/40 shadow-[0_0_0_3px_rgb(var(--accent-primary-glow)/0.10)]'
+          : 'hover:ring-1 hover:ring-white/[0.06] hover:brightness-[1.06]'
+      }`;
     }
 
-    return `${base} text-white ${active ? 'rounded-[13px]' : 'rounded-[20px] hover:rounded-[13px]'}`;
+    return `${base} ${
+      active
+        ? 'ring-1 ring-accent-primary/40 shadow-[0_0_0_3px_rgb(var(--accent-primary-glow)/0.10)]'
+        : 'hover:ring-1 hover:ring-white/[0.06] hover:brightness-[1.05]'
+    }`;
   };
 
   const buttonContent = (
     <button onClick={onClick} className={`${getButtonClasses()} ${dimmed ? 'opacity-40 saturate-50' : ''}`} style={backgroundStyle} title={tooltipText ? undefined : name}>
       {type === 'dm' ? (
-        <img src="/icons/logo-mark.svg" alt="Backspace" className="w-[25px] h-auto" />
+        <span className={`text-[16px] font-bold tracking-tight leading-none ${active ? 'text-white' : 'text-txt-secondary'}`}>V</span>
       ) : type === 'action' ? (
         actionType === 'add' ? (
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -141,6 +151,9 @@ function SidebarItem({ id, name, icon, avatarColor, active, onClick, onContextMe
   const innerContent = (
     <div className={`relative ${dropIndicator === 'merge' ? 'scale-110 ring-2 ring-accent-mint/60 rounded-full' : ''} transition-transform duration-150`}>
       {buttonContent}
+      {hasUnread && !active && (
+        <div className="absolute -top-[1px] -right-[1px] w-[6px] h-[6px] rounded-full bg-accent-mint ring-[2px] ring-surface-base" />
+      )}
       {federationBadge && (
         <div className="absolute -bottom-0.5 -right-0.5 w-[14px] h-[14px] rounded-full bg-surface-base flex items-center justify-center">
           {federationDisconnected ? (
@@ -157,7 +170,7 @@ function SidebarItem({ id, name, icon, avatarColor, active, onClick, onContextMe
 
   return (
     <div
-      className={`relative flex items-center mb-1.5 w-full justify-center ${isDragging ? 'opacity-50' : ''}`}
+      className={`relative flex items-center mb-1 w-full justify-center ${isDragging ? 'opacity-50' : ''} transition-colors`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onContextMenu={onContextMenu}
@@ -167,21 +180,12 @@ function SidebarItem({ id, name, icon, avatarColor, active, onClick, onContextMe
       onDragEnd={onDragEnd}
       onDrop={onDrop}
     >
-      {/* Drop indicator lines — offset into the mb-1.5 gap so adjacent items share one line */}
+      {/* Drop indicator lines — offset into the mb-1 gap so adjacent items share one line */}
       {dropIndicator === 'before' && (
-        <div className="absolute -top-[3px] left-3 right-3 h-[2px] bg-accent-mint rounded-full z-10" />
+        <div className="absolute -top-[2px] left-3 right-3 h-[1px] bg-accent-mint/60 rounded-full z-10" />
       )}
       {dropIndicator === 'after' && (
-        <div className="absolute -bottom-[3px] left-3 right-3 h-[2px] bg-accent-mint rounded-full z-10" />
-      )}
-
-      {/* Pill Indicator */}
-      {(type === 'space' || type === 'dm') && (
-        <div className="absolute -left-0 w-2 h-10 flex items-center">
-          <div
-            className={`bg-white rounded-r-full transition-all duration-200 origin-left ${getPillHeight()} w-1`}
-          />
-        </div>
+        <div className="absolute -bottom-[2px] left-3 right-3 h-[1px] bg-accent-mint/60 rounded-full z-10" />
       )}
 
       {tooltipText ? (
@@ -227,8 +231,10 @@ function FolderIcon({ spaces, color, isActive, isHovered }: { spaces: TaggedSpac
   const borderColor = color ? `rgba(${parseInt(color.slice(1, 3), 16)}, ${parseInt(color.slice(3, 5), 16)}, ${parseInt(color.slice(5, 7), 16)}, 0.3)` : undefined;
   return (
     <div
-      className={`relative w-10 h-10 flex items-center justify-center overflow-hidden glass-pill [transition:border-radius_0.2s] ${
-        isActive || isHovered ? 'rounded-[13px]' : 'rounded-[16px]'
+      className={`relative w-10 h-10 flex items-center justify-center overflow-hidden rounded-[12px] border transition-all duration-200 ${
+        isActive || isHovered
+          ? 'border-accent-primary/30 bg-accent-primary/10 shadow-[0_0_0_3px_rgb(var(--accent-primary-glow)/0.10)]'
+          : 'border-white/[0.05] bg-white/[0.03] hover:border-white/[0.09] hover:bg-white/[0.05]'
       }`}
       style={borderColor ? { borderColor } : undefined}
     >
@@ -393,7 +399,7 @@ function FolderFlyout({
   return ReactDOM.createPortal(
     <div
       ref={floatingRef}
-      className="w-[220px] max-h-[360px] overflow-y-auto glass rounded-lg py-1.5 animate-in fade-in zoom-in-95 duration-100"
+      className="w-[236px] max-h-[360px] overflow-y-auto glass rounded-[14px] py-1.5 animate-in fade-in zoom-in-95 duration-100"
       style={style}
     >
       {/* Folder header */}
@@ -436,9 +442,9 @@ function FolderFlyout({
             )}
 
             <button
-              className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 mx-1 rounded-md transition-colors ${
+              className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 mx-1 rounded-[8px] transition-colors ${
                 isDimmed ? 'opacity-40 saturate-50' : ''
-              } ${isActive ? 'bg-white/[0.10]' : 'hover:bg-white/[0.06]'}`}
+              } ${isActive ? 'bg-white/[0.08]' : 'hover:bg-white/[0.05]'}`}
               style={{ width: 'calc(100% - 8px)' }}
               draggable
               onDragStart={(e) => onDragStart(e, space.id)}
@@ -529,15 +535,11 @@ function FolderSlot({
 }) {
   const [isHovered, setIsHovered] = useState(false);
 
-  const getPillHeight = () => {
-    if (isActive) return 'h-8';
-    if (isHovered) return 'h-4';
-    if (hasUnread) return 'h-2';
-    return 'h-2 scale-0';
-  };
-
   const iconContent = (
     <button onClick={onToggleFlyout}>
+      {hasUnread && !isActive && (
+        <div className="absolute -top-[1px] -right-[1px] w-[6px] h-[6px] rounded-full bg-accent-mint ring-[2px] ring-surface-base z-[2]" />
+      )}
       <FolderIcon spaces={folderSpaces} color={folder.color} isActive={isActive || isFlyoutOpen} isHovered={isHovered} />
     </button>
   );
@@ -545,7 +547,7 @@ function FolderSlot({
   return (
     <div
       ref={anchorRef}
-      className={`relative flex items-center mb-1.5 w-full justify-center ${isDragging ? 'opacity-50' : ''}`}
+      className={`relative flex items-center mb-1 w-full justify-center ${isDragging ? 'opacity-50' : ''} transition-colors`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onContextMenu={onContextMenu}
@@ -555,23 +557,18 @@ function FolderSlot({
       onDragEnd={onDragEnd}
       onDrop={onDrop}
     >
-      {/* Drop indicators — offset into the mb-1.5 gap so adjacent items share one line */}
+      {/* Drop indicators — offset into the mb-1 gap so adjacent items share one line */}
       {dropIndicator === 'before' && (
-        <div className="absolute -top-[3px] left-3 right-3 h-[2px] bg-accent-mint rounded-full z-10" />
+        <div className="absolute -top-[2px] left-3 right-3 h-[1px] bg-accent-mint/60 rounded-full z-10" />
       )}
       {dropIndicator === 'after' && (
-        <div className="absolute -bottom-[3px] left-3 right-3 h-[2px] bg-accent-mint rounded-full z-10" />
+        <div className="absolute -bottom-[2px] left-3 right-3 h-[1px] bg-accent-mint/60 rounded-full z-10" />
       )}
       {dropIndicator === 'merge' && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-          <div className="w-12 h-12 rounded-[16px] ring-2 ring-accent-mint/60" />
+          <div className="w-12 h-12 rounded-[14px] ring-2 ring-accent-mint/40" />
         </div>
       )}
-
-      {/* Pill indicator */}
-      <div className="absolute -left-0 w-2 h-10 flex items-center">
-        <div className={`bg-white rounded-r-full transition-all duration-200 origin-left ${getPillHeight()} w-1`} />
-      </div>
 
       {isFlyoutOpen ? (
         iconContent
@@ -601,7 +598,6 @@ export function SpaceSidebar() {
   const setShowDms = useUIStore((s) => s.setShowDms);
   const openModal = useUIStore((s) => s.openModal);
   const addToast = useUIStore((s) => s.addToast);
-  const floatingPanelHeight = useUIStore((s) => s.floatingPanelHeight);
   const setCurrentChannel = useChatStore((s) => s.setCurrentChannel);
   const unreadChannels = useChatStore((s) => s.unreadChannels);
   const instances = useInstanceStore((s) => s.instances);
@@ -1092,7 +1088,10 @@ export function SpaceSidebar() {
   }, [openFolderId, resolvedLayout]);
 
   return (
-    <nav data-pip-obstacle="left" className="w-[72px] bg-surface-base flex flex-col items-center py-3 overflow-y-auto flex-shrink-0 no-scrollbar select-none md:fixed md:inset-y-0 md:left-0 md:z-[100] md:glass-strip" style={{ paddingBottom: floatingPanelHeight + 24, ...(isElectron() ? { top: '33px' } : {}) }} onDragOver={(e) => { if (dragState) e.preventDefault(); }} onDrop={handleDrop}>
+    <nav data-pip-obstacle="left" className="w-[72px] bg-surface-base flex flex-col items-center py-3 overflow-y-auto flex-shrink-0 no-scrollbar select-none md:fixed md:left-3 md:top-3 md:bottom-3 md:z-[100] md:rounded-[18px] md:border md:border-white/[0.06] md:bg-[linear-gradient(180deg,#17171f_0%,#111118_100%)] md:shadow-[0_10px_36px_rgba(0,0,0,0.5),0_2px_10px_rgba(0,0,0,0.3)] md:h-auto" style={{ paddingBottom: 16, ...(isElectron() ? { top: '33px' } : {}) }} onDragOver={(e) => { if (dragState) e.preventDefault(); }} onDrop={handleDrop}>
+      {/* HOME — root entry */}
+      <span className="mb-1.5 text-[6.5px] font-bold uppercase tracking-[0.3em] text-txt-tertiary/45 select-none">Home</span>
+
       <SidebarItem
         id="@me"
         name="Direct Messages"
@@ -1102,7 +1101,9 @@ export function SpaceSidebar() {
         hasUnread={hasDmUnread}
       />
 
-      <div className="w-8 h-[2px] bg-white/[0.06] rounded-full mb-1.5 shrink-0" />
+      {/* SPACES — grouped list */}
+      <div className="mt-2.5 pt-2 border-t border-white/[0.06] w-full flex flex-col items-center gap-1.5 flex-1 min-h-0">
+        <span className="mb-0.5 text-[6.5px] font-bold uppercase tracking-[0.3em] text-txt-tertiary/45 select-none">Spaces</span>
 
       {/* Unified space list (ordered by user layout) */}
       {resolvedLayout.map((item) => {
@@ -1224,9 +1225,10 @@ export function SpaceSidebar() {
           />
         );
       })}
+      </div>
 
-      <div className="w-8 h-[2px] bg-white/[0.06] rounded-full mb-1.5 shrink-0" />
-
+      {/* ACTIONS — create / join / explore */}
+      <div className="mt-2.5 pt-2 border-t border-white/[0.06] w-full flex flex-col items-center gap-1.5">
       <SidebarItem
         id="add-space"
         name="Add a Space"
@@ -1253,6 +1255,7 @@ export function SpaceSidebar() {
         type="action"
         actionType="explore"
       />
+      </div>
 
       {transferModalSpaceId && (
         <TransferOwnershipModal

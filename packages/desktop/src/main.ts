@@ -38,14 +38,19 @@ import {
   type RecoveryState,
 } from './recovery';
 import { migrateUserData } from './userDataMigration';
+import { registerLicenseIpc } from './licenseIpc';
+import { activarLicencia } from './services/license';
+import { registerAdminCodesIpc } from './adminCodesIpc';
 
 // Override Electron's package.json-derived app name so userData lives at
-// "<appData>/Backspace" instead of leaking the monorepo's "@backspace/desktop"
+// "<appData>/VERTEX" instead of leaking the monorepo's "@vertex/desktop"
 // package name. Must run before any app.getPath('userData') consumer.
-app.setName('Backspace');
+app.setName('VERTEX');
 
 // One-time migration from the historical scoped path. After the move the old
 // folder is gone, so subsequent launches hit the old-missing no-op branch.
+// A second, chainable migration carries pre-rebrand installs (userData under
+// "<appData>/Backspace") forward to "<appData>/VERTEX".
 {
   const appDataDir = app.getPath('appData');
   const oldParent = path.join(appDataDir, '@backspace');
@@ -54,6 +59,23 @@ app.setName('Backspace');
     newDir: path.join(appDataDir, 'Backspace'),
     oldParent,
   });
+  if (result.kind === 'migrated') {
+    console.log(`[userData] migrated ${result.from} → ${result.to}`);
+  } else if (result.kind === 'failed') {
+    console.error('[userData] migration failed:', result.error);
+  }
+  const legacyBackspaceDir = path.join(appDataDir, 'Backspace');
+  const vertexDir = path.join(appDataDir, 'VERTEX');
+  const rebrandResult = migrateUserData({
+    oldDir: legacyBackspaceDir,
+    newDir: vertexDir,
+    oldParent: appDataDir,
+  });
+  if (rebrandResult.kind === 'migrated') {
+    console.log(`[userData] migrated ${rebrandResult.from} → ${rebrandResult.to}`);
+  } else if (rebrandResult.kind === 'failed') {
+    console.error('[userData] rebrand migration failed:', rebrandResult.error);
+  }
   if (result.kind === 'migrated') {
     console.log(`[userData] migrated ${result.from} → ${result.to}`);
   } else if (result.kind === 'failed') {
@@ -69,10 +91,24 @@ let pendingDeepLink: string | null = null;
 
 const knownInstanceOrigins = new Set<string>();
 
+// ---------------------------------------------------------------------------
+// Temporary pending screen-share selection
+// ---------------------------------------------------------------------------
+// When the ScreenSharePicker selects a source, the selection is stored
+// temporarily here via 'screen-share-pending-set'. It is consumed (and cleared)
+// the next time setDisplayMediaRequestHandler is invoked — i.e. when the
+// renderer calls getDisplayMedia() after the picker confirms. This is the
+// transit mechanism that lets the picker's sourceId reach
+// setDisplayMediaRequestHandler without relying on renderer state.
+let pendingScreenShareSelection: {
+  sourceId: string | null;
+  shareAudio: boolean;
+} | null = null;
+
 // ─── AGPL-3.0 § 13 source offer ─────────────────────────────────────────────
 // Upstream fallback for the "Source code" menu items and the About panel.
 // Used when the connected instance can't be reached or advertises no source URL.
-const UPSTREAM_SOURCE_URL = 'https://github.com/TheZwiss/backspace';
+const UPSTREAM_SOURCE_URL = 'https://github.com/gtnn12/VERTEX';
 
 /**
  * Resolve the Corresponding Source URL for the instance the desktop app is
@@ -241,7 +277,7 @@ function applyLoginItemSettings(openAtLogin: boolean, startMinimized: boolean): 
       enabled: openAtLogin,
       path: process.execPath,
       args: startMinimized ? ['--hidden'] : [],
-      name: 'Backspace',
+      name: 'VERTEX',
     });
   } else {
     // Linux: setLoginItemSettings creates ~/.config/autostart/<name>.desktop.
@@ -341,7 +377,7 @@ function createWindow(): void {
       : {}),
     minWidth: 940,
     minHeight: 500,
-    title: 'Backspace',
+    title: 'VERTEX',
     icon: path.join(__dirname, '..', 'build', 'icon.png'),
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
     ...(process.platform !== 'darwin' ? {
@@ -383,6 +419,28 @@ function createWindow(): void {
     } else {
       mainWindow.loadFile(getPickerPath());
     }
+  }
+
+  // DEV: pipe renderer console (license IPC trace legs 1/3 and 2/3) into the
+  // main console so the whole renderer→preload→main chain lands in one log.
+  // Handles both the legacy (event, level, message) and the new (event object)
+  // console-message signatures across Electron versions.
+  if (process.env.NODE_ENV !== 'production') {
+    mainWindow.webContents.on(
+      'console-message' as never,
+      ((...args: unknown[]) => {
+        // Electron ≥32 passes a single event object; older versions pass
+        // (_e, level, message, …). Extract the message from either shape.
+        const first = args[0] as { message?: unknown } | undefined;
+        const message =
+          first && typeof first === 'object' && 'message' in first
+            ? String(first.message)
+            : String(args[2] ?? '');
+        if (message.includes('[license-ipc')) {
+          console.log(`[renderer] ${message}`);
+        }
+      }) as never,
+    );
   }
 
   mainWindow.once('ready-to-show', () => {
@@ -474,7 +532,7 @@ function createTray(): void {
   const icon = loadTrayIcon();
   tray = new Tray(icon);
 
-  tray.setToolTip('Backspace');
+  tray.setToolTip('VERTEX');
   // Context menu is set by the recoveryStore subscriber in app.whenReady,
   // which keeps the menu in sync with update/recovery state.
 
@@ -594,9 +652,35 @@ function registerIpcHandlers(): void {
   ipcMain.handle('get-app-version', () => app.getVersion());
 
   // Screen share picker coordination (used by setDisplayMediaRequestHandler)
-  ipcMain.on('screen-share-selected', (_event, _sourceId: string | null, _shareAudio?: boolean) => {
-    // Handled via ipcMain.once in the display media handler — this is just
-    // a safety net to prevent unhandled-message warnings
+  // Enumerate available screens/windows for the custom picker in the renderer.
+  ipcMain.on('screen-share-request', async (event) => {
+    try {
+      const sources = await desktopCapturer.getSources({
+        types: ['screen', 'window'],
+        thumbnailSize: { width: 320, height: 180 },
+        fetchWindowIcons: true,
+      });
+      event.sender.send(
+        'screen-share-sources',
+        sources.map((s) => ({
+          id: s.id,
+          name: s.name,
+          thumbnailDataUrl: s.thumbnail.toDataURL(),
+          appIconDataUrl: s.appIcon && !s.appIcon.isEmpty() ? s.appIcon.toDataURL() : null,
+          isScreen: s.id.startsWith('screen:'),
+        }))
+      );
+    } catch (err) {
+      console.error('[Main:ScreenShare] Failed to enumerate screen-share sources:', err);
+      event.sender.send('screen-share-sources', []);
+    }
+  });
+
+  // Pending selection from ScreenSharePicker — set when the picker confirms a
+  // source and consumed once by setDisplayMediaRequestHandler on the next
+  // getDisplayMedia() call.
+  ipcMain.on('screen-share-pending-set', (_e, sourceId: string | null, shareAudio?: boolean) => {
+    pendingScreenShareSelection = { sourceId, shareAudio: shareAudio ?? true };
   });
 
   // Auto-launch settings
@@ -608,7 +692,7 @@ function registerIpcHandlers(): void {
       // executableWillLaunchAtLogin to honour Task Manager's StartupApproved state.
       const osState = app.getLoginItemSettings({ path: process.execPath });
       const ownEntry = osState.launchItems?.find(
-        (item) => item.name === 'Backspace' || item.path?.toLowerCase() === process.execPath.toLowerCase(),
+        (item) => item.name === 'VERTEX' || item.name === 'Backspace' || item.path?.toLowerCase() === process.execPath.toLowerCase(),
       );
       // When the Run entry exists, its args are the source of truth for startMinimized.
       // When the entry is absent (autostart is off), there is no OS state to read, so we
@@ -643,7 +727,7 @@ function registerIpcHandlers(): void {
     if (process.platform === 'win32') {
       const osState = app.getLoginItemSettings({ path: process.execPath });
       const ownEntry = osState.launchItems?.find(
-        (item) => item.name === 'Backspace' || item.path?.toLowerCase() === process.execPath.toLowerCase(),
+        (item) => item.name === 'VERTEX' || item.name === 'Backspace' || item.path?.toLowerCase() === process.execPath.toLowerCase(),
       );
       currentOpenAtLogin = osState.executableWillLaunchAtLogin ?? false;
       // See `get-auto-launch-settings`: when the entry is absent, fall back to disk
@@ -683,6 +767,10 @@ function registerIpcHandlers(): void {
   ipcMain.handle('check-accessibility', () => {
     return keybindManager.checkAccessibility();
   });
+
+  // Netrex purchase + license verification (in-app checkout, no browser)
+  registerLicenseIpc(() => mainWindow);
+  registerAdminCodesIpc();
 
   // Recovery / boot-stall protocol
   ipcMain.on('renderer-ready', () => {
@@ -743,7 +831,7 @@ function initAutoUpdater(): void {
       // (recovery mode) is visible — no need to also fire a native toast.
       if (!mainWindow?.isFocused()) {
         showNotification(
-          'Backspace update ready',
+          'VERTEX update ready',
           `Click to restart and install version ${version}.`,
           () => autoUpdater.quitAndInstall(),
         );
@@ -768,7 +856,7 @@ function initAutoUpdater(): void {
       if (updateConfirmed) {
         mainWindow?.webContents.send('update-error', {
           message,
-          releaseUrl: 'https://github.com/TheZwiss/backspace/releases/latest',
+          releaseUrl: 'https://github.com/gtnn12/VERTEX/releases/latest',
         });
       }
     });
@@ -818,7 +906,7 @@ if (process.platform === 'linux') {
   app.commandLine.appendSwitch('enable-features', 'PulseaudioLoopbackForScreenShare');
 }
 
-// Windows: AppUserModelId so toast notifications attribute correctly to Backspace
+// Windows: AppUserModelId so toast notifications attribute correctly to VERTEX
 // (without this, recovery / update notifications appear under "electron.exe").
 if (process.platform === 'win32') {
   app.setAppUserModelId('com.backspace.desktop');
@@ -893,75 +981,88 @@ if (!gotTheLock) {
     await session.defaultSession.clearStorageData({ storages: ['serviceworkers'] });
     await session.defaultSession.clearCache();
 
-    // Intercept getDisplayMedia() — show custom picker in renderer.
-    // Audio loopback controlled by user's shareAudio toggle.
+    // Intercept getDisplayMedia() — the renderer's custom picker pre-selects the
+    // source via 'screen-share-pending-set'; this handler consumes it once.
+    // Audio loopback controlled by the user's shareAudio toggle.
     session.defaultSession.setDisplayMediaRequestHandler(async (_request, callback) => {
       console.log('[Main:ScreenShare] Handler invoked');
       try {
-        const sources = await desktopCapturer.getSources({
-          types: ['screen', 'window'],
-          thumbnailSize: { width: 320, height: 180 },
-          fetchWindowIcons: true,
-        });
-        console.log('[Main:ScreenShare] Got', sources.length, 'sources');
-
-        if (sources.length === 0) {
-          console.warn('[Main:ScreenShare] No sources — Screen Recording permission may not be granted');
-          // @ts-ignore — Electron throws if we pass {} when video was requested; pass nothing to deny
-          callback();
-          return;
-        }
-
-        const serialized = sources.map((source) => ({
-          id: source.id,
-          name: source.name,
-          thumbnailDataUrl: source.thumbnail.toDataURL(),
-          appIconDataUrl: source.appIcon && !source.appIcon.isEmpty()
-            ? source.appIcon.toDataURL() : null,
-          isScreen: source.id.startsWith('screen:'),
-        }));
-
-        // Send sources to renderer, wait for user selection
-        mainWindow?.webContents.send('screen-share-sources', serialized);
-
-        const { sourceId, shareAudio } = await new Promise<{ sourceId: string | null; shareAudio: boolean }>((resolve) => {
-          ipcMain.once('screen-share-selected', (_event, id: string | null, wantAudio?: boolean) => {
-            resolve({ sourceId: id, shareAudio: wantAudio ?? true });
+        // FIRST: Check for pending selection from ScreenSharePicker
+        const pending = pendingScreenShareSelection;
+        if (pending && pending.sourceId) {
+          console.log(
+            '[Main:ScreenShare] Consuming pending selection sourceId:',
+            pending.sourceId
+          );
+          const sources = await desktopCapturer.getSources({
+            types: ['screen', 'window'],
+            thumbnailSize: { width: 320, height: 180 },
+            fetchWindowIcons: true,
           });
-        });
-        console.log('[Main:ScreenShare] User selected:', sourceId, 'audio:', shareAudio);
-
-        if (!sourceId) {
-          // @ts-ignore — deny the request without crashing
-          callback();
-          return;
+          const selected = sources.find(
+            (s) => s.id === pending.sourceId
+          );
+          if (selected) {
+            // Provide the selected source — Electron creates the MediaStream.
+            // System audio loopback support varies:
+            //   - Windows: native (Chromium default).
+            //   - macOS 13+: CoreAudio Tap; requires NSAudioCaptureUsageDescription
+            //     in Info.plist (electron-builder injects it via mac.extendInfo).
+            //   - Linux: PulseAudio loopback, gated behind the
+            //     `PulseaudioLoopbackForScreenShare` feature flag we enable above.
+            //     Fails on PipeWire-only systems without pulse compat — the
+            //     renderer catches that and toasts the user.
+            callback({
+              video: selected,
+              ...(pending.shareAudio ? { audio: 'loopback' } : {}),
+            });
+          } else {
+            // Source no longer available — deny and clear pending
+            console.warn(
+              '[Main:ScreenShare] Pending sourceId not found in available sources'
+            );
+            callback({});
+          }
+          pendingScreenShareSelection = null;
+          return; // Skip normal flow — pending selection consumed
         }
 
-        const selected = sources.find((s) => s.id === sourceId);
-        if (!selected) {
-          // @ts-ignore — deny the request without crashing
-          callback();
-          return;
-        }
-
-        // Provide the selected source — Electron creates the MediaStream.
-        // System audio loopback support varies:
-        //   - Windows: native (Chromium default).
-        //   - macOS 13+: CoreAudio Tap; requires NSAudioCaptureUsageDescription
-        //     in Info.plist (electron-builder injects it via mac.extendInfo).
-        //   - Linux: PulseAudio loopback, gated behind the
-        //     `PulseaudioLoopbackForScreenShare` feature flag we enable above.
-        //     Fails on PipeWire-only systems without pulse compat — the
-        //     renderer catches that and toasts the user.
-        callback({ video: selected, ...(shareAudio ? { audio: 'loopback' } : {}) });
+        // NO pending selection — deny. The renderer only reaches getDisplayMedia()
+        // through the VERTEX picker, which always sets a pending selection first.
+        console.warn(
+          '[Main:ScreenShare] No pending screen-share selection. Ask user to re-open the VERTEX screen share picker.'
+        );
+        callback({});
+        return;
       } catch (err) {
         console.error('[Main:ScreenShare] Handler error:', err);
-        // @ts-ignore — deny the request without crashing
-        callback();
+        callback({});
       }
     });
 
     registerIpcHandlers();
+
+    // ─── License-verify self-test (owner diagnostic) ───
+    // Fires the real main-process verify path once at boot with a fake key.
+    // Expected: Gumroad answers success:false → the main→Gumroad leg works
+    // and any user-facing "Sin conexión" must then be a renderer→IPC issue.
+    // Any thrown error here means the main process itself can't reach the API.
+    void (async () => {
+      try {
+        const result = await activarLicencia('TEST-1234-ABCD-EFGH');
+        if (result.ok) {
+          console.log('[license-selftest] UNEXPECTED success — fake key verified?!');
+        } else {
+          console.log(
+            `[license-selftest] OK — Gumroad reachable, fake key rejected: ${result.error}` +
+              (result.error === 'network' ? '  ← CHECK OUTBOUND NETWORK/PROXY IN MAIN' : ''),
+          );
+        }
+      } catch (err) {
+        console.error('[license-selftest] THREW — main cannot complete verify:', err);
+      }
+    })();
+
     // Wire the recovery module's quit callback to the local requestQuit BEFORE
     // createWindow so a synchronous did-fail-load on first load finds a wired
     // Quit handler. requestQuit is a function declaration and is hoisted.
@@ -971,7 +1072,7 @@ if (!gotTheLock) {
 
     // AGPL-3.0 § 13: native About panel advertises the version + source repo.
     app.setAboutPanelOptions({
-      applicationName: 'Backspace',
+      applicationName: 'VERTEX',
       applicationVersion: app.getVersion(),
       copyright: `AGPL-3.0-only · Source: ${UPSTREAM_SOURCE_URL}`,
       website: UPSTREAM_SOURCE_URL,

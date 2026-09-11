@@ -102,7 +102,7 @@ function makeUser(overrides: Partial<User> = {}): User {
   };
 }
 
-const NOTICE = /This account is detached from its home instance\./i;
+const NOTICE = /Account detached from your home instance/i;
 
 // A connected home-domain instance carrying the proof-mint API surface the
 // fallback action calls. Only the fields AccountPanel touches are populated.
@@ -163,7 +163,7 @@ describe('AccountPanel re-attach fallback action', () => {
     render(<AccountPanel />);
     expect(screen.queryByRole('button', { name: /re-attach/i })).not.toBeInTheDocument();
     // Informational copy still present:
-    expect(screen.getByText(/detached from its home instance/i)).toBeInTheDocument();
+    expect(screen.getByText(/detached from your home instance/i)).toBeInTheDocument();
   });
 
   it('two-step confirm: first click arms, second click mints proof and calls reattach', async () => {
@@ -172,8 +172,7 @@ describe('AccountPanel re-attach fallback action', () => {
     currentInstances = [makeHomeConnection({ attachProof })];
     mockReattach.mockResolvedValue({ success: true, user: makeUser({ username: 'youruser@orbit.test', federationHomeOrphaned: false, homeInstance: 'orbit.test' }) });
 
-    render(<AccountPanel />);
-    fireEvent.click(screen.getByRole('button', { name: /re-attach to orbit\.test/i }));
+    render(<AccountPanel />);    fireEvent.click(screen.getByRole('button', { name: /re-attach to orbit\.test/i }));
     fireEvent.click(screen.getByRole('button', { name: /confirm re-attach/i }));
     await waitFor(() => expect(mockReattach).toHaveBeenCalledWith({ token: 'a'.repeat(64) }));
     expect(attachProof).toHaveBeenCalled();

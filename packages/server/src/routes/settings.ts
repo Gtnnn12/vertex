@@ -183,7 +183,7 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
     const gifKey = row.gifApiKey as string | null;
     const maxUploadBytes = row.maxUploadSizeBytes ?? config.maxUploadSize;
     const response: InstanceAdminSettings = {
-      instanceName: row.instanceName ?? 'Backspace',
+      instanceName: row.instanceName ?? 'VERTEX',
       registrationOpen: row.registrationOpen !== null ? row.registrationOpen === 1 : config.registrationOpen,
       federatedRegistrationOpen: row.federatedRegistrationOpen === 1,
       discoveryEnabled: row.discoveryEnabled === 1,
@@ -282,7 +282,7 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
     const updatedGifKey = updatedRow.gifApiKey as string | null;
     const updatedMaxUploadBytes = updatedRow.maxUploadSizeBytes ?? config.maxUploadSize;
     const response: InstanceAdminSettings = {
-      instanceName: updatedRow.instanceName ?? 'Backspace',
+      instanceName: updatedRow.instanceName ?? 'VERTEX',
       registrationOpen: updatedRow.registrationOpen !== null ? updatedRow.registrationOpen === 1 : config.registrationOpen,
       federatedRegistrationOpen: updatedRow.federatedRegistrationOpen === 1,
       discoveryEnabled: updatedRow.discoveryEnabled === 1,
