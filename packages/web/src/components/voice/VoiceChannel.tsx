@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo } from 'react';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { useVoiceStore } from '../../stores/voiceStore';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { useAuthStore } from '../../stores/authStore';
@@ -33,6 +34,7 @@ interface VoiceChannelProps {
 
 /** Wrapper component for the volume slider so it can use hooks (useState). */
 export function VoiceChannel({ channelId, channelName, onClick, locked, canManage, onSettingsClick, voiceUserHandlers, dropZone }: VoiceChannelProps) {
+  const { t } = useLanguage();
   const serverVoiceUsers = useVoiceStore((s) => s.voiceUsers.get(channelId)) ?? EMPTY_VOICE_USERS;
   const currentVoiceChannel = useVoiceStore((s) => s.currentVoiceChannelId);
   const participants = useVoiceStore((s) => s.participants);
@@ -73,7 +75,7 @@ export function VoiceChannel({ channelId, channelName, onClick, locked, canManag
       e.stopPropagation();
 
       // Build moderation items
-      const modItems = buildVoiceModMenuItems(userId, channelId);
+      const modItems = buildVoiceModMenuItems(userId, channelId, t);
 
       const items: ContextMenuItem[] = [...modItems];
 
@@ -116,20 +118,17 @@ export function VoiceChannel({ channelId, channelName, onClick, locked, canManag
     >
       <button
         onClick={onClick}
-        className={`relative w-full flex items-center gap-1.5 px-[10px] h-8 rounded-[6px] group transition-colors ${
+        className={`relative w-full flex items-center gap-1.5 px-[10px] h-8 rounded-[7px] group transition-colors ${
           locked
             ? 'text-txt-tertiary/50 cursor-not-allowed'
             : isActive
-              ? 'bg-surface-elevated text-txt-primary'
-              : 'text-txt-tertiary hover:text-txt-secondary hover:bg-interactive-hover'
+              ? 'bg-surface-elevated text-txt-primary ring-1 ring-white/[0.05]'
+              : 'text-txt-tertiary hover:text-txt-secondary hover:bg-white/[0.04]'
         }`}
         title={locked ? "You don't have permission to connect to this channel" : undefined}
       >
         {isActive && !locked && (
-          <div
-            className="absolute -left-[2px] top-1/2 -translate-y-1/2 w-[3px] bg-white rounded-r-full"
-            style={{ height: '55%', opacity: 0.7 }}
-          />
+          <span className="absolute -right-[1px] top-1/2 -translate-y-1/2 w-[3px] h-[55%] rounded-l-full bg-accent-mint/80" />
         )}
         {locked ? (
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="flex-shrink-0 text-[#6e6e7a]/50">
@@ -188,7 +187,7 @@ export function VoiceChannel({ channelId, channelName, onClick, locked, canManag
             return (
               <div
                 key={userId}
-                className={`px-[10px] py-1 rounded-[6px] hover:bg-interactive-hover transition-colors ${
+                className={`px-[10px] py-1 rounded-[7px] hover:bg-white/[0.04] transition-colors ${
                   isDraggable ? 'cursor-grab active:cursor-grabbing' : ''
                 } ${isBeingDragged ? 'opacity-50' : ''}`}
                 draggable={isDraggable}

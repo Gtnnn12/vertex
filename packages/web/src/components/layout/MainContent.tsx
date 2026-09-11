@@ -9,12 +9,14 @@ import { MessageInput } from '../chat/MessageInput';
 import { VoiceGrid } from '../voice/VoiceGrid';
 import { VoiceControlBar } from '../voice/VoiceControlBar';
 import { VoiceChatPanel } from '../voice/VoiceChatPanel';
-import { FriendsPage } from '../chat/FriendsPage';
+import { HomePage } from '../home/HomePage';
 import { ExplorePage } from '../chat/ExplorePage';
+import { VertexSection } from '../vertex/VertexSection';
+import { NetrexSection } from '../netrex/NetrexSection';
 import { Avatar } from '../ui/Avatar';
+import { ProfileAvatar } from '../ui/ProfileAvatar';
 import { AvatarStack } from '../ui/AvatarStack';
 import { useVoiceStore } from '../../stores/voiceStore';
-import { wsSend } from '../../hooks/useWebSocket';
 import { MemberListToggleButton } from './MemberListToggleButton';
 import { TransferIndicator } from './TransferIndicator';
 import { isSelf, parseFederatedUsername, isFederationGlobeApplicable } from '../../utils/identity';
@@ -25,7 +27,7 @@ import type { User } from '@backspace/shared';
 import { Tooltip } from '../ui/Tooltip';
 import { joinVoiceChannel } from '../../utils/voice';
 import { SearchPopover } from '../chat/SearchPopover';
-import { isDmChannel, getChannelOrigin } from '../../stores/spaceStore';
+import { isDmChannel } from '../../stores/spaceStore';
 import { useLanguage } from '../../contexts/LanguageContext';
 
 export function MainContent() {
@@ -44,8 +46,8 @@ export function MainContent() {
   const showDms = useUIStore((s) => s.showDms);
   const location = useLocation();
   const isExplorePage = location.pathname === '/explore';
-  const activeDmCall = useVoiceStore((s) => s.activeDmCall);
-  const outgoingCall = useVoiceStore((s) => s.outgoingCall);
+  const isVertexPage = location.pathname === '/vertex';
+  const isNetrexPage = location.pathname === '/netrex';
   const dmChannels = useSpaceStore((s) => s.dmChannels);
   const authUser = useAuthStore((s) => s.user);
   const openModal = useUIStore((s) => s.openModal);
@@ -54,6 +56,11 @@ export function MainContent() {
   const searchButtonRef = useRef<HTMLButtonElement>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [jumpToMessageId, setJumpToMessageId] = useState<string | null>(null);
+  // Presentation-only: true while the DM message list is scrolled away from the
+  // top. Drives the subtle bottom edge on the glass header (dm-header-scrolled).
+  // Read from the scroll event's target (MessageList's internal scroller) via a
+  // capture-phase listener — no logic in MessageList is touched.
+  const [dmHeaderScrolled, setDmHeaderScrolled] = useState(false);
 
   // Resolve the DM header's "first other" member through the canonical view
   // cache. The hook must be called unconditionally at the component top, so we
@@ -66,6 +73,7 @@ export function MainContent() {
   // Reset search when channel changes
   useEffect(() => {
     setSearchOpen(false);
+    setDmHeaderScrolled(false);
   }, [currentChannelId]);
 
   // Handle actual browser fullscreen API.
@@ -152,10 +160,13 @@ export function MainContent() {
   const channel = channels.find(c => c.id === currentChannelId);
   const isVoiceChannel = channel?.type === 'voice';
 
+  if (isNetrexPage) return <NetrexSection />;
+  if (isVertexPage) return <VertexSection />;
+
   if (showDms || isExplorePage || !currentSpaceId) {
     if (!currentChannelId) {
       if (isExplorePage) return <ExplorePage />;
-      return <FriendsPage />;
+      return <HomePage />;
     }
 
     const dmChannel = dmChannels.find(dm => dm.id === currentChannelId);
@@ -184,110 +195,53 @@ export function MainContent() {
         : undefined;
     const dmPartnerDeleted = dmChannel ? isDeletedPartnerDm(dmChannel, authUser) : false;
 
-    const isInDmCall = activeDmCall?.dmChannelId === currentChannelId;
-    const isCallingThisDm = outgoingCall?.dmChannelId === currentChannelId;
-
-    const handleStartVoiceCall = () => {
-      if (!currentChannelId) return;
-      useVoiceStore.getState().setOutgoingCall({ dmChannelId: currentChannelId });
-      wsSend({ type: 'dm_call_start', dmChannelId: currentChannelId }, getChannelOrigin(currentChannelId));
-    };
-
-    const handleCancelCall = () => {
-      if (!currentChannelId) return;
-      useVoiceStore.getState().setOutgoingCall(null);
-      const { federatedCallId, callOrigin } = useVoiceStore.getState();
-      const origin = callOrigin || getChannelOrigin(currentChannelId);
-      wsSend({ type: 'dm_call_end', dmChannelId: currentChannelId, federatedCallId }, origin);
-    };
-
-    if (isInDmCall) {
-      return (
-        <div
-          ref={voiceContainerRef}
-          className={`flex-1 flex flex-col bg-surface-base min-w-0 group/voice relative ${voiceFullscreen ? 'h-screen' : ''}`}
-        >
-          <div className={`h-14 px-5 flex items-center justify-between border-b border-border-hard flex-shrink-0 bg-surface-base transition-opacity duration-300 ${voiceFullscreen ? 'opacity-0 hover:opacity-100' : ''}`}>
-            <div className="flex items-center gap-[10px]">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="text-txt-tertiary">
-                <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" />
-              </svg>
-              <span className="font-bold text-[15px] tracking-[-0.02em] text-txt-primary">{dmName}</span>
-              {connectionError ? (
-                <span className="text-xs text-txt-danger font-medium ml-2">{t('connection_failed')}</span>
-              ) : isLiveKitConnected ? (
-                <>
-                  <span className="text-xs text-status-online font-medium ml-2">{t('connected')}</span>
-                  <span className="text-xs text-txt-tertiary ml-1">{t('n_in_call').replace('{n}', String(participants.length))}</span>
-                </>
-              ) : (
-                <span className="text-xs text-status-idle font-medium ml-2">{t('connecting')}</span>
-              )}
-            </div>
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <TransferIndicator />
-              <MemberListToggleButton />
-            </div>
-          </div>
-
-          <div className="flex-1 flex overflow-hidden pb-20">
-            <VoiceGrid participants={participants} />
-            {voiceChatOpen && !voiceFullscreen && (
-              <VoiceChatPanel channelId={currentChannelId} channelName={`@${dmName}`} />
-            )}
-          </div>
-
-          <VoiceControlBar />
-        </div>
-      );
-    }
-
     return (
       <div className="flex-1 flex flex-col bg-surface-chat min-w-0 relative">
-        {isCallingThisDm && (
-          <div className="bg-status-online/10 border-b border-status-online/20 px-4 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="text-status-online animate-pulse">
-                <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" />
-              </svg>
-              <span className="text-status-online text-sm font-medium">{t('calling_name').replace('{name}', dmName)}...</span>
-            </div>
-            <button
-              onClick={handleCancelCall}
-              className="px-3 py-1 bg-accent-rose hover:bg-accent-rose/80 text-white text-xs font-medium rounded transition-colors"
-            >
-              {t('cancel')}
-            </button>
-          </div>
-        )}
-        <div className="h-14 px-5 flex items-center justify-between border-b border-border-hard flex-shrink-0 z-10 bg-surface-chat">
-          <div className="flex items-center gap-[10px] min-w-0">
+<div className={`h-[80px] px-6 md:px-8 flex items-center justify-between flex-shrink-0 z-10 dm-header-glass ${dmHeaderScrolled ? 'dm-header-scrolled' : ''}`}>
+          <div className="flex items-center gap-4 min-w-0">
             {isGroupDm ? (
               <div
                 onClick={() => openModal('groupDmSettings', { dmChannelId: currentChannelId, initialTab: 'overview' })}
                 className="flex-shrink-0 cursor-pointer"
                 aria-label={t('open_group_settings')}
               >
-                <AvatarStack members={otherMembers} size={32} border="chat" iconUrl={dmChannel?.icon} />
+                <AvatarStack members={otherMembers} size={44} border="chat" iconUrl={dmChannel?.icon} />
               </div>
             ) : (
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="text-txt-tertiary flex-shrink-0">
-                <path d="M12.5 2A6.5 6.5 0 0 0 6 8.5c0 1.82.75 3.47 1.95 4.65A10.02 10.02 0 0 0 2 22h2c0-4.42 3.58-8 8-8 .35 0 .69.03 1.03.07A6.49 6.49 0 0 0 19 8.5 6.5 6.5 0 0 0 12.5 2Zm0 11A4.5 4.5 0 1 1 17 8.5a4.5 4.5 0 0 1-4.5 4.5Z" />
-              </svg>
+              <div className="dm-presence-ring flex-shrink-0">
+                <ProfileAvatar
+                  src={firstOther?.avatar ?? null}
+                  name={firstOther?.displayName ?? firstOther?.username ?? ''}
+                  size={42}
+                  ring={{ width: 1, color: 'rgba(255,255,255,0.11)' }}
+                  user={firstOther ?? undefined}
+                />
+              </div>
             )}
-            {isGroupDm ? (
+            <div className="flex flex-col min-w-0 leading-none">
               <span
-                onClick={() => openModal('groupDmSettings', { dmChannelId: currentChannelId, initialTab: 'overview' })}
-                className="font-bold text-[15px] tracking-[-0.02em] text-txt-primary truncate cursor-pointer"
+                onClick={() => isGroupDm && openModal('groupDmSettings', { dmChannelId: currentChannelId, initialTab: 'overview' })}
+                className={`font-semibold text-[18px] tracking-[-0.015em] text-txt-primary truncate ${isGroupDm ? 'cursor-pointer' : ''}`}
               >
                 {dmName}
               </span>
-            ) : (
-              <span className="font-bold text-[15px] tracking-[-0.02em] text-txt-primary truncate">{dmName}</span>
-            )}
+              <span className="mt-1.5 text-[13px] tracking-[0.005em] text-txt-tertiary truncate">
+                {isGroupDm ? (
+                  `${dmChannel?.members.length} ${t('members')}`
+                ) : firstOther ? (
+                  <span>
+                    {firstOther.homeInstance
+                      ? firstOther.username
+                      : `@${parseFederatedUsername(firstOther.username).baseName}`}
+                  </span>
+                ) : (
+                  t('direct_message')
+                )}
+              </span>
+            </div>
             {!isGroupDm && firstOther && isFederationGlobeApplicable(firstOther) && (
               <Tooltip content={firstOther.username} position="bottom">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-txt-tertiary/80 flex-shrink-0">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-txt-tertiary/80 flex-shrink-0">
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
                 </svg>
               </Tooltip>
@@ -297,56 +251,38 @@ export function MainContent() {
               if (federatedMembers.length === 0) return null;
               return (
                 <Tooltip content={federatedMembers.map(m => m.username).join(', ')} position="bottom">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-txt-tertiary/80 flex-shrink-0">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-txt-tertiary/80 flex-shrink-0">
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
                   </svg>
                 </Tooltip>
               );
             })()}
             {isGroupDm && (
-              <span
+              <button
                 onClick={() => openModal('groupDmSettings', { dmChannelId: currentChannelId, initialTab: 'members' })}
-                className="text-xs text-txt-tertiary flex-shrink-0 cursor-pointer"
+                className="w-9 h-9 flex items-center justify-center text-txt-tertiary hover:text-txt-primary transition-colors rounded-[10px] hover:bg-white/[0.06] flex-shrink-0"
+                title={t('members')}
               >
-                ({dmChannel?.members.length} {t('members')})
-              </span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M9 11a4 4 0 100-8 4 4 0 000 8zm0 2c-2.67 0-8 1.34-8 4v2h10v-2c0-1.1.9-2 2-2l.38.13A4 4 0 0013.62 13H9zm8-1h-1l1 4 3-3a1 1 0 00-1.41-1.41L17 12z" />
+                </svg>
+              </button>
             )}
             {isGroupDm && (
               <button
                 onClick={() => openModal('groupDmSettings', { dmChannelId: currentChannelId, initialTab: 'overview' })}
-                className="w-7 h-7 flex items-center justify-center text-txt-tertiary hover:text-txt-primary transition-colors rounded-[6px] hover:bg-interactive-hover flex-shrink-0"
+                className="w-9 h-9 flex items-center justify-center text-txt-tertiary hover:text-txt-primary transition-colors rounded-[10px] hover:bg-white/[0.06] flex-shrink-0"
                 title={t('group_settings')}
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z" />
                 </svg>
               </button>
             )}
           </div>
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <button
-              onClick={handleStartVoiceCall}
-              disabled={!!outgoingCall || !!activeDmCall}
-              className="w-8 h-8 flex items-center justify-center text-txt-tertiary hover:text-txt-primary transition-colors rounded-[6px] hover:bg-interactive-hover disabled:opacity-50 disabled:cursor-not-allowed"
-              title={t('start_voice_call')}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" />
-              </svg>
-            </button>
-            <button
-              onClick={handleStartVoiceCall}
-              disabled={!!outgoingCall || !!activeDmCall}
-              className="w-8 h-8 flex items-center justify-center text-txt-tertiary hover:text-txt-primary transition-colors rounded-[6px] hover:bg-interactive-hover disabled:opacity-50 disabled:cursor-not-allowed"
-              title={t('start_video_call')}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M21 6.5l-4 4V7c0-.55-.45-1-1-1H9.82L21 17.18V6.5zM3.27 2L2 3.27 4.73 6H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.21 0 .39-.08.54-.18L19.73 21 21 19.73 3.27 2z" />
-              </svg>
-            </button>
-            <button
-              onClick={() => openModal('addDmMember', { dmChannelId: currentChannelId })}
-              className="w-8 h-8 flex items-center justify-center text-txt-tertiary hover:text-txt-primary transition-colors rounded-[6px] hover:bg-interactive-hover"
+          <div className="flex items-center gap-1 flex-shrink-0">              <button
+                onClick={() => openModal('addDmMember', { dmChannelId: currentChannelId })}
+className="dm-icon-btn w-9 h-9 md:w-[38px] md:h-[38px] flex items-center justify-center text-txt-tertiary hover:text-txt-primary rounded-[11px] hover:bg-white/[0.06]"
               title={t('add_friends_to_dm')}
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
@@ -356,7 +292,7 @@ export function MainContent() {
             <button
               ref={searchButtonRef}
               onClick={() => setSearchOpen(!searchOpen)}
-              className={`w-8 h-8 flex items-center justify-center transition-colors rounded-[6px] ${searchOpen ? 'text-txt-primary bg-interactive-active' : 'text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover'}`}
+className={`dm-icon-btn w-9 h-9 md:w-[38px] md:h-[38px] flex items-center justify-center rounded-[11px] ${searchOpen ? 'text-accent-primary bg-white/[0.08]' : 'text-txt-tertiary hover:text-txt-primary hover:bg-white/[0.06]'}`}
               title={t('search')}
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
@@ -364,11 +300,20 @@ export function MainContent() {
               </svg>
             </button>
             <TransferIndicator />
-            <div className="w-[1px] h-5 bg-border-soft mx-1" />
+<div className="w-px h-6 bg-white/[0.06] mx-0.5" />
             <MemberListToggleButton />
           </div>
         </div>
-        <MessageList channelId={currentChannelId} jumpToMessageId={jumpToMessageId} onJumpComplete={() => setJumpToMessageId(null)} />
+<div className="flex-1 min-h-0 relative" onScrollCapture={(e) => {
+          const el = e.target as HTMLElement;
+          if (el instanceof HTMLElement && typeof el.scrollTop === 'number') {
+            setDmHeaderScrolled(el.scrollTop > 8);
+          }
+        }}>
+          <div className="h-full max-w-[920px] mx-auto px-6 md:px-10 flex">
+            <MessageList channelId={currentChannelId} jumpToMessageId={jumpToMessageId} onJumpComplete={() => setJumpToMessageId(null)} />
+          </div>
+        </div>
         {dmPartnerDeleted
           ? <DmDeletedNotice />
           : <MessageInput channelId={currentChannelId} channelName={`@${dmName}`} placeholder={dmInputPlaceholder} />}
@@ -387,7 +332,7 @@ export function MainContent() {
   if (!currentChannelId || !channel) {
     return (
       <div className="flex-1 flex flex-col bg-surface-chat relative">
-        <div className="h-14 px-5 flex items-center justify-between border-b border-border-hard">
+        <div className="h-14 px-5 flex items-center justify-between border-b border-border-hard flex-shrink-0 bg-surface-chat/80">
           <span className="text-txt-tertiary">{t('select_a_channel')}</span>
           <div className="flex items-center gap-1 flex-shrink-0">
             <TransferIndicator />
@@ -407,7 +352,7 @@ export function MainContent() {
     if (!isInThisChannel) {
       return (
         <div className="flex-1 flex flex-col bg-surface-base">
-          <div className="h-14 px-5 flex items-center justify-between border-b border-border-hard flex-shrink-0 bg-surface-base">
+          <div className="h-14 px-5 flex items-center justify-between border-b border-border-hard flex-shrink-0 bg-surface-base/80">
             <div className="flex items-center gap-[10px]">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="text-txt-tertiary">
                 <path d="M11 5L6 9H2V15H6L11 19V5ZM15.54 8.46C16.48 9.4 17 10.67 17 12S16.48 14.6 15.54 15.54L14.12 14.12C14.69 13.55 15 12.79 15 12S14.69 10.45 14.12 9.88L15.54 8.46Z" />
@@ -420,14 +365,14 @@ export function MainContent() {
             </div>
           </div>
           <div className="flex-1 flex flex-col items-center justify-center gap-8 relative">
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(124,108,246,0.12)_0%,transparent_70%)] animate-gradient-pulse pointer-events-none" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgb(var(--accent-primary-glow)/0.12)_0%,transparent_70%)] animate-gradient-pulse pointer-events-none" />
             <div className="text-center relative z-10">
-              <h2 className="text-[28px] font-bold text-white mb-3">{channel.name}</h2>
+              <h2 className="text-[28px] font-bold text-txt-primary mb-3">{channel.name}</h2>
               <p className="text-txt-tertiary text-[15px]">{t('no_one_in_voice_channel')}</p>
             </div>
             <button
               onClick={() => joinVoiceChannel(currentChannelId, useVoiceStore.getState().connectFn ?? undefined)}
-              className="relative z-10 px-8 py-3 bg-accent-primary hover:bg-accent-primary-hover text-white font-semibold rounded-full transition-all text-[15px] shadow-[0_4px_20px_rgba(124,108,246,0.3)]"
+              className="relative z-10 px-8 py-3 bg-accent-primary hover:bg-accent-primary-hover text-white font-semibold rounded-full transition-all text-[15px] shadow-[0_4px_20px_rgb(var(--accent-primary-glow)/0.3)]"
             >
               {t('join_voice')}
             </button>
@@ -441,7 +386,7 @@ export function MainContent() {
         ref={voiceContainerRef}
         className={`flex-1 flex flex-col bg-surface-base min-w-0 group/voice relative ${voiceFullscreen ? 'h-screen' : ''}`}
       >
-        <div className={`h-14 px-5 flex items-center justify-between border-b border-border-hard flex-shrink-0 bg-surface-base transition-opacity duration-300 ${voiceFullscreen ? 'opacity-0 hover:opacity-100' : ''}`}>
+        <div className={`h-14 px-5 flex items-center justify-between border-b border-border-hard flex-shrink-0 bg-surface-base/80 transition-opacity duration-300 ${voiceFullscreen ? 'opacity-0 hover:opacity-100' : ''}`}>
           <div className="flex items-center gap-[10px]">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="text-txt-tertiary">
               <path d="M11 5L6 9H2V15H6L11 19V5ZM15.54 8.46C16.48 9.4 17 10.67 17 12S16.48 14.6 15.54 15.54L14.12 14.12C14.69 13.55 15 12.79 15 12S14.69 10.45 14.12 9.88L15.54 8.46Z" />

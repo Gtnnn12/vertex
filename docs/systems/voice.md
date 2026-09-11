@@ -218,6 +218,71 @@ Three independent muting mechanisms:
 
 ---
 
+## DM WebRTC: Voice vs Video, Camera Toggle, Mic Quality
+
+The raw-WebRTC DM provider (`media/WebRTCMediaProvider.ts`) carries the DM call
+media for non-LiveKit calls. Three behaviors govern its media:
+
+### Voice vs Video call distinction
+- A `video: boolean` flag propagates end-to-end through the call lifecycle:
+  `dm_call_start` → `dm_call_incoming` (S2S federation adds it to
+  `FederationCallPayload.call.video`) → the callee's `incomingCall.video`, and
+  finally into `connectFn(..., startWithVideo)`.
+- The caller sets the flag from the button pressed (`handleStartVoiceCall` →
+  voice, `handleStartVideoCall` → video). The callee reads it from
+  `IncomingCallModal`.
+- `WebRTCMediaProvider.connect(..., startWithVideo)` stores it, and
+  `_getRawMedia()` passes it to `getUserMedia`:
+  - **Voice call** (`startWithVideo=false`): requests **audio only**
+    (`video: false`) — no camera, no video track, nothing sent. Camera stays OFF
+    until the user presses the camera button.
+  - **Video call** (`startWithVideo=true`): requests audio + video; both are
+    published in `_addLocalTracksToPC()`.
+- LiveKit DM calls honour the same intent by calling
+  `room.localParticipant.setCameraEnabled(true)` for `startWithVideo`.
+
+### Camera toggle (WebRTC) with renegotiation
+`setCameraEnabled(enabled, opts)` really acquires/replaces track:
+- **Enable:** if no camera sender exists yet (`_cameraSender`), `getUserMedia`
+  acquires a fresh video track, `pc.addTrack` adds a new m-line, and the change
+  is negotiated. If a sender exists (camera previously disabled via
+  `replaceTrack(null)`), it just `replaceTrack`s` the track back — no
+  renegotiation.
+- **Disable:** `replaceTrack(null)` detaches the track (no renegotiation),
+  stops it, and removes it from `_localTracks`.
+- **Renegotiation** (`_negotiate()` / `_requestRenegotiation()`): adding a new
+  camera m-line requires the caller to send a fresh offer. On the caller this
+  runs directly; the callee requests one over the data channel
+  (`{ type: 'renegotiate' }`), and `_negotiate` checks `signalingState` is
+  `stable`/`have-local-offer` before writing the new offer. The existing
+  Firebase `onValue` listeners re-fire, so the callee re-answers and both peers
+  converge without changing the offerer/caller role.
+- The camera sender is tracked explicitly (`_cameraSender`) and set in both
+  `_addLocalTracksToPC` and `setCameraEnabled` so it is never confused with the
+  screen-share sender.
+- Local self-view: `useLiveKit.updateParticipants` pulls the live camera track
+  from `provider._localTracks['camera']` and sets the local participant's
+  `videoTrack`, so `VoiceGrid`/`VoiceUser` render it; it clears on disable.
+
+### DM mic quality (no stutter / natural voice)
+`_getRawMedia()` + `_configureAudioEncoding()`:
+- **DTX is disabled** (`dtx:false`). Opus DTX suppresses the encoder during
+  silence, so at the next speech onset the decoder has no comfort frames —
+  with 20ms ptime and FEC this is the classic cause of "chopped" word
+  beginnings and cut syllables. Voice naturalness wins over the tiny bandwidth
+  saving.
+- **FEC stays on** for packet-loss resilience (drops no extra latency).
+- `googHighpassFilter:false` mirrors the battle-tested AudioManager config (an
+  aggressive highpass thins the voice and, layered on Chromium NS, produces a
+  metallic tone that masks consonant attack).
+- Opus stays at **64 kbps / 20 ms**, AGC/EC/NS honour the user's voice-store
+  prefs. No bitrate increase — the fix is removal of DTX, not more bandwidth.
+- The DM WebRTC path does NOT route through AudioManager/RNNoise (it publishes
+  raw `getUserMedia` tracks), so browser NS is the only NS stage — no
+  double-NS risk.
+
+---
+
 ## Screen Sharing
 
 ### Resolution & Framerate Options
@@ -248,6 +313,13 @@ ScreenShareConfig {
 }
 ```
 
+**Defaults:** new installs offer `720p / 1080p / 1440p / 4K` and `30 / 60 fps` (see `allowedResolutions` / `allowedFramerates` defaults), 30 fps is NOT default — default config is 720p/60. Admins may restrict both lists.
+
+### ScreenSharePicker (Electron)
+The single share button wires through `handleScreenShareAction()` → `requestScreenShareSources()` → the mounted `ScreenSharePicker`. Tabs: **Screens**, **Windows**, **Applications** (windows grouped by app icon, drill-down to individual windows). Real thumbnails come from `desktopCapturer`. A single source is selected; "Share" sends `screen-share-pending-set(sourceId, shareAudio)`, closes the picker, and runs `startScreenShare(provider)` → `getDisplayMedia()`, which the main-process `setDisplayMediaRequestHandler` resolves from the pending selection (no native picker). The embedded `ScreenShareSettingsControls` write directly to `voiceStore.screenShareConfig`, so every option (resolution, FPS, system audio) is applied to the real capture.
+
+**Capture verification & self-correction:** after negotiation (2s / 5s) and on any config change mid-stream, the code reads `track.getSettings()` and, when no custom bitrate is set, recomputes the sender bitrate from the *actual* captured width/height/fps (pixel-proportional to the nearest standard tier). If Electron/Chromium cannot honor an exact resolution (e.g. 4K chosen on a 1080p panel), the stream simply captures the best available size and the bitrate follows it — nothing breaks.
+
 ### Build Pipeline (`buildScreenShareOptions()`)
 1. Resolve bitrate from matrix (custom > override > default > native estimate)
 2. Clamp to instance limits (minBitrateKbps, maxBitrateKbps)
@@ -271,6 +343,24 @@ ScreenShareConfig {
 - `maxResolution`, `maxFramerate`, `maxBitrateKbps`, `minBitrateKbps`
 - `allowCustomBitrate` toggle
 - `bitrateMatrixOverrides` (JSON sparse overrides)
+
+### Raw-WebRTC DM provider
+The `WebRTCMediaProvider.setScreenShareEnabled()` path reads the same
+`screenShareConfig` from the voice store and applies it to the raw
+`getDisplayMedia` capture:
+- passes `width`/`height` (from `WIDTH_MAP`) and `frameRate: { max: fps }` as
+  video constraints, and `shareAudio` as the audio constraint — so the capture
+  surface is clamped to the user's chosen resolution/FPS (honest capability
+  detection: the browser reports/holds the actual supported value, no fake
+  options), and
+- applies `customBitrateKbps` via `sender.setParameters()` on the shared video
+  sender.
+It retains the existing single-shared-video-sender semantics (screen replaces
+the camera sender on the same m-line; the camera track is remembered and
+restored on stop). A distinct screen-share m-line and per-source remote
+labelling remain a documented limitation on the raw-WebRTC path; the LiveKit
+path (space voice / federated) publishes screen share + system audio as
+separate tracks.
 
 ### System Audio Loopback (`shareAudio`)
 
@@ -300,7 +390,7 @@ See `docs/systems/mobile-ui.md` → "MobileVoiceFullScreen" for the auto-focus s
 - Screen-share: `StreamTile` lazily subscribes via `setStreamSubscription` only after the user taps "Watch Stream" (or auto-focus does so on mobile, which currently still requires the user to tap the in-tile "Watch Stream" CTA — auto-focus only sets the focused publisher; it does not auto-subscribe to bandwidth-heavy screen-share tracks).
 - Mute / deafen / speaking-ring overlays, watch/unwatch controls, local mute, volume sliders — identical between mobile and desktop.
 
-**Screen-share button wiring on mobile.** `MobileVoiceFullScreen`'s screen-share button calls `handleScreenShareAction()` from `utils/voiceActions`, **not** `voiceStore.toggleScreenShare`. The store action only flips the `isScreenSharing` boolean and never calls `getDisplayMedia`. The canonical `handleScreenShareAction` is shared with desktop's `VoiceControlBar` and the keybind manager; it calls `startScreenShare(room)` / `stopScreenShare(room)` and broadcasts voice status to peers. iOS Safari does not support `getDisplayMedia` (the call rejects); this is a platform limitation. Android Chrome supports it and works.
+**Screen-share button wiring on mobile.** `MobileVoiceFullScreen`'s screen-share button calls `handleScreenShareAction()` from `utils/voiceActions`, **not** `voiceStore.toggleScreenShare`. The store action only flips the `isScreenSharing` boolean and never calls `getDisplayMedia`. The canonical `handleScreenShareAction` is shared with desktop's `VoiceControlBar` and the keybind manager; in the browser it calls `startScreenShare(provider)` / `stopScreenShare(room)` directly and broadcasts voice status to peers, while in Electron it first opens the `ScreenSharePicker` (via `requestScreenShareSources()`) and only invokes `startScreenShare` on the user's confirm. iOS Safari does not support `getDisplayMedia` (the call rejects); this is a platform limitation. Android Chrome supports it and works.
 
 ---
 
@@ -316,7 +406,7 @@ The fullscreen toggle in `VoiceControlBar` flips the `voiceFullscreen` flag in `
 
 When neither native API is available the effect returns without throwing; the `voiceFullscreen` flag still applies `h-screen` to `voiceContainerRef`, which acts as the in-page maximize fallback (chat panel hides, header fades, control bar stays). The exit path mirrors this with `document.exitFullscreen()` → `document.webkitExitFullscreen()` → no-op. Both paths are wrapped in try/catch so a Promise rejection (e.g. user cancels via Esc mid-transition) does not surface as an unhandled error. The `fullscreenchange` listener is registered for both `fullscreenchange` and `webkitfullscreenchange`. Before this fallback, calling the missing API directly threw `TypeError: requestFullscreen is not a function` on iPhone Safari, which surfaced as a full-screen error overlay when an iPhone user crossed the 768 px desktop breakpoint in landscape mode.
 
-**Overlay portals:** While fullscreen is active the browser's Fullscreen API renders only descendants of `voiceContainerRef`. Every overlay reachable during a call (context menus on `StreamTile`/`VoiceUser`/`VoiceChannel`, tooltips on the control bar, `ConnectionInfoPopover`, `ScreenShareSettingsPopover`, `ConfirmDialog` invoked from voice context-menu actions, and `ScreenSharePicker`) portals through `usePortalContainer()` so it lands inside the fullscreen element. Adding new overlays that can be opened from inside the call must follow the same contract — see `docs/systems/design-system.md` Surface Material Tiers.
+**Overlay portals:** While fullscreen is active the browser's Fullscreen API renders only descendants of `voiceContainerRef`. Every overlay reachable during a call (context menus on `StreamTile`/`VoiceUser`/`VoiceChannel`, tooltips on the control bar, `ConnectionInfoPopover`, `ConfirmDialog` invoked from voice context-menu actions, and `ScreenSharePicker`, whose `ScreenShareSettingsControls` are rendered inline) portals through `usePortalContainer()` so it lands inside the fullscreen element. Adding new overlays that can be opened from inside the call must follow the same contract — see `docs/systems/design-system.md` Surface Material Tiers.
 
 ---
 

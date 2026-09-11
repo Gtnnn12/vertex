@@ -73,17 +73,16 @@ export function DmListItem({ dm, isActive, isUnread, user, onSelect, onClose, on
     : undefined;
 
   // ── State-driven classes ──────────────────────────────────────────────
-  // Container: 6px radius (up from 4px), 44px height (up from 42px)
-  const containerClass = `relative flex items-center gap-3 px-2 h-[44px] rounded-[6px] cursor-pointer transition-colors group ${
+  const containerClass = `relative flex items-center gap-2.5 px-2.5 h-[40px] rounded-[9px] cursor-pointer transition-colors group ${
     isActive
-      ? 'bg-interactive-selected text-white'
+      ? 'bg-surface-elevated text-txt-primary ring-1 ring-white/[0.05]'
       : isUnread
-        ? 'text-white hover:bg-interactive-hover'
-        : 'text-txt-tertiary hover:bg-interactive-hover hover:text-txt-secondary'
+        ? 'text-white hover:bg-white/[0.04]'
+        : 'text-txt-tertiary hover:bg-white/[0.04] hover:text-txt-secondary'
   }`;
 
   // Name: font-semibold for unread (deliberately NOT font-bold — design decision)
-  const nameClass = `text-[15px] truncate leading-tight ${
+  const nameClass = `text-[14px] truncate leading-tight ${
     isActive ? 'text-white font-medium'
       : isUnread ? 'text-white font-semibold'
       : 'text-txt-tertiary group-hover:text-txt-secondary font-medium'
@@ -127,17 +126,9 @@ export function DmListItem({ dm, isActive, isUnread, user, onSelect, onClose, on
       onClick={handleClick}
       className={containerClass}
     >
-      {/* Selected accent bar */}
-      {isActive && (
-        <div
-          className="absolute -left-[2px] top-1/2 -translate-y-1/2 w-[3px] bg-white rounded-r-full"
-          style={{ height: '55%', opacity: 0.7 }}
-        />
-      )}
-
       {/* Unread indicator */}
       {isUnread && (
-        <div className="absolute -left-1 w-1 h-2 bg-white rounded-r-full" />
+        <div className="absolute -left-[2px] top-1/2 -translate-y-1/2 w-[5px] h-[5px] rounded-full bg-accent-mint" />
       )}
 
       {/* Avatar */}

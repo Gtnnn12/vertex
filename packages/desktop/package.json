@@ -1,14 +1,13 @@
 {
-  "name": "@backspace/desktop",
+  "name": "@vertex/desktop",
   "version": "1.0.0",
   "private": true,
   "license": "AGPL-3.0-only",
-  "description": "Backspace",
+  "description": "VERTEX",
   "author": {
-    "name": "Jannis Braun",
-    "email": "backspace@backspace.chat"
+    "name": "gtnn12"
   },
-  "homepage": "https://github.com/TheZwiss/backspace",
+  "homepage": "https://github.com/gtnn12/VERTEX",
   "main": "dist/main.js",
   "scripts": {
     "build:ts": "tsc",

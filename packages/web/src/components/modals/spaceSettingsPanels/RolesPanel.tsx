@@ -1,9 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useSpaceStore } from '../../../stores/spaceStore';
 import { useUIStore } from '../../../stores/uiStore';
+import { useAuthStore } from '../../../stores/authStore';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { api } from '../../../api/client';
-import { PermissionBits, stringToPermissions, permissionsToString } from '../../../utils/permissions';
+import { hasPermissionBit, PermissionBits, stringToPermissions, permissionsToString } from '../../../utils/permissions';
 import type { Role } from '@backspace/shared';
 
 // ─── Permission display groups ─────────────────────────────────────────────
@@ -76,6 +77,9 @@ interface RolesPanelProps {
 
 export function RolesPanel({ spaceId }: RolesPanelProps) {
   const roles = useSpaceStore((s) => s.roles);
+  const members = useSpaceStore((s) => s.members);
+  const spacePermissions = useSpaceStore((s) => s.spacePermissions);
+  const spaces = useSpaceStore((s) => s.spaces);
   const loadSpaceDetail = useSpaceStore((s) => s.loadSpaceDetail);
   const { t } = useLanguage();
 
@@ -83,6 +87,24 @@ export function RolesPanel({ spaceId }: RolesPanelProps) {
   const [isNewRole, setIsNewRole] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [reordering, setReordering] = useState(false);
+
+  const myUserId = useAuthStore((s) => s.user?.id);
+  const space = spaces.find((s) => s.id === spaceId);
+  const ownerId = space?.ownerId;
+  const myPerms = spacePermissions.get(spaceId);
+  const canManageRoles = hasPermissionBit(myPerms, PermissionBits.MANAGE_ROLES);
+
+  const myHighestRolePosition = React.useMemo(() => {
+    if (!myUserId) return -1;
+    const me = members.find((m) => m.userId === myUserId);
+    if (!me || !me.roles || me.roles.length === 0) return -1;
+    return Math.max(...me.roles.map((r) => r.position));
+  }, [members, myUserId]);
+
+  const isOwner = ownerId === myUserId;
 
   // Sort: non-everyone roles by position desc, @everyone always last
   const sortedRoles = [...roles].sort((a, b) => {
@@ -92,6 +114,109 @@ export function RolesPanel({ spaceId }: RolesPanelProps) {
     if (bIsEveryone) return -1;
     return b.position - a.position;
   });
+
+  // Owner can always reorder; otherwise need MANAGE_ROLES and a role with position > 0
+  const canReorder = isOwner || (canManageRoles && myHighestRolePosition > 0);
+
+  const getRolePosition = (role: Role): number => {
+    if (role.id === spaceId) return -Infinity;
+    return role.position;
+  };
+
+  const canMoveRole = useCallback(
+    (fromIndex: number, toIndex: number): boolean => {
+      if (!canReorder) return false;
+      const fromRole = sortedRoles[fromIndex];
+      if (!fromRole) return false;
+      if (fromRole.id === spaceId) return false;
+
+      const fromPosition = getRolePosition(fromRole);
+      const toRole = sortedRoles[toIndex];
+      if (!toRole) return false;
+      if (toRole.id === spaceId) return false;
+      const toPosition = getRolePosition(toRole);
+
+      // Owner can move any role freely
+      if (isOwner) return true;
+
+      // For non-owners: can't move to a position higher than own highest role
+      if (fromPosition >= toPosition) {
+        return myHighestRolePosition > toPosition;
+      } else {
+        return myHighestRolePosition >= toPosition;
+      }
+    },
+    [canReorder, sortedRoles, spaceId, isOwner, myHighestRolePosition]
+  );
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(index));
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverIndex(index);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    setDragOverIndex(null);
+
+    if (draggedIndex === null || draggedIndex === targetIndex) {
+      setDraggedIndex(null);
+      return;
+    }
+
+    if (!canMoveRole(draggedIndex, targetIndex)) {
+      setDraggedIndex(null);
+      return;
+    }
+
+    setReordering(true);
+    const addToast = useUIStore.getState().addToast;
+
+    try {
+      const newRoles = [...sortedRoles];
+      const [draggedRole] = newRoles.splice(draggedIndex, 1);
+      newRoles.splice(targetIndex, 0, draggedRole);
+
+      const nonEveryoneRoles = newRoles.filter((r) => r.id !== spaceId);
+      const everyoneRole = newRoles.find((r) => r.id === spaceId);
+
+      const updates: { roleId: string; position: number }[] = [];
+      nonEveryoneRoles.forEach((role, idx) => {
+        const newPosition = nonEveryoneRoles.length - idx;
+        if (role.position !== newPosition) {
+          updates.push({ roleId: role.id, position: newPosition });
+        }
+      });
+
+      for (const update of updates) {
+        await api.roles.update(spaceId, update.roleId, { position: update.position });
+      }
+
+      await loadSpaceDetail(spaceId);
+      addToast(t('roles_reordered'), 'success', 2000);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : t('failed_to_reorder_roles');
+      useUIStore.getState().addToast(errorMsg, 'warning', 3000);
+    } finally {
+      setDraggedIndex(null);
+      setReordering(false);
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
 
   const handleCreateRole = async () => {
     setCreating(true);
@@ -154,15 +279,48 @@ export function RolesPanel({ spaceId }: RolesPanelProps) {
         <p className="text-xs text-txt-tertiary mb-2">{t('roles_hint')}</p>
         <div className="rounded-lg bg-white/[0.02] p-2">
           <div className="space-y-0.5">
-            {sortedRoles.map((role) => {
+            {sortedRoles.map((role, index) => {
               const isEveryone = role.id === spaceId;
+              const isDragging = draggedIndex === index;
+              const isDragOver = dragOverIndex === index;
+              const canDrag = canReorder && !isEveryone;
+
               return (
-                <button
+                <div
                   key={role.id}
-                  onClick={() => { setIsNewRole(false); setEditingRoleId(role.id); }}
-                  className="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-interactive-hover transition-colors text-left group"
+                  draggable={canDrag}
+                  onDragStart={(e) => handleDragStart(e, index)}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, index)}
+                  onDragEnd={handleDragEnd}
+                  className={[
+                    'w-full flex items-center justify-between px-3 py-2 rounded transition-all text-left group',
+                    isDragging ? 'opacity-50 scale-[0.98]' : '',
+                    isDragOver && draggedIndex !== null && draggedIndex !== index ? 'bg-accent-primary/20 ring-1 ring-accent-primary/50' : 'hover:bg-interactive-hover',
+                  ].filter(Boolean).join(' ')}
                 >
-                  <div className="flex items-center gap-2.5 min-w-0">
+                  <button
+                    onClick={() => { setIsNewRole(false); setEditingRoleId(role.id); }}
+                    className="flex items-center gap-2.5 min-w-0 flex-1"
+                  >
+                    {canDrag && (
+                      <svg
+                        className="w-4 h-4 text-txt-tertiary/40 hover:text-txt-tertiary cursor-grab active:cursor-grabbing flex-shrink-0 transition-colors"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                      >
+                        <circle cx="9" cy="6" r="1.5" />
+                        <circle cx="15" cy="6" r="1.5" />
+                        <circle cx="9" cy="12" r="1.5" />
+                        <circle cx="15" cy="12" r="1.5" />
+                        <circle cx="9" cy="18" r="1.5" />
+                        <circle cx="15" cy="18" r="1.5" />
+                      </svg>
+                    )}
+                    {!canDrag && (
+                      <div className="w-4 h-4 flex-shrink-0" />
+                    )}
                     <div
                       className="w-3 h-3 rounded-full flex-shrink-0"
                       style={{ backgroundColor: role.color }}
@@ -170,9 +328,9 @@ export function RolesPanel({ spaceId }: RolesPanelProps) {
                     <span className="text-sm text-txt-primary truncate">
                       {isEveryone ? '@everyone' : role.name}
                     </span>
-                  </div>
+                  </button>
                   <svg
-                    className="w-4 h-4 text-txt-tertiary group-hover:text-txt-secondary transition-colors flex-shrink-0"
+                    className="w-4 h-4 text-txt-tertiary group-hover:text-txt-secondary transition-colors flex-shrink-0 ml-2"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -180,10 +338,15 @@ export function RolesPanel({ spaceId }: RolesPanelProps) {
                   >
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                   </svg>
-                </button>
+                </div>
               );
             })}
           </div>
+          {reordering && (
+            <div className="absolute inset-0 bg-surface-base/50 flex items-center justify-center rounded-lg">
+              <div className="text-sm text-txt-secondary">{t('reordering')}</div>
+            </div>
+          )}
         </div>
       </div>
     </div>

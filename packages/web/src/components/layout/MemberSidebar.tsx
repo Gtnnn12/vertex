@@ -11,12 +11,13 @@ import { parseFederatedUsername, isFederationGlobeApplicable } from '../../utils
 import { useCanonicalUserView } from '../../utils/userViewLookup';
 import { useDelayedLoading } from '../../hooks/useDelayedLoading';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { StaffBadge, NetrexChip } from '../ui/StaffBadge';
 
 /**
  * Derives the display group for a member based on their highest-positioned role
  * or owner status. Returns { key, label, color, position }.
  */
-function getMemberGroup(member: MemberWithUser, ownerId: string | undefined, t: (k: string) => string) {
+export function getMemberGroup(member: MemberWithUser, ownerId: string | undefined, t: (k: string) => string) {
   if (ownerId && member.userId === ownerId) {
     // Owner always sorts first — position Infinity so it's above all roles
     const ownerRole = member.roles?.find(r => r.position > 0);
@@ -47,7 +48,7 @@ function getMemberGroup(member: MemberWithUser, ownerId: string | undefined, t: 
   };
 }
 
-function MemberSidebarRow({
+export function MemberSidebarRow({
   member,
   isOffline,
   colorStyle,
@@ -87,11 +88,15 @@ function MemberSidebarRow({
         user={canonical}
       />
       <div className="flex-1 min-w-0">
-        <Username
-          username={displayName}
-          className={`text-[13.5px] leading-[1.2] font-medium truncate ${isOffline ? 'text-txt-tertiary' : (!colorStyle ? 'text-txt-primary' : '')}`}
-          style={colorStyle}
-        />
+        <div className="flex items-center gap-1.5 min-w-0">
+          <Username
+            username={displayName}
+            className={`text-[13.5px] leading-[1.2] font-medium truncate ${isOffline ? 'text-txt-tertiary' : (!colorStyle ? 'text-txt-primary' : '')}`}
+            style={colorStyle}
+          />
+          {!isOffline && canonical.staffRole && <StaffBadge role={canonical.staffRole} />}
+          {!isOffline && canonical.netrexEnabled && <NetrexChip />}
+        </div>
         {!isOffline && isFederationGlobeApplicable(canonical) && (
           <div className="text-[10px] leading-[1.3] text-txt-tertiary truncate opacity-60">@{parseFederatedUsername(canonical.username).domain}</div>
         )}

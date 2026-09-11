@@ -19,7 +19,7 @@ import { MobileVoiceMiniBar } from './MobileVoiceMiniBar';
 import { MobileVoiceFullScreen } from './MobileVoiceFullScreen';
 import { MobileMembersScreen } from './MobileMembersScreen';
 import { MobileGroupDmInfo } from './MobileGroupDmInfo';
-import { FriendsPage } from '../chat/FriendsPage';
+import { HomePage } from '../home/HomePage';
 import { ExplorePage } from '../chat/ExplorePage';
 import { UserProfileModal } from '../modals/UserProfileModal';
 import { GeneralPanel } from '../modals/instanceSettingsPanels/GeneralPanel';
@@ -61,7 +61,7 @@ function MobileFederationPanelWrapper() {
 
 const screenMap: Record<string, (params?: Record<string, string>) => React.ReactNode> = {
   'channel-chat': (params) => <MobileChatScreen params={params} />,
-  'friends': () => <FriendsPage mobile />,
+  'friends': () => <HomePage mobile />,
   'settings': () => <MobileSettingsScreen />,
   'settings-account': () => <MobileSettingsScreen initialPanel="account" />,
   'settings-voice': () => <MobileSettingsScreen initialPanel="voice" />,

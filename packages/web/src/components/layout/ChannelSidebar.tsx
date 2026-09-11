@@ -11,11 +11,14 @@ import { VoiceControls } from '../voice/VoiceControls';
 import { useVoiceStore } from '../../stores/voiceStore';
 import { ProfileAvatar } from '../ui/ProfileAvatar';
 import { Mascot } from '../ui/Mascot';
+import { getSpaceGradient } from '../../utils/gradients';
 import { wsSend } from '../../hooks/useWebSocket';
 import { AudioManager } from '../../audio/AudioManager';
 import { hasPermissionBit, PermissionBits } from '../../utils/permissions';
 import { joinVoiceChannel, broadcastVoiceStatus, broadcastDeafenViaLiveKit } from '../../utils/voice';
 import { useContextMenuStore, type ContextMenuItem } from '../../stores/contextMenuStore';
+import { usePresenceMenuItems } from './PresenceMenu';
+import { NetrexNavChip } from './NetrexNavChip';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { DmSearchBar } from './DmSearchBar';
 import { DmListItem } from './DmListItem';
@@ -36,9 +39,7 @@ export function ChannelSidebar() {
   const unreadChannels = useChatStore((s) => s.unreadChannels);
   const openModal = useUIStore((s) => s.openModal);
   const user = useAuthStore((s) => s.user);
-  const members = useSpaceStore((s) => s.members);
   const currentVoiceChannelId = useVoiceStore((s) => s.currentVoiceChannelId);
-  const activeDmCall = useVoiceStore((s) => s.activeDmCall);
   const isMuted = useVoiceStore((s) => s.isMuted);
   const isDeafened = useVoiceStore((s) => s.isDeafened);
   const toggleMic = useVoiceStore((s) => s.toggleMic);
@@ -55,6 +56,8 @@ export function ChannelSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useLanguage();
+  const isVertexPage = location.pathname === '/vertex';
+  const isNetrexPage = location.pathname === '/netrex';
 
   const [floatingPanelEl, setFloatingPanelEl] = useState<HTMLDivElement | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -105,6 +108,7 @@ export function ChannelSidebar() {
   }, [space, federationInstances]);
   const channelPermissions = useSpaceStore((s) => s.channelPermissions);
   const canManageChannels = hasPermissionBit(mySpacePerms, PermissionBits.MANAGE_CHANNELS);
+  const canManageRoles = hasPermissionBit(mySpacePerms, PermissionBits.MANAGE_ROLES);
   const canCreateInvite = hasPermissionBit(mySpacePerms, PermissionBits.CREATE_INVITE);
   const categories = useSpaceStore((s) => s.categories);
 
@@ -160,6 +164,15 @@ export function ChannelSidebar() {
     return map;
   }, [visibleChannels]);
 
+  // Partition a group of channels into text rows then voice rows.
+  // This is the canonical visual order the sidebar renders in (and `orderedItems`
+  // mirrors), so drag-and-drop position math stays aligned with what you see.
+  const partitionChannels = useCallback((list: Channel[]): { text: Channel[]; voice: Channel[] } => {
+    const text = list.filter(c => c.type !== 'voice').sort((a, b) => a.position - b.position);
+    const voice = list.filter(c => c.type === 'voice').sort((a, b) => a.position - b.position);
+    return { text, voice };
+  }, []);
+
   // Check if a collapsed category has unread channels
   const categoryHasUnread = useCallback((categoryId: string) => {
     const chs = channelsByCategory.get(categoryId) ?? [];
@@ -169,23 +182,24 @@ export function ChannelSidebar() {
   // --- Centralized drag-and-drop ---
 
   // Flat ordered list matching visual sidebar order — used by useDragManager
-  // to normalize 'before B' into 'after A' for a single drop indicator line
+  // to normalize 'before B' into 'after A' for a single drop indicator line.
+  // Mirrors the rendered order: within each group, text rows come before voice rows.
   const orderedItems = useMemo<LayoutItem[]>(() => {
     const items: LayoutItem[] = [];
-    for (const ch of uncategorizedChannels) {
-      items.push({ id: ch.id, type: 'channel' });
-    }
+    const pushGroup = (list: Channel[]) => {
+      const { text, voice } = partitionChannels(list);
+      for (const ch of text) items.push({ id: ch.id, type: 'channel' });
+      for (const ch of voice) items.push({ id: ch.id, type: 'channel' });
+    };
+    pushGroup(uncategorizedChannels);
     for (const cat of sortedCategories) {
       items.push({ id: cat.id, type: 'category' });
-      const catChs = channelsByCategory.get(cat.id) ?? [];
       if (!collapsedCategories.has(cat.id)) {
-        for (const ch of catChs) {
-          items.push({ id: ch.id, type: 'channel' });
-        }
+        pushGroup(channelsByCategory.get(cat.id) ?? []);
       }
     }
     return items;
-  }, [uncategorizedChannels, sortedCategories, channelsByCategory, collapsedCategories]);
+  }, [partitionChannels, uncategorizedChannels, sortedCategories, channelsByCategory, collapsedCategories]);
 
   const canMoveMembers = hasPermissionBit(mySpacePerms, PermissionBits.MOVE_MEMBERS);
 
@@ -311,9 +325,7 @@ export function ChannelSidebar() {
     onVoiceUserDrop: handleVoiceUserDrop,
   });
 
-  const handleSidebarContextMenu = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const spaceMenuItems = useMemo(() => {
     const items: ContextMenuItem[] = [];
     if (canManageChannels) {
       items.push({
@@ -364,8 +376,21 @@ export function ChannelSidebar() {
       ),
       onClick: () => openModal('spaceSettings'),
     });
-    openContextMenu({ x: e.clientX, y: e.clientY }, items);
-  }, [canManageChannels, canCreateInvite, openModal, openContextMenu]);
+    return items;
+  }, [canManageChannels, canCreateInvite, openModal]);
+
+  // Right-click anywhere in the space sidebar — same space actions.
+  const handleSidebarContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    openContextMenu({ x: e.clientX, y: e.clientY }, spaceMenuItems);
+  }, [openContextMenu, spaceMenuItems]);
+
+  // "⋯" button in the space identity module — opens the same space actions.
+  const handleSpaceMenuButton = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    openContextMenu({ x: e.clientX, y: e.clientY }, spaceMenuItems);
+  }, [openContextMenu, spaceMenuItems]);
 
   const handleDmContextMenu = useCallback((e: React.MouseEvent, dmId: string) => {
     e.preventDefault();
@@ -409,26 +434,15 @@ export function ChannelSidebar() {
     navigate(`/channels/${currentSpaceId}/${channelId}`);
   };
 
-  // Floating bottom panel — shared between DM view and server view
-  const floatingPanel = user ? (
-    <div ref={setFloatingPanelEl} data-pip-obstacle="bottom" className="fixed bottom-0 left-0 right-0 z-[105] p-2 md:right-auto md:w-[296px] md:bottom-[10px] md:left-[10px] md:p-0">
-      <div className="glass-bubble rounded-[14px]">
-        {/* Voice controls (expands when connected) */}
-        {(currentVoiceChannelId || activeDmCall) && <VoiceControls />}
-        {/* Separator between voice and user area */}
-        {(currentVoiceChannelId || activeDmCall) && <div className="mx-3 border-t border-white/[0.06]" />}
-        {/* User area (always visible) */}
-        <UserAreaPanel
-          user={user}
-          isMuted={isMuted}
-          isDeafened={isDeafened}
-          isSpaceMuted={isSpaceMuted}
-          isSpaceDeafened={isSpaceDeafened}
-          isPermissionMuted={isPermissionMuted}
-          onMicToggle={handleMicToggle}
-          onDeafenToggle={handleDeafenToggle}
-          onSettingsClick={(tab) => openModal('userSettings', tab ? { tab } : {})}
-        />
+  const inVoiceSession = currentVoiceChannelId;
+
+  // Floating voice bubble — only present while connected to a channel/call.
+  // The user area lives INSIDE the sidebar column now; this stays glass because
+  // it is a persistent transient control (voice controls) floating above content.
+  const voiceBubble = user && inVoiceSession ? (
+    <div ref={setFloatingPanelEl} data-pip-obstacle="bottom" className="fixed bottom-0 left-0 right-0 z-[105] p-2 md:right-auto md:w-[232px] md:bottom-[4px] md:left-[100px] md:p-0">
+      <div className="glass-bubble rounded-[16px] shadow-[0_8px_28px_rgba(0,0,0,0.28)]">
+        <VoiceControls />
       </div>
     </div>
   ) : null;
@@ -436,59 +450,97 @@ export function ChannelSidebar() {
   if (!space) {
     return (
       <>
-      <div className="w-60 md:w-full bg-surface-channel flex flex-col flex-shrink-0 select-none md:pl-[72px] border-r border-border-hard">
-        <div className="h-14 px-[10px] flex items-center border-b border-border-hard z-10">
+<div data-sidebar-column className="w-60 md:w-full bg-surface-channel flex flex-col flex-shrink-0 select-none md:pl-[96px] md:border-r md:border-white/[0.04] bg-[linear-gradient(180deg,#1b1b24_0%,#15151c_100%)]">
+        {/* Search module — primary navigation tool */}
+        <div className="px-2.5 pt-2.5 z-10">
           <DmSearchBar />
+
+          {/* Primary navigation */}
+          <div className="mt-1 flex flex-col p-0.5">
+            <div
+              onClick={handleHomeClick}
+              className={`flex items-center gap-2 px-2 h-[34px] rounded-[8px] cursor-pointer transition-colors group ${
+                !currentChannelId && location.pathname !== '/explore' && !isVertexPage && !isNetrexPage
+                  ? 'bg-white/[0.05] text-txt-primary'
+                  : 'text-txt-tertiary hover:bg-white/[0.03] hover:text-txt-secondary'
+              }`}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className={`flex-shrink-0 ${!currentChannelId ? 'text-accent-primary' : 'opacity-70 group-hover:opacity-100'}`}>
+                <path d="M13 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-2-4a2 2 0 1 1 4 0 2 2 0 0 1-4 0Z" />
+                <path d="M3 18a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-1c0-2.76-5.37-4-8-4s-8 1.24-8 4v1Z" />
+                <path d="M3.5 13.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" opacity=".5" />
+              </svg>
+              <span className="font-medium text-[14px]">{t('friends')}</span>
+            </div>
+
+            {/* VERTEX — product section entry */}
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate('/vertex')}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  navigate('/vertex');
+                }
+              }}
+              aria-label="VERTEX"
+              data-fx="vertex"
+              className={`group flex items-center gap-2 px-2 h-[40px] rounded-[8px] cursor-pointer select-none transition-all ${
+                isVertexPage
+                  ? 'bg-white/[0.07] ring-1 ring-white/[0.07]'
+                  : 'hover:bg-white/[0.035]'
+              }`}
+            >
+              <div
+                className={`w-[28px] h-[28px] rounded-[8px] flex-shrink-0 flex items-center justify-center border transition-all duration-200 ${
+                  isVertexPage
+                    ? 'bg-accent-primary/10 border-accent-primary/25 shadow-[0_0_0_3px_rgb(var(--accent-primary-glow)/0.08)]'
+                    : 'bg-white/[0.04] border-white/[0.07] group-hover:bg-white/[0.06] group-hover:border-white/[0.12]'
+                }`}
+              >
+                <span className={`text-[13px] font-black leading-none tracking-[-0.03em] transition-colors ${isVertexPage ? 'text-accent-primary' : 'text-txt-primary'}`}>V</span>
+              </div>
+              <div className="min-w-0 flex-1 flex flex-col justify-center leading-none">
+                <span className={`text-[13px] font-bold tracking-[0.08em] transition-colors ${isVertexPage ? 'text-txt-primary' : 'text-txt-secondary group-hover:text-txt-primary'}`}>
+                  VERTEX
+                </span>
+                <span className="mt-[3px] text-[9.5px] font-semibold tracking-[0.06em] text-txt-tertiary">v0.1.0</span>
+              </div>
+              {isVertexPage && (
+                <span className="w-[6px] h-[6px] rounded-full bg-accent-primary flex-shrink-0" />
+              )}
+            </div>
+
+            {/* NETREX — premium section entry */}
+            <NetrexNavChip
+              isCurrentPage={isNetrexPage}
+            />
+          </div>
         </div>
-        <div className="flex-1 overflow-y-auto pt-4 px-2 no-scrollbar" style={{ paddingBottom: floatingPanelHeight + 24 }}>
-          <div
-            onClick={handleHomeClick}
-            className={`flex items-center gap-3 px-2 h-[42px] rounded-[6px] cursor-pointer mb-[2px] transition-colors group ${
-              !currentChannelId && location.pathname !== '/explore'
-                ? 'bg-interactive-selected text-white'
-                : 'text-txt-tertiary hover:bg-interactive-hover hover:text-txt-secondary'
-            }`}
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className={`flex-shrink-0 ${!currentChannelId ? 'text-white' : 'opacity-70 group-hover:opacity-100'}`}>
-              <path d="M13 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-2-4a2 2 0 1 1 4 0 2 2 0 0 1-4 0Z" />
-              <path d="M3 18a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-1c0-2.76-5.37-4-8-4s-8 1.24-8 4v1Z" />
-              <path d="M3.5 13.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" opacity=".5" />
-            </svg>
-            <span className="font-medium text-[16px]">{t('friends')}</span>
-          </div>
 
-          {/* Placeholder nav items */}
-          <div
-            className="flex items-center gap-3 px-2 h-[42px] rounded-[6px] mb-[2px] text-txt-tertiary cursor-default opacity-50"
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="flex-shrink-0">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
-            </svg>
-            <span className="font-medium text-[16px]">{t('coming_soon')}</span>
-          </div>
-          <div
-            className="flex items-center gap-3 px-2 h-[42px] rounded-[6px] mb-[2px] text-txt-tertiary cursor-default opacity-50"
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="flex-shrink-0">
-              <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z" />
-            </svg>
-            <span className="font-medium text-[16px]">{t('coming_soon')}</span>
-          </div>
+        {/* Division between header and list */}
+        <div className="mx-2.5 mt-2 border-b border-white/[0.04]" />
 
-          <div className="mt-[18px] px-2 mb-1 flex items-center justify-between group">
-            <span className="text-[12px] font-bold text-txt-tertiary tracking-wider">{t('direct_messages')}</span>
+        {/* Direct messages */}
+        <div className="flex-1 overflow-y-auto pt-2.5 px-2 no-scrollbar" style={{ paddingBottom: 12 }}>
+          <div className="px-1.5 mb-1.5 flex items-center justify-between group">
+            <span className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-txt-tertiary/60">
+              {t('direct_messages')}
+              <span className="ml-1.5 text-txt-tertiary/40 font-semibold normal-case tracking-normal">{dmChannels.length}</span>
+            </span>
             <button
               onClick={() => openModal('newDm')}
-              className="text-txt-tertiary hover:text-txt-primary transition-colors"
+              className="opacity-0 group-hover:opacity-100 text-txt-tertiary/70 hover:text-txt-primary w-6 h-6 flex items-center justify-center rounded-[6px] hover:bg-white/[0.05] transition-all"
               title={t('new_direct_message')}
             >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
                 <path d="M8 2a.5.5 0 01.5.5v5h5a.5.5 0 010 1h-5v5a.5.5 0 01-1 0v-5h-5a.5.5 0 010-1h5v-5A.5.5 0 018 2z" />
               </svg>
             </button>
           </div>
 
-          <div className="space-y-[2px]">
+          <div className="space-y-[3px]">
             {dmChannels.map((dm) => (
               <DmListItem
                 key={dm.id}
@@ -517,8 +569,26 @@ export function ChannelSidebar() {
           </div>
         </div>
 
+        {/* User module — in-layout bottom profile */}
+        {user && (
+<div className="px-2 mt-auto" style={{ paddingBottom: inVoiceSession ? floatingPanelHeight + 4 : 12 }}>
+          <div className="rounded-[12px] border border-white/[0.05] bg-white/[0.03] overflow-hidden shadow-[inset_0_1px_0_rgba(255,255,255,0.03),0_2px_14px_-10px_rgba(0,0,0,0.6)]">
+            <UserAreaPanel
+              user={user}
+              isMuted={isMuted}
+              isDeafened={isDeafened}
+              isSpaceMuted={isSpaceMuted}
+              isSpaceDeafened={isSpaceDeafened}
+              isPermissionMuted={isPermissionMuted}
+              onMicToggle={handleMicToggle}
+              onDeafenToggle={handleDeafenToggle}
+              onSettingsClick={(tab) => openModal('userSettings', tab ? { tab } : {})}
+            />
+          </div>
+        </div>
+        )}
       </div>
-      {floatingPanel}
+      {voiceBubble}
       <ConfirmDialog
         isOpen={leaveGroupDmId !== null}
         onClose={() => setLeaveGroupDmId(null)}
@@ -550,193 +620,122 @@ export function ChannelSidebar() {
 
   return (
     <>
-    <div className="w-60 md:w-full bg-surface-channel flex flex-col flex-shrink-0 select-none md:pl-[72px] border-r border-border-hard">
-      {/* Space header */}
-      <div className="h-14 flex items-stretch border-b border-border-hard z-10 group/header">
-        <button
-          onClick={() => openModal('spaceSettings')}
-          className="flex-1 h-full px-4 flex items-center justify-between hover:bg-interactive-hover transition-colors min-w-0"
-        >
-          <div className="min-w-0">
-            <span className="font-bold text-[15px] tracking-[-0.02em] text-txt-primary truncate leading-tight block">{space.name}</span>
-            {instanceLabel && (
-              <span className="text-[10px] text-txt-tertiary font-medium truncate block leading-tight">
-                {instanceLabel}
-              </span>
-            )}
+    <div data-sidebar-column className="w-60 md:w-full bg-surface-channel flex flex-col flex-shrink-0 select-none md:pl-[96px] md:border-r md:border-white/[0.04] bg-[linear-gradient(180deg,#1b1b24_0%,#15151c_100%)]">
+      {/* Space identity module — application context header */}
+      <div className="px-2.5 pt-2.5 pb-2 z-10">
+        <div className="rounded-[14px] border border-white/[0.06] bg-gradient-to-br from-white/[0.05] to-white/[0.02] overflow-hidden shadow-[0_4px_20px_-8px_rgba(0,0,0,0.55)]">
+          <div className="flex items-stretch">
+            <button
+              onClick={() => openModal('spaceSettings')}
+              className="flex items-center gap-2.5 min-w-0 flex-1 p-2 text-left transition-colors hover:bg-white/[0.03]"
+            >
+              <div
+                className="w-11 h-11 rounded-[12px] flex-shrink-0 overflow-hidden flex items-center justify-center shadow-[0_2px_12px_rgba(0,0,0,0.35)] ring-1 ring-white/[0.08]"
+                style={space.icon ? undefined : { background: getSpaceGradient(space.id, space.name, space.avatarColor).gradient }}
+              >
+                {space.icon ? (
+                  <img
+                    src={space.icon.startsWith('http') || space.icon.startsWith('/') ? space.icon : `/api/uploads/${space.icon}`}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-[16px] font-bold text-white">{space.name.charAt(0).toUpperCase()}</span>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="font-bold text-[16px] tracking-[-0.02em] text-txt-primary truncate leading-snug">
+                  {space.name}
+                </div>
+                <div className="text-[11px] text-txt-tertiary font-medium truncate leading-snug opacity-90">
+                  {instanceLabel ?? window.location.host}
+                </div>
+              </div>
+            </button>
+            <button
+              onClick={handleSpaceMenuButton}
+              className="w-10 flex-shrink-0 flex items-center justify-center text-txt-tertiary/70 hover:text-txt-primary hover:bg-white/[0.04] transition-colors"
+              title="Space actions — settings, invite, create"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M6 10a2 2 0 110 4 2 2 0 010-4zm6 0a2 2 0 110 4 2 2 0 010-4zm6 0a2 2 0 110 4 2 2 0 010-4z" />
+              </svg>
+            </button>
           </div>
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor" className="text-txt-tertiary flex-shrink-0">
-            <path d="M5.293 7.293a1 1 0 011.414 0L9 9.586l2.293-2.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" />
-          </svg>
-        </button>
-        {canCreateInvite && (
-          <button
-            onClick={() => openModal('invite')}
-            className="w-10 h-full flex items-center justify-center text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover transition-all flex-shrink-0"
-            title="Invite People"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M21 3H24V5H21V8H19V5H16V3H19V0H21V3ZM10 12C12.21 12 14 10.21 14 8C14 5.79 12.21 4 10 4C7.79 4 6 5.79 6 8C6 10.21 7.79 12 10 12ZM10 13C6.69 13 1 14.66 1 18V20H19V18C19 14.66 13.31 13 10 13Z" />
-            </svg>
-          </button>
-        )}
+        </div>
       </div>
 
-      {/* Channels — dynamic category layout */}
-      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto pt-3 px-2 no-scrollbar" style={{ paddingBottom: floatingPanelHeight + 24 }} onDrop={containerHandlers.onDrop} onDragOver={containerHandlers.onDragOver} onContextMenu={handleSidebarContextMenu}>
-        {showChannelSkeleton ? (
-          <div className="px-2 pt-3" role="status" aria-label="Loading channels">
-            {/* Category group 1 */}
-            <div className="skeleton skeleton-bar h-2 w-[45%] ml-2 mb-3" />
-            {Array.from({ length: 3 }, (_, i) => (
-              <div key={i} className="flex items-center gap-2 px-2 py-1.5 mb-0.5" style={{ animationDelay: `${i * 0.1}s` }}>
-                <div className="skeleton w-3.5 h-3.5 rounded-sm flex-shrink-0" style={{ animationDelay: `${i * 0.1}s` }} />
-                <div className="skeleton skeleton-bar flex-1" style={{ width: `${55 + (i * 17) % 25}%`, animationDelay: `${i * 0.1}s` }} />
-              </div>
-            ))}
-            {/* Category group 2 */}
-            <div className="skeleton skeleton-bar h-2 w-[55%] ml-2 mb-3 mt-5" style={{ animationDelay: '0.3s' }} />
-            {Array.from({ length: 4 }, (_, i) => (
-              <div key={i} className="flex items-center gap-2 px-2 py-1.5 mb-0.5" style={{ animationDelay: `${(i + 3) * 0.1}s` }}>
-                <div className="skeleton w-3.5 h-3.5 rounded-sm flex-shrink-0" style={{ animationDelay: `${(i + 3) * 0.1}s` }} />
-                <div className="skeleton skeleton-bar flex-1" style={{ width: `${50 + (i * 13) % 30}%`, animationDelay: `${(i + 3) * 0.1}s` }} />
-              </div>
-            ))}
-          </div>
-        ) : (<>
-        {/* Uncategorized channels */}
-        {uncategorizedChannels.length > 0 && (
-          <div className="mb-[19px]">
-            {canManageChannels && sortedCategories.length === 0 && (
-              <div className="flex items-center justify-end px-1 mb-1">
-                <button
-                  onClick={() => openModal('createChannel')}
-                  className="text-txt-tertiary hover:text-txt-primary transition-colors"
-                  title="Create Channel"
-                >
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M8 2a.5.5 0 01.5.5v5h5a.5.5 0 010 1h-5v5a.5.5 0 01-1 0v-5h-5a.5.5 0 010-1h5v-5A.5.5 0 018 2z" />
-                  </svg>
-                </button>
-              </div>
+      {/* Division between identity and channel modules */}
+      <div className="mx-2.5 border-b border-white/[0.05]" />
+
+      {/* Channels — grouped module layouts */}
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto pt-2 px-2 no-scrollbar" style={{ paddingBottom: 12 }} onDrop={containerHandlers.onDrop} onDragOver={containerHandlers.onDragOver} onContextMenu={handleSidebarContextMenu}>
+        {/* Editorial section label */}
+        <div className="px-1 mb-2 flex items-center justify-between">
+          <span className="text-[9.5px] font-bold uppercase tracking-[0.22em] text-txt-tertiary/55">
+            {t('channels')}
+            {canManageChannels && sortedCategories.length > 0 && (
+              <span className="ml-1.5 px-1.5 py-px rounded-full bg-white/[0.04] border border-white/[0.05] text-[8.5px] font-bold normal-case tracking-normal text-txt-tertiary/80">{visibleChannels.length}</span>
             )}
-            <div className="space-y-[2px]">
-              {uncategorizedChannels.map((channel) => (
-                <ChannelItem
-                  key={channel.id}
-                  channel={channel}
-                  isActive={currentChannelId === channel.id}
-                  isUnread={unreadChannels.has(channel.id) && currentChannelId !== channel.id}
-                  canManage={canManageChannels}
-                  isDragging={activeDrag?.type === 'channel' && activeDrag.dragId === channel.id}
-                  dropIndicator={dropTarget?.targetId === channel.id ? dropTarget.position : null}
-                  onChannelClick={channel.type === 'voice' ? (() => {
-                    const chPerms = channelPermissions.get(channel.id);
-                    const canConnect = hasPermissionBit(chPerms, PermissionBits.CONNECT);
-                    if (canConnect) handleVoiceJoin(channel.id);
-                  }) : (() => handleChannelClick(channel.id))}
-                  onSettingsClick={() => openModal('channelSettings', { channelId: channel.id })}
-                  channelDragHandlers={channelHandlers(channel.id)}
-                  voiceUserHandlers={voiceUserHandlers}
-                  voiceChannelDropZone={voiceChannelDropZone(channel.id)}
-                  channelPermissions={channelPermissions}
-                  handleVoiceJoin={handleVoiceJoin}
-                />
+          </span>
+          {canManageChannels && canManageRoles && (
+            <button
+              onClick={() => openModal('bulkPermissions')}
+              className="flex items-center gap-1 text-[9.5px] font-bold uppercase tracking-[0.14em] text-txt-tertiary/70 hover:text-txt-primary transition-colors px-1.5 py-0.5 rounded-md hover:bg-white/[0.05]"
+              title="Bulk channel permissions"
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" />
+                <path d="M7 11V7a5 5 0 0110 0v4" />
+              </svg>
+              {t('permissions')}
+            </button>
+          )}
+          {canManageChannels && sortedCategories.length === 0 && (
+            <button
+              onClick={() => openModal('createChannel')}
+              className="text-txt-tertiary/60 hover:text-txt-primary transition-colors"
+              title="Create Channel"
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M8 2a.5.5 0 01.5.5v5h5a.5.5 0 010 1h-5v5a.5.5 0 01-1 0v-5h-5a.5.5 0 010-1h5v-5A.5.5 0 018 2z" />
+              </svg>
+            </button>
+          )}
+        </div>
+        {showChannelSkeleton ? (
+          <div className="flex flex-col gap-3" role="status" aria-label="Loading channels">
+            {/* Group panel skeleton 1 */}
+            <div className="rounded-[12px] border border-white/[0.04] bg-white/[0.025] p-2">
+              <div className="skeleton skeleton-bar h-2 w-[45%] ml-1 mb-3" />
+              {Array.from({ length: 3 }, (_, i) => (
+                <div key={i} className="flex items-center gap-2 px-2 py-1.5 mb-1" style={{ animationDelay: `${i * 0.1}s` }}>
+                  <div className="skeleton w-3.5 h-3.5 rounded-sm flex-shrink-0" style={{ animationDelay: `${i * 0.1}s` }} />
+                  <div className="skeleton skeleton-bar flex-1" style={{ width: `${55 + (i * 17) % 25}%`, animationDelay: `${i * 0.1}s` }} />
+                </div>
+              ))}
+            </div>
+            {/* Group panel skeleton 2 */}
+            <div className="rounded-[12px] border border-white/[0.04] bg-white/[0.025] p-2">
+              <div className="skeleton skeleton-bar h-2 w-[55%] ml-1 mb-3" style={{ animationDelay: '0.3s' }} />
+              {Array.from({ length: 3 }, (_, i) => (
+                <div key={i} className="flex items-center gap-2 px-2 py-1.5 mb-1" style={{ animationDelay: `${(i + 3) * 0.1}s` }}>
+                  <div className="skeleton w-3.5 h-3.5 rounded-sm flex-shrink-0" style={{ animationDelay: `${(i + 3) * 0.1}s` }} />
+                  <div className="skeleton skeleton-bar flex-1" style={{ width: `${50 + (i * 13) % 30}%`, animationDelay: `${(i + 3) * 0.1}s` }} />
+                </div>
               ))}
             </div>
           </div>
-        )}
-
-        {/* Categories with their channels */}
-        {sortedCategories.map((category) => {
-          const catChannels = channelsByCategory.get(category.id) ?? [];
-
-          // Hide empty categories for users without MANAGE_CHANNELS permission
-          if (!canManageChannels && catChannels.length === 0) return null;
-
-          const isCollapsed = collapsedCategories.has(category.id);
-          const hasUnread = isCollapsed && categoryHasUnread(category.id);
-
-          const categoryHeader = (
-                <div
-                  className={`flex items-center justify-between px-1 mb-1 group cursor-pointer ${
-                    activeDrag?.type === 'category' && activeDrag.dragId === category.id ? 'opacity-50' : ''
-                  } ${dropTarget?.targetId === category.id && dropTarget.targetType === 'category' ? 'ring-1 ring-accent-mint/40 rounded' : ''}`}
-                  {...categoryHandlers(category.id)}
-                  onClick={() => toggleCollapse(category.id)}
-                >
-                  <div className="flex items-center gap-0.5 text-txt-tertiary hover:text-txt-secondary transition-colors min-w-0">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className={`opacity-70 transition-transform flex-shrink-0 ${isCollapsed ? '-rotate-90' : ''}`}>
-                      <path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z" />
-                    </svg>
-                    <span className="text-[11px] font-medium uppercase tracking-[0.06em] truncate" style={{ color: '#484854' }}>{category.name}</span>
-                    {category.isPrivate && (
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-txt-muted flex-shrink-0">
-                        <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" />
-                      </svg>
-                    )}
-                    {hasUnread && (
-                      <div className="ml-1 w-1.5 h-1.5 rounded-full bg-accent-rose flex-shrink-0" />
-                    )}
-                  </div>
-                  {canManageChannels && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openModal('createChannel', { categoryId: category.id });
-                      }}
-                      className="text-txt-tertiary hover:text-txt-primary transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0"
-                      title="Create Channel"
-                    >
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                        <path d="M8 2a.5.5 0 01.5.5v5h5a.5.5 0 010 1h-5v5a.5.5 0 01-1 0v-5h-5a.5.5 0 010-1h5v-5A.5.5 0 018 2z" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-          );
-
+        ) : (<>
+        {/* Uncategorized channels — grouped panel */}
+        {(() => {
+          const { text, voice } = partitionChannels(uncategorizedChannels);
+          if (text.length + voice.length === 0) return null;
           return (
-            <div key={category.id} className="mb-[19px]">
-              {/* Category header */}
-              {canManageChannels ? (
-                <div onContextMenu={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  openContextMenu({ x: e.clientX, y: e.clientY }, [
-                    {
-                      key: 'category-settings',
-                      type: 'action',
-                      label: 'Category Settings',
-                      icon: (
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1115.6 12 3.611 3.611 0 0112 15.6z" />
-                        </svg>
-                      ),
-                      onClick: () => openModal('categorySettings', { categoryId: category.id }),
-                    },
-                    {
-                      key: 'delete-category',
-                      type: 'action',
-                      label: 'Delete Category',
-                      danger: true,
-                      icon: (
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
-                        </svg>
-                      ),
-                      onClick: () => setDeleteCategoryId(category.id),
-                    },
-                  ]);
-                }}>
-                  {categoryHeader}
-                </div>
-              ) : categoryHeader}
-
-              {/* Category channels (hidden when collapsed, unless active) */}
-              {!isCollapsed && (
-                <div className="space-y-[2px]">
-                  {catChannels.map((channel) => (
+            <div className="mb-3">
+              <div className="rounded-[12px] border border-white/[0.04] bg-white/[0.025] overflow-hidden p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.02),0_2px_14px_-10px_rgba(0,0,0,0.6)]">
+                <div className="space-y-px">
+                  {text.map((channel) => (
                     <ChannelItem
                       key={channel.id}
                       channel={channel}
@@ -758,37 +757,218 @@ export function ChannelSidebar() {
                       handleVoiceJoin={handleVoiceJoin}
                     />
                   ))}
-                  {catChannels.length === 0 && (
-                    <div className="px-2 py-2 text-[12px] text-txt-tertiary italic opacity-40">No channels</div>
+                  {voice.length > 0 && (
+                    <div className="flex items-center gap-2 px-1.5 pt-1.5 pb-0.5">
+                      <span className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-txt-tertiary/45">{t('voice')}</span>
+                      <div className="flex-1 h-px bg-white/[0.05]" />
+                    </div>
+                  )}
+                  {voice.map((channel) => (
+                    <ChannelItem
+                      key={channel.id}
+                      channel={channel}
+                      isActive={currentChannelId === channel.id}
+                      isUnread={unreadChannels.has(channel.id) && currentChannelId !== channel.id}
+                      canManage={canManageChannels}
+                      isDragging={activeDrag?.type === 'channel' && activeDrag.dragId === channel.id}
+                      dropIndicator={dropTarget?.targetId === channel.id ? dropTarget.position : null}
+                      onChannelClick={channel.type === 'voice' ? (() => {
+                        const chPerms = channelPermissions.get(channel.id);
+                        const canConnect = hasPermissionBit(chPerms, PermissionBits.CONNECT);
+                        if (canConnect) handleVoiceJoin(channel.id);
+                      }) : (() => handleChannelClick(channel.id))}
+                      onSettingsClick={() => openModal('channelSettings', { channelId: channel.id })}
+                      channelDragHandlers={channelHandlers(channel.id)}
+                      voiceUserHandlers={voiceUserHandlers}
+                      voiceChannelDropZone={voiceChannelDropZone(channel.id)}
+                      channelPermissions={channelPermissions}
+                      handleVoiceJoin={handleVoiceJoin}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Categories — grouped panel per category */}
+        {sortedCategories.map((category) => {
+          const catChannels = channelsByCategory.get(category.id) ?? [];
+
+          // Hide empty categories for users without MANAGE_CHANNELS permission
+          if (!canManageChannels && catChannels.length === 0) return null;
+
+          const { text, voice } = partitionChannels(catChannels);
+          const isCollapsed = collapsedCategories.has(category.id);
+          const hasUnread = isCollapsed && categoryHasUnread(category.id);
+
+          const categoryHeader = (
+                <div
+                  className={`flex items-center justify-between px-2.5 pt-1.5 pb-1 group cursor-pointer relative ${
+                    activeDrag?.type === 'category' && activeDrag.dragId === category.id ? 'opacity-50' : ''
+                  } ${dropTarget?.targetId === category.id && dropTarget.targetType === 'category' ? 'ring-1 ring-accent-mint/20 rounded' : ''}`}
+                  {...categoryHandlers(category.id)}
+                  onClick={() => toggleCollapse(category.id)}
+                >
+                  <div className="flex items-center gap-1 text-txt-tertiary hover:text-txt-secondary transition-colors min-w-0">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className={`opacity-50 transition-transform flex-shrink-0 ${isCollapsed ? '-rotate-90' : ''}`}>
+                      <path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z" />
+                    </svg>
+                    <span className="text-[10.5px] font-bold uppercase tracking-[0.14em] truncate text-txt-tertiary/90">{category.name}</span>
+                    {!isCollapsed && (
+                      <span className="text-[9.5px] font-semibold text-txt-tertiary/40 tracking-normal normal-case">{catChannels.length}</span>
+                    )}
+                    {category.isPrivate && (
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" className="text-txt-muted flex-shrink-0">
+                        <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" />
+                      </svg>
+                    )}
+                    {hasUnread && (
+                      <div className="ml-1 w-1.5 h-1.5 rounded-full bg-accent-rose/40 flex-shrink-0" />
+                    )}
+                  </div>
+                  {canManageChannels && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openModal('createChannel', { categoryId: category.id });
+                      }}
+                      className="opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded-[6px] text-txt-tertiary hover:text-accent-mint hover:bg-white/[0.05] transition-all flex-shrink-0"
+                      title="Create Channel"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M8 2a.5.5 0 01.5.5v5h5a.5.5 0 010 1h-5v5a.5.5 0 01-1 0v-5h-5a.5.5 0 010-1h5v-5A.5.5 0 018 2z" />
+                      </svg>
+                    </button>
                   )}
                 </div>
-              )}
+          );
+
+          return (
+            <div key={category.id} className="mb-3">
+              <div className="rounded-[12px] border border-white/[0.04] bg-white/[0.025] overflow-hidden shadow-[inset_0_1px_0_rgba(255,255,255,0.02),0_2px_14px_-10px_rgba(0,0,0,0.6)]">
+                {/* Category header */}
+                {canManageChannels ? (
+                  <div onContextMenu={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    openContextMenu({ x: e.clientX, y: e.clientY }, [
+                      {
+                        key: 'category-settings',
+                        type: 'action',
+                        label: 'Category Settings',
+                        icon: (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1115.6 12 3.611 3.611 0 0112 15.6z" />
+                          </svg>
+                        ),
+                        onClick: () => openModal('categorySettings', { categoryId: category.id }),
+                      },
+                      {
+                        key: 'delete-category',
+                        type: 'action',
+                        label: 'Delete Category',
+                        danger: true,
+                        icon: (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+                          </svg>
+                        ),
+                        onClick: () => setDeleteCategoryId(category.id),
+                      },
+                    ]);
+                  }}>
+                    {categoryHeader}
+                  </div>
+                ) : categoryHeader}
+
+                {/* Category channels (hidden when collapsed) */}
+                {!isCollapsed && (
+                  <div className="p-1 pt-0.5">
+                    <div className="space-y-px">
+                      {text.map((channel) => (
+                        <ChannelItem
+                          key={channel.id}
+                          channel={channel}
+                          isActive={currentChannelId === channel.id}
+                          isUnread={unreadChannels.has(channel.id) && currentChannelId !== channel.id}
+                          canManage={canManageChannels}
+                          isDragging={activeDrag?.type === 'channel' && activeDrag.dragId === channel.id}
+                          dropIndicator={dropTarget?.targetId === channel.id ? dropTarget.position : null}
+                          onChannelClick={channel.type === 'voice' ? (() => {
+                            const chPerms = channelPermissions.get(channel.id);
+                            const canConnect = hasPermissionBit(chPerms, PermissionBits.CONNECT);
+                            if (canConnect) handleVoiceJoin(channel.id);
+                          }) : (() => handleChannelClick(channel.id))}
+                          onSettingsClick={() => openModal('channelSettings', { channelId: channel.id })}
+                          channelDragHandlers={channelHandlers(channel.id)}
+                          voiceUserHandlers={voiceUserHandlers}
+                          voiceChannelDropZone={voiceChannelDropZone(channel.id)}
+                          channelPermissions={channelPermissions}
+                          handleVoiceJoin={handleVoiceJoin}
+                        />
+                      ))}
+                      {voice.length > 0 && (
+                        <div className="flex items-center gap-2 px-1.5 pt-1.5 pb-0.5">
+                          <span className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-txt-tertiary/45">{t('voice')}</span>
+                          <div className="flex-1 h-px bg-white/[0.05]" />
+                        </div>
+                      )}
+                      {voice.map((channel) => (
+                        <ChannelItem
+                          key={channel.id}
+                          channel={channel}
+                          isActive={currentChannelId === channel.id}
+                          isUnread={unreadChannels.has(channel.id) && currentChannelId !== channel.id}
+                          canManage={canManageChannels}
+                          isDragging={activeDrag?.type === 'channel' && activeDrag.dragId === channel.id}
+                          dropIndicator={dropTarget?.targetId === channel.id ? dropTarget.position : null}
+                          onChannelClick={channel.type === 'voice' ? (() => {
+                            const chPerms = channelPermissions.get(channel.id);
+                            const canConnect = hasPermissionBit(chPerms, PermissionBits.CONNECT);
+                            if (canConnect) handleVoiceJoin(channel.id);
+                          }) : (() => handleChannelClick(channel.id))}
+                          onSettingsClick={() => openModal('channelSettings', { channelId: channel.id })}
+                          channelDragHandlers={channelHandlers(channel.id)}
+                          voiceUserHandlers={voiceUserHandlers}
+                          voiceChannelDropZone={voiceChannelDropZone(channel.id)}
+                          channelPermissions={channelPermissions}
+                          handleVoiceJoin={handleVoiceJoin}
+                        />
+                      ))}
+                      {catChannels.length === 0 && (
+                        <div className="px-2 py-2 text-[12px] text-txt-tertiary italic opacity-40">No channels</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           );
         })}
 
         {/* Create channel / category buttons */}
         {canManageChannels && (
-          <div className="px-1 mt-4 pt-3 border-t border-white/[0.06]">
+          <div className="px-1 mt-5">
             {sortedCategories.length > 0 && (
               <button
                 onClick={() => openModal('createChannel')}
-                className="w-full flex items-center gap-1.5 px-[10px] py-1 rounded-[6px] text-txt-tertiary/60 hover:text-txt-secondary hover:bg-interactive-hover transition-colors"
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[8px] text-[12.5px] text-txt-tertiary/70 hover:text-txt-secondary hover:bg-white/[0.03] transition-colors"
               >
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" className="flex-shrink-0 opacity-70">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" className="flex-shrink-0 opacity-60">
                   <path d="M8 2a.5.5 0 01.5.5v5h5a.5.5 0 010 1h-5v5a.5.5 0 01-1 0v-5h-5a.5.5 0 010-1h5v-5A.5.5 0 018 2z" />
                 </svg>
-                <span className="text-[12px]">Create Channel</span>
+                <span>Create Channel</span>
               </button>
             )}
             <button
               onClick={() => openModal('createCategory')}
-              className="w-full flex items-center gap-1.5 px-[10px] py-1 rounded-[6px] text-txt-tertiary/60 hover:text-txt-secondary hover:bg-interactive-hover transition-colors"
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[8px] text-[12.5px] text-txt-tertiary/70 hover:text-txt-secondary hover:bg-white/[0.03] transition-colors"
             >
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" className="flex-shrink-0 opacity-70">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" className="flex-shrink-0 opacity-60">
                 <path d="M8 2a.5.5 0 01.5.5v5h5a.5.5 0 010 1h-5v5a.5.5 0 01-1 0v-5h-5a.5.5 0 010-1h5v-5A.5.5 0 018 2z" />
               </svg>
-              <span className="text-[12px]">Create Category</span>
+              <span>Create Category</span>
             </button>
           </div>
         )}
@@ -796,8 +976,26 @@ export function ChannelSidebar() {
 
       </div>
 
+      {/* User module — in-layout bottom profile */}
+      {user && (
+        <div className="px-2 mt-auto" style={{ paddingBottom: inVoiceSession ? floatingPanelHeight + 4 : 12 }}>
+          <div className="rounded-[12px] border border-white/[0.05] bg-white/[0.03] overflow-hidden shadow-[inset_0_1px_0_rgba(255,255,255,0.03),0_2px_14px_-10px_rgba(0,0,0,0.6)]">
+            <UserAreaPanel
+              user={user}
+              isMuted={isMuted}
+              isDeafened={isDeafened}
+              isSpaceMuted={isSpaceMuted}
+              isSpaceDeafened={isSpaceDeafened}
+              isPermissionMuted={isPermissionMuted}
+              onMicToggle={handleMicToggle}
+              onDeafenToggle={handleDeafenToggle}
+              onSettingsClick={(tab) => openModal('userSettings', tab ? { tab } : {})}
+            />
+          </div>
+        </div>
+      )}
     </div>
-    {floatingPanel}
+    {voiceBubble}
     <ConfirmDialog
       isOpen={deleteCategoryId !== null}
       onClose={() => setDeleteCategoryId(null)}
@@ -847,6 +1045,8 @@ function UserAreaPanel({
   onSettingsClick: (tab?: string) => void;
 }) {
   const [openPanel, setOpenPanel] = useState<'input' | 'output' | null>(null);
+  const openContextMenu = useContextMenuStore((s) => s.open);
+  const presenceMenuItems = usePresenceMenuItems(user);
   const inputDeviceId = useVoiceStore((s) => s.inputDeviceId);
   const outputDeviceId = useVoiceStore((s) => s.outputDeviceId);
   const setInputDevice = useVoiceStore((s) => s.setInputDevice);
@@ -1133,29 +1333,54 @@ function UserAreaPanel({
         </div>
       )}
 
-      {/* User area bar */}
-      <div className="h-[52px] px-2 flex items-center select-none">
-        {/* Avatar + name */}
-        <div className="p-1 hover:bg-interactive-hover rounded-[4px] flex items-center gap-2 flex-1 min-w-0 cursor-pointer transition-colors group">
-          <ProfileAvatar src={user.avatar} name={user.displayName ?? user.username} size={34} status={user.status} user={user} />
-          <div className="flex-1 min-w-0">
+      {/* User area module — user first, controls recede until hover */}
+      <div className="flex flex-col p-1.5 select-none group/user">
+        {/* Profile — primary element. Click opens the presence menu
+            (status switcher); Settings stays available in the controls row. */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            const rect = e.currentTarget.getBoundingClientRect();
+            openContextMenu(
+              { x: rect.left, y: rect.top - 8 },
+              [
+                ...presenceMenuItems,
+                { type: 'separator' as const, key: 'presence-sep' },
+                {
+                  type: 'action' as const,
+                  key: 'user-area-settings',
+                  label: 'Settings',
+                  onClick: () => onSettingsClick(),
+                },
+              ],
+            );
+          }}
+          className="px-1.5 py-1.5 rounded-[9px] flex items-center gap-2.5 min-w-0 w-full cursor-pointer transition-colors group hover:bg-white/[0.03]"
+        >
+          <ProfileAvatar src={user.avatar} name={user.displayName ?? user.username} size={32} status={user.status} user={user} />
+          <div className="min-w-0 flex-1 text-left">
             <div className="text-[13.5px] font-semibold text-txt-primary truncate leading-tight">{user.displayName ?? user.username}</div>
-            <div className="text-[11px] text-txt-tertiary truncate leading-tight group-hover:text-txt-secondary">@{user.username}</div>
+            <div className="text-[11px] text-txt-tertiary truncate leading-tight opacity-80">@{user.username}</div>
           </div>
-        </div>
+          <div className="w-5 h-5 flex-shrink-0 flex items-center justify-center text-txt-tertiary/60 opacity-0 group-hover:opacity-100 transition-opacity">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M7 10l5 5 5-5H7z" />
+            </svg>
+          </div>
+        </button>
 
-        {/* Controls */}
-        <div className="flex items-center">
+        {/* Controls — compact, muted until the module is hovered */}
+        <div className="flex items-center gap-0.5 px-1 opacity-0 group-hover/user:opacity-100 transition-opacity">
           {/* Mic */}
           <button
             onClick={onMicToggle}
-            className={`w-8 h-8 flex items-center justify-center hover:bg-interactive-hover rounded-l-[4px] transition-colors ${
+            className={`w-6 h-6 flex items-center justify-center hover:bg-white/[0.08] rounded-[7px] transition-colors ${
               (isSpaceMuted || isSpaceDeafened || isPermissionMuted) ? 'text-accent-amber cursor-not-allowed'
-                : isMuted || isDeafened ? 'text-txt-danger' : 'text-txt-tertiary hover:text-txt-primary'
+                : isMuted || isDeafened ? 'text-txt-danger' : 'text-txt-tertiary/70 hover:text-txt-primary'
             }`}
             title={(isPermissionMuted) ? 'Muted (No Speak Permission)' : (isSpaceMuted || isSpaceDeafened) ? 'Space Muted' : isMuted ? 'Unmute' : 'Mute'}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
               <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
               {(isMuted || isDeafened || isSpaceMuted || isSpaceDeafened || isPermissionMuted) && <line x1="3" y1="3" x2="21" y2="21" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />}
@@ -1164,12 +1389,12 @@ function UserAreaPanel({
           {/* Input chevron */}
           <button
             onClick={() => togglePanel('input')}
-            className={`w-[18px] h-8 flex items-center justify-center hover:bg-interactive-hover rounded-r-[4px] transition-colors ${
-              openPanel === 'input' ? 'text-txt-primary bg-interactive-hover' : 'text-txt-tertiary hover:text-txt-primary'
+            className={`w-5 h-6 flex items-center justify-center hover:bg-white/[0.08] rounded-[7px] transition-colors ${
+              openPanel === 'input' ? 'text-txt-primary bg-white/[0.08]' : 'text-txt-tertiary/70 hover:text-txt-primary'
             }`}
             title="Input Devices"
           >
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className={`transition-transform ${openPanel === 'input' ? 'rotate-180' : ''}`}>
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" className={`transition-transform ${openPanel === 'input' ? 'rotate-180' : ''}`}>
               <path d="M7 10l5 5 5-5z" />
             </svg>
           </button>
@@ -1177,13 +1402,13 @@ function UserAreaPanel({
           {/* Headphones */}
           <button
             onClick={onDeafenToggle}
-            className={`w-8 h-8 flex items-center justify-center hover:bg-interactive-hover rounded-l-[4px] transition-colors ${
+            className={`w-6 h-6 flex items-center justify-center hover:bg-white/[0.08] rounded-[7px] transition-colors ${
               isSpaceDeafened ? 'text-accent-amber cursor-not-allowed'
-                : isDeafened ? 'text-txt-danger' : 'text-txt-tertiary hover:text-txt-primary'
+                : isDeafened ? 'text-txt-danger' : 'text-txt-tertiary/70 hover:text-txt-primary'
             }`}
             title={isSpaceDeafened ? 'Space Deafened' : isDeafened ? 'Undeafen' : 'Deafen'}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 3c-4.97 0-9 4.03-9 9v7c0 1.1.9 2 2 2h2v-7H5v-2c0-3.87 3.13-7 7-7s7 3.13 7 7v2h-2v7h2c1.1 0 2-.9 2-2v-7c0-4.97-4.03-9-9-9z" />
               {(isDeafened || isSpaceDeafened) && <line x1="3" y1="3" x2="21" y2="21" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />}
             </svg>
@@ -1191,23 +1416,25 @@ function UserAreaPanel({
           {/* Output chevron */}
           <button
             onClick={() => togglePanel('output')}
-            className={`w-[18px] h-8 flex items-center justify-center hover:bg-interactive-hover rounded-r-[4px] transition-colors ${
-              openPanel === 'output' ? 'text-txt-primary bg-interactive-hover' : 'text-txt-tertiary hover:text-txt-primary'
+            className={`w-5 h-6 flex items-center justify-center hover:bg-white/[0.08] rounded-[7px] transition-colors ${
+              openPanel === 'output' ? 'text-txt-primary bg-white/[0.08]' : 'text-txt-tertiary/70 hover:text-txt-primary'
             }`}
             title="Output Devices"
           >
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className={`transition-transform ${openPanel === 'output' ? 'rotate-180' : ''}`}>
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" className={`transition-transform ${openPanel === 'output' ? 'rotate-180' : ''}`}>
               <path d="M7 10l5 5 5-5z" />
             </svg>
           </button>
 
+          <div className="flex-1" />
+
           {/* Settings */}
           <button
             onClick={() => onSettingsClick()}
-            className="w-8 h-8 flex items-center justify-center text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover rounded-[4px] transition-colors"
+            className="w-6 h-6 flex items-center justify-center text-txt-tertiary/70 hover:text-txt-primary hover:bg-white/[0.08] rounded-[7px] transition-colors"
             title="Settings"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
               <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
             </svg>
           </button>
@@ -1297,27 +1524,21 @@ function ChannelItem({
       {dropIndicator === 'before' && <div className="absolute -top-[1px] left-2 right-2 h-[2px] bg-accent-mint rounded-full z-10" />}
       <button
         onClick={onChannelClick}
-        className={`relative w-full flex items-center gap-1.5 px-[10px] h-8 rounded-[6px] group transition-colors ${
+        className={`relative w-full flex items-center gap-2 px-2.5 h-[32px] rounded-[7px] group transition-colors ${
           isActive
-            ? 'bg-surface-elevated text-txt-primary'
+            ? 'bg-white/[0.07] text-txt-primary ring-1 ring-white/[0.06]'
             : isUnread
-              ? 'text-white hover:text-white hover:bg-interactive-hover'
-              : 'text-txt-tertiary hover:text-txt-secondary hover:bg-interactive-hover'
+              ? 'text-txt-primary font-semibold hover:bg-white/[0.04]'
+              : 'text-txt-tertiary hover:text-txt-secondary hover:bg-white/[0.04]'
         }`}
       >
-        {isActive && (
-          <div
-            className="absolute -left-[2px] top-1/2 -translate-y-1/2 w-[3px] bg-white rounded-r-full"
-            style={{ height: '55%', opacity: 0.7 }}
-          />
-        )}
         {isUnread && (
-          <div className="absolute right-2 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-accent-rose" />
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-accent-rose/80" />
         )}
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="flex-shrink-0 text-[#6e6e7a]">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className={`flex-shrink-0 transition-colors ${isActive ? 'text-accent-mint/90' : 'text-txt-tertiary opacity-70 group-hover:opacity-100'}`}>
           <path d="M5.88657 21C5.57547 21 5.3399 20.7189 5.39427 20.4126L6.00001 17H2.59511C2.28449 17 2.04905 16.7198 2.10259 16.4138L2.27759 15.4138C2.31946 15.1746 2.52722 15 2.77011 15H6.35001L7.41001 9H4.00511C3.69449 9 3.45905 8.71977 3.51259 8.41381L3.68759 7.41381C3.72946 7.17456 3.93722 7 4.18011 7H7.76001L8.39677 3.41262C8.43914 3.17391 8.64664 3 8.88907 3H9.87344C10.1845 3 10.4201 3.28107 10.3657 3.58738L9.76001 7H15.76L16.3968 3.41262C16.4391 3.17391 16.6466 3 16.8891 3H17.8734C18.1845 3 18.4201 3.28107 18.3657 3.58738L17.76 7H21.1649C21.4755 7 21.711 7.28023 21.6574 7.58619L21.4824 8.58619C21.4406 8.82544 21.2328 9 20.9899 9H17.41L16.35 15H19.7549C20.0655 15 20.301 15.2802 20.2474 15.5862L20.0724 16.5862C20.0306 16.8254 19.8228 17 19.5799 17H16L15.3632 20.5874C15.3209 20.8261 15.1134 21 14.8709 21H13.8866C13.5755 21 13.3399 20.7189 13.3943 20.4126L14 17H8.00001L7.36325 20.5874C7.32088 20.8261 7.11337 21 6.87094 21H5.88657ZM9.41001 9L8.35001 15H14.35L15.41 9H9.41001Z" />
         </svg>
-        <span className={`truncate text-[15px] leading-5 tracking-[0.01em] flex-1 text-left ${isUnread ? 'font-semibold' : 'font-medium'}`}>{channel.name}</span>
+        <span className={`truncate text-[13.5px] tracking-[-0.005em] leading-[18px] flex-1 text-left ${isUnread ? 'font-semibold' : 'font-medium'}`}>{channel.name}</span>
         {canManage && (
           <svg
             width="16"

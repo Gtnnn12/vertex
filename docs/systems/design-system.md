@@ -36,6 +36,77 @@ Font: DM Sans (primary) with system fallbacks
 ### Primary Action
 `--accent-primary`, `--accent-primary-hover`, `--accent-primary-active`
 
+### Accent layer
+The base identity is **monochrome** (black + white + greys): `:root` ships a neutral
+`--accent-primary` (130 130 140) so the UI works perfectly with no color at all.
+Color is a single **personalization layer** over that base — never a redesign of
+surfaces or text tokens.
+
+- `data-accent` on `<html>` selects a preset. Each preset (`indigo`, `blue`,
+  `emerald`, `crimson`, `violet`, and the `mono` default) overrides **only** the
+  accent channels (plus `--accent-primary-glow` and `--accent-primary-comma`).
+- `--accent-primary-glow` feeds accent-aware shadows/washes (send button glow,
+  DM entrance shadow, radial auth gradients).
+- `--accent-primary-comma` feeds the emoji-mart `--rgb-accent`.
+- Preset metadata (names/taglines/colors) lives in `packages/web/src/utils/vertexTheme.ts`;
+  selection is persisted to `localStorage` (`vertex.preferences`, see below) and
+  applied before first paint via `initVertexAppearance()` in `main.tsx`.
+  No store/API involvement.
+- Rule: hardcoded accent rgba values are banned — always reference
+  `rgb(var(--accent-primary-glow)/…)` so theming stays consistent.
+- Rules for adding presets: extend `ACCENT_PRESETS` and the matching
+  `:root[data-accent="…"]` block with all five channels. Keep channels semantic
+  (primary/hover/active/glow/comma); do not add surface fields yet — full
+  theming (backgrounds, per-area accents) will grow from this same layer.
+
+### Appearance layer (theme + effects)
+
+Three orthogonal knobs are set as attributes on `<html>` and driven by the
+single persisted bag `localStorage["vertex.preferences"] = { accent, theme, effects }`
+(the legacy `vertex.accent` key is still written for compatibility and read as a
+fallback when `vertex.preferences` is absent):
+
+| Attribute | Values | Effect |
+|-----------|--------|--------|
+| `data-accent` | `mono` `indigo` `blue` `emerald` `crimson` `violet` | Accent color layer (see above) |
+| `data-theme` | `light` `dark` (resolved; `system` preference resolves via `prefers-color-scheme`) | Full token-set swap |
+| `data-effects` | `minimal` `ambient` `glass` `glow` | Surface fill/blur/aura tuning |
+
+- **Theme:** `:root[data-theme='light']` redefines every design token (surfaces,
+  borders, text, interactive, status, glass + `color-scheme: light`);
+  `:root[data-theme='dark']` sets `color-scheme: dark`. Light intentionally does
+  **not** redefine the accent channels — accent presets stay orthogonal to theme.
+  Big canvases cross-fade via `--fx-bg-speed` (transitions on `body/main/aside/footer`).
+- **Effects** behave as explicit per-effect CSS rules (no numeric custom
+  properties — esbuild's minifier rejects them): glass tiers get
+  `blur(20px)` in Glass/Glow, `blur(10px)` in Ambient, `none` in Minimal;
+  panel fills (`bg-white/[0.025|0.03|0.04]`) get per-effect near-opacity;
+  the `body::after` accent aura is scaled per effect (off in Minimal).
+- **White-alpha cabinet:** Light is *not* a plain token swap (the codebase uses
+  ~530 hardcoded `text-white` / `bg-white/…` / `border-white/…` utilities across
+  280+ files). Instead, a CSS-only cabinet at the end of `globals.css` re-skims the
+  detected value set (`border-white/[0.04..0.16] 10 40`, `bg-white/[0.015..0.22] 5 10 20`,
+  `hover:` washes) to ink on light canvases, plus light re-tints for `.glass-pill`,
+  scrollbars, selection, autofill, and the hardcoded sidebar gradients.
+  A tiny bounded set of components use `text-white` on surface backgrounds and
+  were switched to `text-txt-*` (channel-title empty state, DM rail badge, empty
+  channel icon).
+- **CSS hooks for effects:** `[data-sidebar-column]` on the two ChannelSidebar
+  roots, `[data-fx="vertex"]` on the VERTEX entry, and `nav[data-pip-obstacle="left"]`
+  give the cabinet collision-free selectors. `data-effects="glow"` adds accent
+  glow to focus, the VERTEX entry hover, rail buttons, and channel rows.
+- **Module:** `packages/web/src/utils/vertexTheme.ts` owns `THEMES`, `EFFECTS`,
+  `getSavedPreferences()`, `applyPreferences()` (merge + apply + persist),
+  `resolveTheme()`, and `initVertexAppearance()` (pre-paint apply + live
+  `prefers-color-scheme` listener for `system`). The UI lives under the
+  `/vertex` route (`VertexSection.tsx`): sections 01 Appearance, 02 Effects,
+  03 Theme — every option applies live, no reload.
+- When adding a new `data-effects` preset, both `EFFECTS` in
+  `vertexTheme.ts` (metadata, incl. i18n `vertex_eff_desc_<id>`) and the
+  `:root[data-effects='…']` blocks + cabinet rules in `globals.css` must be kept
+  in sync. When adding a new white-alpha utility, add its light remap to the
+  cabinet (dark surfaces stay as-is).
+
 ### Text Hierarchy
 `--text-primary`, `--text-secondary`, `--text-tertiary`, `--text-category`, `--text-message`, `--text-link`, `--text-positive`, `--text-warning`, `--text-danger`
 
@@ -111,6 +182,21 @@ When introducing a new input or contenteditable surface, no extra work is needed
 3-column grid: 312px channel sidebar | main content | 240px members sidebar
 Glass server strip overlays left 72px of channel sidebar.
 Channel sidebar fully opaque with gradient at left edge feeding glass.
+
+**Server banner (sidebar):** when `space.banner` is set, a 64px `object-cover` image
+sits between the space identity module and the channel list (`rounded-[10px]`,
+`ring-white/[0.05]`, no gradient overlay). Keyed by `space.id` so switching servers
+swaps the banner and restarts animated GIFs immediately. No banner → no element →
+no dead gap. Uses the existing upload pipeline (`/api/uploads/<filename>`), so
+animated GIF banners render as-is.
+
+**Activity Member Panel (Netrex):** premium replacement for the members sidebar
+(`bg-surface-members`, same 240px column). Header (panel title + member count +
+Invite chip) + mode switcher (Activity / Standard pills) on a sticky strip;
+avatar grid in `grid-cols-4` with `Avatar` status dots capped at 24 cells with a
+"Ver más" expander; activity feed grouped by primary activity type with
+`glass-pill border-l-2` rows and accent icons; offline members listed below.
+Standard mode renders the classic role-grouped list unchanged.
 
 ---
 

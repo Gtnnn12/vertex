@@ -43,7 +43,7 @@ third-party rights he does not own.
 Commercial licensing is available **on request**. A dedicated licensing contact
 will be added as the project grows; until then, reach the maintainer via GitHub —
 open a discussion or issue on the repository, or contact
-[@TheZwiss](https://github.com/TheZwiss) — with a short description of your
+[@gtnn12](https://github.com/gtnn12) — with a short description of your
 intended use. Terms are agreed in a separate, signed commercial agreement.
 
 > This document is provided for information only, without warranty. It is **not**
@@ -53,6 +53,6 @@ intended use. Terms are agreed in a separate, signed commercial agreement.
 
 ---
 
-Copyright © 2026 Jannis Braun. "VERTEX", the VERTEX logo, and app icons are
-trademarks of Jannis Braun; no trademark rights are granted by either the AGPL or
+Copyright © 2026 VERTEX. "VERTEX", the VERTEX logo, and app icons are
+trademarks of the project; no trademark rights are granted by either the AGPL or
 the commercial license.

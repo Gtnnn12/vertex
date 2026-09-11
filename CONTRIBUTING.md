@@ -21,7 +21,7 @@ Before your first contribution can be merged, you must sign the project's
 [Contributor License Agreement](CLA.md).
 
 VERTEX is a single-owner project. Under the CLA **you keep the copyright to
-your contribution** and grant the maintainer (Jannis Braun) an exclusive,
+your contribution** and grant the maintainer (gtnn12) an exclusive,
 sublicensable license to it, which is what lets the project be offered under both
 the AGPL and a commercial license. In return, you receive a perpetual license to
 reuse the specific code you authored in your own other projects (see CLA §5). You

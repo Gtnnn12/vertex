@@ -314,7 +314,7 @@ describe('GroupDmSettings — icon staging', () => {
     expect(mockStartUpload).not.toHaveBeenCalled();
     expect(mockUpdateMetadata).not.toHaveBeenCalled();
     // Direct /api/uploads POSTs (legacy paths) also must not have happened.
-    const uploadCalls = fetchSpy.mock.calls.filter(([url]: [string]) =>
+    const uploadCalls = fetchSpy.mock.calls.filter(([url]) =>
       typeof url === 'string' && url.includes('/api/uploads'),
     );
     expect(uploadCalls.length).toBe(0);

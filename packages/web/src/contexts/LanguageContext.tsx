@@ -26,8 +26,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [language]);
 
   const t = (key: string) => {
-    const table = translations[language];
-    return Object.prototype.hasOwnProperty.call(table, key) ? table[key as TranslationKey] : key;
+    return translate(translations[language], key, language);
   };
 
   return (
@@ -37,10 +36,38 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   );
 };
 
+const translate = (table: Record<TranslationKey, string>, key: string, lang?: Language): string => {
+  if (!Object.prototype.hasOwnProperty.call(table, key)) {
+    // Missing-key sentinel: makes raw-key leaks visible in DevTools immediately.
+    console.warn(`[i18n] Missing key: "${key}"${lang ? ` (lang: ${lang})` : ''}`);
+  }
+  return Object.prototype.hasOwnProperty.call(table, key) ? table[key as TranslationKey] : key;
+};
+
+const FALLBACK_CONTEXT: LanguageContextType = {
+  language: 'en',
+  setLanguage: () => undefined,
+  t: (key) => translate(en, key, 'en'),
+};
+
 export const useLanguage = () => {
   const context = useContext(LanguageContext);
   if (!context) {
-    throw new Error('useLanguage must be used within a LanguageProvider');
+    return FALLBACK_CONTEXT;
   }
   return context;
 };
+
+/**
+ * Translate outside React (stores, WS handlers): reads the same `lang`
+ * localStorage key the provider persists, with English fallback.
+ */
+export function translateStatic(key: string): string {
+  try {
+    const lang = (localStorage.getItem('lang') as Language) || 'es';
+    const table = translations[lang] ?? en;
+    return translate(table, key, lang);
+  } catch {
+    return translate(en, key);
+  }
+}

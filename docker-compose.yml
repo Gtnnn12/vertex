@@ -17,7 +17,7 @@ services:
     # pulled, `docker compose up --build` (install.sh's fallback, and deploy.sh)
     # builds from source instead and tags the result under this same ref.
     # Override the tag with VERTEX_IMAGE_TAG in .env (defaults to `latest`).
-    image: ${VERTEX_IMAGE:-ghcr.io/thezwiss/VERTEX}:${VERTEX_IMAGE_TAG:-latest}
+    image: ${VERTEX_IMAGE:-ghcr.io/gtnn12/vertex}:${VERTEX_IMAGE_TAG:-latest}
     build:
       context: .
       args:

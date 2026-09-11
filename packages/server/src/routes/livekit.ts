@@ -43,7 +43,9 @@ export async function livekitRoutes(app: FastifyInstance): Promise<void> {
   app.post<{ Body: LiveKitTokenRequest & { dmChannelId?: string } }>('/api/livekit/token', {
     preHandler: authenticate,
   }, async (request, reply) => {
+    console.log('[VERTEX LIVEKIT TOKEN TRACE] TOKEN_REQUEST channelId=', request.body?.channelId, 'dmChannelId=', request.body?.dmChannelId, 'userId=', request.userId);
     if (!config.livekit.apiKey || !config.livekit.apiSecret) {
+      console.log('[VERTEX LIVEKIT TOKEN TRACE] TOKEN_ERROR livekit not configured');
       return reply.code(503).send({ error: 'Voice/video is not configured on this server', statusCode: 503 });
     }
 
@@ -59,6 +61,7 @@ export async function livekitRoutes(app: FastifyInstance): Promise<void> {
     if (dmChannelId && typeof dmChannelId === 'string') {
       // DM call token
       if (!isDmMember(dmChannelId, request.userId)) {
+        console.log('[VERTEX LIVEKIT TOKEN TRACE] TOKEN_ERROR not dm member dmChannelId=', dmChannelId, 'userId=', request.userId);
         return reply.code(403).send({ error: 'You are not a member of this DM channel', statusCode: 403 });
       }
 
@@ -73,11 +76,14 @@ export async function livekitRoutes(app: FastifyInstance): Promise<void> {
       roomName = channel?.federatedId ? channel.federatedId : `dm-${dmChannelId}`;
     } else if (channelId && typeof channelId === 'string') {
       // Space voice channel token
+      console.log('[VERTEX LIVEKIT TOKEN TRACE] Space channel token request channelId=', channelId);
       const spaceId = getChannelSpaceId(channelId);
       if (!spaceId) {
+        console.log('[VERTEX LIVEKIT TOKEN TRACE] TOKEN_ERROR channel not found channelId=', channelId);
         return reply.code(404).send({ error: 'Channel not found', statusCode: 404 });
       }
       if (!hasPermission(request.userId, spaceId, PermissionBits.CONNECT, channelId)) {
+        console.log('[VERTEX LIVEKIT TOKEN TRACE] TOKEN_ERROR missing connect permission userId=', request.userId, 'spaceId=', spaceId, 'channelId=', channelId);
         return reply.code(403).send({ error: 'Missing CONNECT permission', statusCode: 403 });
       }
       // Check SPEAK and STREAM permissions for granular token grants
@@ -86,10 +92,12 @@ export async function livekitRoutes(app: FastifyInstance): Promise<void> {
       canStream = (perms & PermissionBits.STREAM) !== 0n || (perms & PermissionBits.ADMINISTRATOR) !== 0n;
       roomName = channelId;
     } else {
+      console.log('[VERTEX LIVEKIT TOKEN TRACE] TOKEN_ERROR no channelId or dmChannelId provided');
       return reply.code(400).send({ error: 'channelId or dmChannelId is required', statusCode: 400 });
     }
 
     const identity = `${request.userId}:${request.username}`;
+    console.log('[VERTEX LIVEKIT TOKEN TRACE] TOKEN_GENERATED identity=', identity, 'roomName=', roomName, 'canSpeak=', canSpeak, 'canStream=', canStream, 'livekitUrl=', config.livekit.url);
 
     const token = new AccessToken(config.livekit.apiKey, config.livekit.apiSecret, {
       identity,
@@ -118,6 +126,7 @@ export async function livekitRoutes(app: FastifyInstance): Promise<void> {
     const jwt = await token.toJwt();
 
     const livekitUrl = config.livekit.url ?? '';
+    console.log('[VERTEX LIVEKIT TOKEN TRACE] TOKEN_RESPONSE token.length=', jwt?.length ?? 0, 'url=', livekitUrl);
 
     const response: LiveKitTokenResponse = {
       token: jwt,

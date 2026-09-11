@@ -14,6 +14,7 @@ import { registerSelfId } from '../utils/identity';
 import { getActiveRoom } from './useLiveKit';
 import { useUIStore } from '../stores/uiStore';
 import { useActivityStore } from '../stores/activityStore';
+import { promoteDesktopActivity } from '../platform/activityBridge';
 import { useDiscoverStore } from '../stores/discoverStore';
 import { useFederationStore } from '../stores/federationStore';
 
@@ -123,44 +124,9 @@ function buildWsUrl(origin: string): string {
   return `${protocol}//${url.host}/ws`;
 }
 
-// ─── Call relay helpers ───────────────────────────────────────────────────────
-
-import { buildCallUndeliverableToast } from '../utils/callUndeliverableToast';
-
-export { buildCallUndeliverableToast };
-
 // ─── Event handling ───────────────────────────────────────────────────────────
 
 const HOME_ORIGIN = '';
-
-/**
- * Tear down local state for a DM call that ended, was rejected, or became
- * terminally undeliverable. Clears the call UI/federation state, and tears
- * down the LiveKit session **only when the active voice connection still
- * belongs to the DM call**.
- *
- * The guard is load-bearing: `disconnectFn()` tears down whatever LiveKit room
- * is currently active, regardless of which channel it is. Once the user has
- * joined a *space* voice channel, `currentVoiceChannelId` is set and the active
- * room is the space channel — NOT the DM call (the two are mutually exclusive;
- * `setCurrentVoiceChannel` clears `activeDmCall`). A stale `dm_call_ended` echo
- * must never disconnect that space connection.
- *
- * This is exactly what happens to the **last** participant to leave a DM call
- * for a space channel: their `voice_join` empties the server-side DM room, the
- * server broadcasts `dm_call_ended` back to every DM member (including them),
- * and an unguarded `disconnectFn()` would tear down the space room they just
- * connected to — stranding the UI on "Connecting…" until a manual rejoin.
- */
-export function teardownDmCall(): void {
-  const voice = useVoiceStore.getState();
-  voice.setIncomingCall(null);
-  voice.setOutgoingCall(null);
-  voice.setActiveDmCall(null);
-  voice.clearFederatedCallData();
-  // Never tear down a space voice connection in response to a DM-call signal.
-  if (voice.disconnectFn && !voice.currentVoiceChannelId) voice.disconnectFn();
-}
 
 function handleEvent(origin: string, event: ServerEvent): void {
   const isHome = origin === HOME_ORIGIN;
@@ -296,10 +262,13 @@ function handleEvent(origin: string, event: ServerEvent): void {
       // Re-push local Electron activities after reconnect (sleep/wake, network blip, etc.)
       // The process scanner keeps running but onActivityDetected only fires on change,
       // so if the same app was active before and after sleep, nothing would re-push.
+      // Same promotion as the live bridge (desktop Spotify Vía A → rich card).
       if (isHome && window.backspace?.getCurrentActivity) {
-        window.backspace.getCurrentActivity().then((activity: unknown) => {
-          if (activity) {
-            useActivityStore.getState().pushActivities([activity as Activity]);
+        window.backspace.getCurrentActivity().then(async (activity: unknown) => {
+          if (!activity) return;
+          const promoted = await promoteDesktopActivity(activity as Activity | null);
+          if (promoted) {
+            useActivityStore.getState().pushActivities([promoted]);
           }
         }).catch(() => {});
       }
@@ -385,50 +354,6 @@ function handleEvent(origin: string, event: ServerEvent): void {
               useVoiceStore.getState().leaveVoice();
               getActiveRoom()?.disconnect();
             }
-          }
-        }
-      }
-
-      // Restore DM call state from server (all origins — federated DMs live on remote instances)
-      {
-        const { activeDmCall, setActiveDmCall, setIncomingCall, incomingCall, connectFn, disconnectFn, setFederatedCallData, setFederatedCallId } = useVoiceStore.getState();
-        const myId = event.user.id;
-        if (event.activeCalls && event.activeCalls.length > 0) {
-          for (const call of event.activeCalls) {
-            // For federated calls, check membership via token presence (participants may be empty)
-            const isParticipant = call.participants.includes(myId) || !!call.livekitToken;
-            if (call.state === 'active' && isParticipant) {
-              // Clear any stuck ringing UI from a ringing→active transition during refresh
-              setIncomingCall(null);
-              // Do NOT set activeDmCall or auto-connect. On refresh/restart, the user
-              // is no longer in LiveKit — showing "Connecting..." with no connection
-              // is broken UX. The call exists on the server but this client session
-              // has no active LiveKit connection. The user can re-initiate if needed.
-              break;
-            } else if (call.state === 'ringing' && call.callerId !== myId) {
-              const dmCh = event.dmChannels?.find((d: any) => d.id === call.dmChannelId);
-              const callerUser = dmCh?.members?.find((m: any) => m.id === call.callerId);
-              setIncomingCall({
-                dmChannelId: call.dmChannelId,
-                callerId: call.callerId,
-                callerName: callerUser?.displayName || callerUser?.username || call.callerId,
-              });
-              // Store federated call data for ringing calls too
-              if (call.livekitUrl && call.livekitToken) {
-                setFederatedCallData(call.livekitToken, call.livekitUrl);
-              }
-              if (call.federatedCallId) {
-                setFederatedCallId(call.federatedCallId);
-              }
-            }
-          }
-        } else {
-          if (activeDmCall) {
-            setActiveDmCall(null);
-            if (disconnectFn) disconnectFn();
-          }
-          if (incomingCall) {
-            setIncomingCall(null);
           }
         }
       }
@@ -537,6 +462,14 @@ function handleEvent(origin: string, event: ServerEvent): void {
     }
 
     case 'presence_update':
+      // Self echo: keep authStore in sync so the own presence dot and the
+      // Active Now panels reflect the current status across tabs.
+      if (event.userId === (isHome ? useAuthStore.getState().user?.id : getMyUserIdForOrigin(origin))) {
+        const me = useAuthStore.getState().user;
+        if (me && me.status !== event.status) {
+          setUser({ ...me, status: event.status as typeof me.status });
+        }
+      }
       updateMemberPresence(event.userId, event.status);
       useSocialStore.getState().updateFriendPresence(event.userId, event.status);
       if (event.activities) {
@@ -1024,88 +957,6 @@ function handleEvent(origin: string, event: ServerEvent): void {
     case 'mark_unread': {
       const { onMarkUnread } = useChatStore.getState();
       onMarkUnread(event.channelId, event.messageId);
-      break;
-    }
-
-    // ─── DM call events (all origins) ──────────────────────────────────────
-
-    case 'dm_call_incoming': {
-      if (!isHome && !activePeerOrigins.has(origin)) break;
-      // Batch ALL call state into a single set() to prevent:
-      // 1. Ringtone multiplication (multiple subscription triggers from separate set() calls)
-      // 2. Stale callOrigin/federatedCallId from previous calls (always overwritten)
-      // callOrigin = the WS origin that delivered this event, NOT event.callOrigin (the host).
-      // Routing accept/reject through this WS ensures the message reaches a connected server,
-      // which then relays to the host via S2S HTTP. Using event.callOrigin (the host URL)
-      // would route through the multi-instance WS, which may not be connected.
-      useVoiceStore.setState({
-        incomingCall: {
-          dmChannelId: event.dmChannelId ?? null,
-          callerId: event.callerId,
-          callerName: event.callerName,
-        },
-        federatedCallToken: event.livekitToken ?? null,
-        federatedCallUrl: event.livekitUrl ?? null,
-        federatedCallId: event.federatedCallId ?? null,
-        callOrigin: origin,
-      });
-      break;
-    }
-
-    case 'dm_call_accepted': {
-      if (!isHome && !activePeerOrigins.has(origin)) break;
-      const { setIncomingCall, setOutgoingCall, outgoingCall, setActiveDmCall, connectFn, isLiveKitConnected } = useVoiceStore.getState();
-      const wasOutgoingCall = !!outgoingCall;
-      setIncomingCall(null);
-      setOutgoingCall(null);
-
-      // Only enter active call state if:
-      // - We're the caller (wasOutgoingCall) → will connect via connectFn below
-      // - We already connected to LiveKit (clicked accept in handleAccept)
-      // Other instances of the same user must NOT enter call state — they'd show
-      // "Connecting..." forever with no actual LiveKit connection.
-      const callDmId = event.dmChannelId || event.federatedCallId || '';
-      if (wasOutgoingCall || isLiveKitConnected) {
-        setActiveDmCall({ dmChannelId: callDmId });
-      }
-      // The caller connects to the DM room. `wasOutgoingCall` alone identifies
-      // the caller session (other sessions/tabs never set outgoingCall), and
-      // `connect()` de-dupes an already-connected same room — so we must NOT
-      // also gate on `!isLiveKitConnected`: a caller who is currently sitting in
-      // a space voice channel is LiveKit-connected, and gating on it would skip
-      // the DM connect entirely, stranding them in the space channel.
-      if (connectFn && wasOutgoingCall && callDmId) {
-        connectFn(callDmId, true).catch((err: unknown) => {
-          console.error('[WS] DM call connect failed:', err);
-        });
-      }
-      break;
-    }
-
-    case 'dm_call_rejected': {
-      if (!isHome && !activePeerOrigins.has(origin)) break;
-      teardownDmCall();
-      break;
-    }
-
-    case 'dm_call_ended': {
-      if (!isHome && !activePeerOrigins.has(origin)) break;
-      teardownDmCall();
-      break;
-    }
-
-    case 'dm_call_undeliverable': {
-      if (!isHome && !activePeerOrigins.has(origin)) break;
-
-      const { addToast } = useUIStore.getState();
-
-      if (event.terminal) {
-        // Tear down local outbound call state — mirrors dm_call_ended.
-        teardownDmCall();
-      }
-
-      const msg = buildCallUndeliverableToast(event.failures, event.terminal, event.phase);
-      addToast(msg, event.terminal ? 'warning' : 'info', 8_000);
       break;
     }
 

@@ -60,7 +60,8 @@ interface BackspaceElectronAPI {
 
   // Screen share picker coordination
   onScreenShareSources: (callback: (sources: ElectronScreenSource[]) => void) => void;
-  selectScreenSource: (sourceId: string | null, shareAudio?: boolean) => void;
+  requestScreenShareSources: () => void;
+  setScreenSharePendingSelection: (sourceId: string | null, shareAudio?: boolean) => void;
 
   // Instance URL management
   getInstanceUrl: () => Promise<string | null>;
@@ -88,6 +89,58 @@ interface BackspaceElectronAPI {
   getRecoveryState: () => Promise<RecoveryState>;
   onRecoveryStateChanged: (cb: (state: RecoveryState) => void) => () => void;
   recoveryAction: (action: RecoveryAction) => void;
+
+  // Netrex Premium — in-app purchase + license verification
+  /** Result of a Gumroad license verify (from the main process). */
+  openNetrexCheckout: (plan: 'monthly' | 'sixMonths' | 'yearly') => Promise<{ ok: boolean; purchased?: boolean }>;
+  openNetrexCheckoutWithEmail: (
+    plan: 'monthly' | 'sixMonths' | 'yearly',
+    email: string | null,
+  ) => Promise<{ ok: boolean; purchased?: boolean; error?: 'missing_url' | 'no_window'; fallback?: 'external' }>;
+  isNetrexCheckoutOpen: () => Promise<boolean>;
+  netrexPlansConfig: () => Promise<Array<{ plan: string; configured: boolean }>>;
+  activateNetrexLicense: (
+    key: string,
+  ) => Promise<NetrexLicenseResult>;
+  checkNetrexLicense: () => Promise<NetrexLicenseResult>;
+  deactivateNetrexLicense: () => Promise<{ ok: boolean }>;
+  /** Open an https URL in the OS browser (Gumroad library, etc.). */
+  openExternalUrl: (url: string) => Promise<{ ok: boolean }>;
+  /** Open Gumroad's purchase library in a modal in-app child window. */
+  openNetrexBilling: () => Promise<{ ok: boolean }>;
+
+  // Owner-only discount-code admin panel
+  adminCodesSetupState: () => Promise<{ hasAdminKey: boolean; hasToken: boolean }>;
+  adminCodesSetAccessKey: (key: string) => Promise<{ ok: boolean; error?: string }>;
+  adminCodesUnlock: (key: string) => Promise<{ ok: boolean }>;
+  adminCodesSetToken: (adminKey: string, token: string) => Promise<{ ok: boolean; error?: string }>;
+  adminCodesProducts: () => Promise<{ plan: string; productId: string; url: string }[]>;
+  adminCodesList: (adminKey: string, productId: string) => Promise<unknown>;
+  adminCodesCreate: (adminKey: string, input: unknown) => Promise<unknown>;
+  adminCodesDelete: (adminKey: string, productId: string, codeId: string) => Promise<unknown>;
+}
+
+interface AdminOfferCode {
+  id: string;
+  name: string;
+  code: string;
+  type: 'percent' | 'fixed';
+  amount: number;
+  universal: boolean;
+  timesUsed: number;
+  maxUses: number | null;
+  startsAt: string | null;
+  expiresAt: string | null;
+}
+
+interface NetrexLicenseResult {
+  ok: boolean;
+  source?: 'online' | 'cache';
+  licenseKey?: string;
+  purchasedAt?: number;
+  /** Which Gumroad product the key belongs to. */
+  plan?: 'monthly' | 'lifetime';
+  error?: 'invalid' | 'refunded' | 'uses_exceeded' | 'network' | 'server';
 }
 
 interface Window {

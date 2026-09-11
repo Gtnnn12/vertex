@@ -10,6 +10,7 @@ export const users = sqliteTable('users', {
   status: text('status').default('offline'),
   customStatus: text('custom_status'),
   isAdmin: integer('is_admin').default(0),
+  netrexEnabled: integer('netrex_enabled').default(0),
   homeInstance: text('home_instance'),
   homeUserId: text('home_user_id'),
   replicatedInstances: text('replicated_instances').default('[]'),
@@ -25,6 +26,22 @@ export const users = sqliteTable('users', {
   federationRegistryUpdatedAt: integer('federation_registry_updated_at').default(0),
   federationHealPending: integer('federation_heal_pending').default(0),
   federationHomeOrphaned: integer('federation_home_orphaned').default(0),
+  netrexExpiresAt: integer('netrex_expires_at'),
+  /** Purchased Netrex plan: 'monthly' | 'six_months' | 'yearly' | 'lifetime' (from Gumroad ping / key). */
+  netrexPlan: text('netrex_plan'),
+  /** Entitlement end date (epoch ms). Recurring subscriptions refresh it via pings. */
+  netrexUntil: integer('netrex_until'),
+  /** Lowercased buyer email from Gumroad — the webhook match key. */
+  billingEmail: text('billing_email'),
+  /** Visual style of the profile music (Spotify) card — Netrex-gated on save. */
+  musicWidgetStyle: text('music_widget_style'),
+  /** Profile board (Tablero): JSON array of BoardWidget — Netrex-gated on save. */
+  profileBoard: text('profile_board'),
+  staffRole: text('staff_role'),
+  lastSeenAt: integer('last_seen_at'),  bannedUntil: integer('banned_until'),
+  banReason: text('ban_reason'),
+  bannedAt: integer('banned_at'),
+  bannedBy: text('banned_by'),
   createdAt: integer('created_at').notNull(),
 });
 
@@ -308,16 +325,16 @@ export const userSpaceLayout = sqliteTable('user_space_layout', {
 
 export const instanceSettings = sqliteTable('instance_settings', {
   id: integer('id').primaryKey().default(1),
-  instanceName: text('instance_name').default('Backspace'),
+  instanceName: text('instance_name').default('VERTEX'),
   workerId: integer('worker_id'),
   instanceId: text('instance_id'),
   discoveryEnabled: integer('discovery_enabled').notNull().default(1),
   maxBitrateKbps: integer('max_bitrate_kbps').notNull().default(20000),
   minBitrateKbps: integer('min_bitrate_kbps').notNull().default(500),
   bitrateStepKbps: integer('bitrate_step_kbps').notNull().default(500),
-  allowedResolutions: text('allowed_resolutions').notNull().default('540,720,1080'),
-  allowedFramerates: text('allowed_framerates').notNull().default('30,45,60'),
-  maxResolution: integer('max_resolution').notNull().default(1080),
+  allowedResolutions: text('allowed_resolutions').notNull().default('720,1080,1440,2160'),
+  allowedFramerates: text('allowed_framerates').notNull().default('30,60'),
+  maxResolution: integer('max_resolution').notNull().default(2160),
   maxFramerate: integer('max_framerate').notNull().default(60),
   registrationOpen: integer('registration_open'),  // null = use env var default, 0/1 = explicit
   federatedRegistrationOpen: integer('federated_registration_open').notNull().default(1),
@@ -341,6 +358,41 @@ export const bans = sqliteTable('bans', {
 }, (table) => ({
   pk: primaryKey({ columns: [table.spaceId, table.userId] }),
   spaceIdx: index('idx_bans_space_id').on(table.spaceId),
+}));
+
+export const staffRoles = sqliteTable('staff_roles', {
+  userId: text('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
+  role: text('role').notNull(),
+  grantedBy: text('granted_by').references(() => users.id),
+  grantedAt: integer('granted_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+});
+
+export const moderationEvents = sqliteTable('moderation_events', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  action: text('action').notNull(),
+  reason: text('reason'),
+  actorId: text('actor_id').references(() => users.id),
+  durationSeconds: integer('duration_seconds'),
+  expiresAt: integer('expires_at'),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  userIdx: index('idx_moderation_events_user_id').on(table.userId),
+  createdAtIdx: index('idx_moderation_events_created_at').on(table.createdAt),
+}));
+
+export const auditLog = sqliteTable('audit_log', {
+  id: text('id').primaryKey(),
+  actorId: text('actor_id').references(() => users.id),
+  action: text('action').notNull(),
+  targetId: text('target_id'),
+  targetType: text('target_type'),
+  metadata: text('metadata'),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  createdAtIdx: index('idx_audit_log_created_at').on(table.createdAt),
+  actionIdx: index('idx_audit_log_action').on(table.action),
 }));
 
 export const joinRequests = sqliteTable('join_requests', {
@@ -539,6 +591,74 @@ export const inviteLinks = sqliteTable('invite_links', {
   createdAtIdx: index('idx_invite_links_created_at').on(table.createdAt),
 }));
 
+export const webSupportMessages = sqliteTable('web_support_messages', {
+  id: text('id').primaryKey(),
+  /** Vertex user who sent it (nullable — keeps history if the user is deleted). */
+  userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
+  /** Username snapshot at send time, so the admin tray keeps context. */
+  username: text('username').notNull(),
+  subject: text('subject').notNull(),
+  /** 'doubt' | 'bug' | 'report' | 'other' */
+  category: text('category').notNull(),
+  message: text('message').notNull(),
+  /** 'new' | 'answered' */
+  status: text('status').notNull().default('new'),
+  response: text('response'),
+  respondedAt: integer('responded_at'),
+  respondedBy: text('responded_by'),
+  /** Epoch ms the user last saw the admin response — drives the unread badge. */
+  responseSeenAt: integer('response_seen_at'),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  statusIdx: index('idx_web_support_status').on(table.status),
+  userIdx: index('idx_web_support_user_id').on(table.userId),
+  createdAtIdx: index('idx_web_support_created_at').on(table.createdAt),
+}));
+
+/**
+ * Conversation threads for the web support portal. Each thread is one topic:
+ * the user's opening message creates it, and every subsequent exchange (user
+ * or admin) is a row in web_support_thread_messages attached to the thread.
+ */
+export const webSupportThreads = sqliteTable('web_support_threads', {
+  id: text('id').primaryKey(),
+  /** Thread owner (nullable — keeps history if the user is deleted). */
+  userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
+  /** Username snapshot at creation time. */
+  username: text('username').notNull(),
+  subject: text('subject').notNull(),
+  /** 'doubt' | 'bug' | 'report' | 'other' */
+  category: text('category').notNull(),
+  /** 'open' | 'closed' */
+  status: text('status').notNull().default('open'),
+  /** Epoch ms the user last saw the thread (drives unread counts). */
+  userReadAt: integer('user_read_at'),
+  /** Epoch ms an admin last saw the thread (drives the admin unread dot). */
+  adminReadAt: integer('admin_read_at'),
+  /** Epoch ms of the newest message (ordering key for both inboxes). */
+  lastMessageAt: integer('last_message_at').notNull(),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  userIdx: index('idx_web_threads_user_id').on(table.userId),
+  lastMsgIdx: index('idx_web_threads_last_message_at').on(table.lastMessageAt),
+}));
+
+/** A single message inside a support thread. author: 'user' | 'admin'. */
+export const webSupportThreadMessages = sqliteTable('web_support_thread_messages', {
+  id: text('id').primaryKey(),
+  threadId: text('thread_id').notNull().references(() => webSupportThreads.id, { onDelete: 'cascade' }),
+  author: text('author').notNull(),
+  /** Snapshot of the sender's username ('Vertex' for admin replies). */
+  authorName: text('author_name').notNull(),
+  /** Admin replies carry the admin's user id for audit; user messages null. */
+  authorUserId: text('author_user_id'),
+  body: text('body').notNull(),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  threadIdx: index('idx_web_thread_messages_thread_id').on(table.threadId),
+  createdAtIdx: index('idx_web_thread_messages_created_at').on(table.createdAt),
+}));
+
 export const inviteRedemptions = sqliteTable('invite_redemptions', {
   id: text('id').primaryKey(),
   inviteId: text('invite_id').notNull().references(() => inviteLinks.id, { onDelete: 'cascade' }),
@@ -549,3 +669,21 @@ export const inviteRedemptions = sqliteTable('invite_redemptions', {
   inviteIdx: index('idx_invite_redemptions_invite_id').on(table.inviteId),
   userIdx: index('idx_invite_redemptions_user_id').on(table.userId),
 }));
+
+/**
+ * Spotify OAuth tokens per user (Web API, authorization code + refresh token).
+ * The client secret lives ONLY in the backend env — never sent to clients.
+ */
+export const spotifyTokens = sqliteTable('spotify_tokens', {
+  userId: text('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
+  /** Spotify account display name (from /v1/me) shown after connecting. */
+  spotifyUser: text('spotify_user'),
+  accessToken: text('access_token').notNull(),
+  refreshToken: text('refresh_token').notNull(),
+  /** Epoch ms when accessToken expires (expires_in − 60s safety margin). */
+  expiresAt: integer('expires_at').notNull(),
+  /** Epoch ms when the user connected the account. */
+  connectedAt: integer('connected_at').notNull(),
+  /** Epoch ms of the last successful currently-playing poll. */
+  lastPolledAt: integer('last_polled_at'),
+});

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "license": "AGPL-3.0-only",
-  "author": "Jannis Braun",
+  "author": "gtnn12",
   "type": "module",
   "main": "./src/types.ts",
   "types": "./src/types.ts",
@@ -24,3 +24,5 @@
     "typescript": "^5.4.0"
   }
 }
+
+

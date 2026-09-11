@@ -14,12 +14,14 @@ import { InviteModal } from '../modals/InviteModal';
 import { UserSettingsModal } from '../modals/UserSettings';
 import { SpaceSettingsModal } from '../modals/SpaceSettings';
 import { ChannelSettingsModal } from '../modals/ChannelSettingsModal';
+import { BulkPermissionsModal } from '../modals/BulkPermissionsModal';
 import { CategorySettingsModal } from '../modals/CategorySettingsModal';
 import { NewDmModal } from '../modals/NewDmModal';
 import { AddDmMemberModal } from '../modals/AddDmMemberModal';
 import { GroupDmSettings } from '../modals/GroupDmSettings';
 import { UserProfileModal } from '../modals/UserProfileModal';
-import { IncomingCallModal } from '../voice/IncomingCallModal';
+import { PersonalizationEditorModal } from '../netrex/PersonalizationEditorModal';
+import { PremiumBlockModal } from '../netrex/PremiumBlockModal';
 import { PictureInPicture } from '../voice/PictureInPicture';
 import { SoundController } from '../voice/SoundController';
 import { GlobalAudioRenderer } from '../voice/GlobalAudioRenderer';
@@ -36,6 +38,8 @@ import { useLiveKit } from '../../hooks/useLiveKit';
 import { useKeybinds } from '../../hooks/useKeybinds';
 import { useDeepLinkHandler } from '../../platform/deepLink';
 import { initActivityBridge, teardownActivityBridge } from '../../platform/activityBridge';
+import { initManualActivityProvider, useActivityProviderRegistry } from '../../activity';
+import { useActivityStore } from '../../stores/activityStore';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { useChatStore } from '../../stores/chatStore';
 import { useUIStore } from '../../stores/uiStore';
@@ -92,7 +96,20 @@ export function AppLayout() {
   // so this is safe to call before any user interaction.
   const outputDeviceId = useVoiceStore((s) => s.outputDeviceId);
   useEffect(() => {
-    AudioManager.getInstance().setOutputDevice(outputDeviceId);
+    let cancelled = false;
+    const syncOutputDevice = async () => {
+      // If a non-default device is configured, ensure it is still available before passing to AudioManager
+      if (outputDeviceId !== 'default' && typeof navigator !== 'undefined' && typeof navigator.mediaDevices?.enumerateDevices === 'function') {
+        await useVoiceStore.getState().pruneStaleDevices();
+        if (cancelled) return;
+      }
+      const activeId = useVoiceStore.getState().outputDeviceId;
+      AudioManager.getInstance().setOutputDevice(activeId);
+    };
+    void syncOutputDevice();
+    return () => {
+      cancelled = true;
+    };
   }, [outputDeviceId]);
 
   // Audio device hot-plug handler.
@@ -257,6 +274,32 @@ export function AppLayout() {
   // Deep link handler for Electron (backspace:// protocol)
   useDeepLinkHandler();
 
+  // Activity provider system: manual/web provider registered first; the
+  // Electron desktop provider is wrapped as a registry provider below, and a
+  // future Tauri/native provider is a one-line registration away.
+  useEffect(() => {
+    initManualActivityProvider();
+
+    // DesktopActivityProvider seam: adapts the existing Electron bridge
+    // (window.backspace process detection) to the provider registry.
+    if (window.backspace?.getCurrentActivity) {
+      const desktopProvider = {
+        id: 'desktop-electron',
+        getCurrentActivity: () => {
+          const acts = useActivityStore.getState().myActivities;
+          return acts && acts.length > 0 ? acts[0]! : null;
+        },
+      };
+      const registry = useActivityProviderRegistry.getState();
+      // Register the desktop provider FIRST (wins over manual) and keep the
+      // manual provider registered too; desktop returning null falls through
+      // to the manual activity.
+      registry.unregister('manual');
+      registry.register(desktopProvider);
+      initManualActivityProvider();
+    }
+  }, []);
+
   // Electron activity detection bridge (game/app process scanning → activityStore)
   useEffect(() => {
     initActivityBridge();
@@ -341,16 +384,16 @@ export function AppLayout() {
 
   if (!user || showBootSkeleton) {
     return (
-      <div className="h-full flex bg-surface-base" role="status" aria-label={t('loading_backspace')}>
-        {/* Space strip */}
-        <div className="w-[72px] hidden md:flex flex-col items-center gap-3 pt-4 bg-surface-base flex-shrink-0">
+      <div className="h-full flex bg-surface-base" role="status" aria-label={t('loading_vertex')}>
+        {/* Space strip — floating dock skeleton */}
+        <div className="w-[72px] hidden md:flex flex-col items-center gap-3 pt-4 bg-surface-base flex-shrink-0 md:mx-3 md:my-4 md:rounded-[18px] md:border md:border-white/[0.05]">
           {Array.from({ length: 5 }, (_, i) => (
             <div key={i} className="skeleton skeleton-circle w-12 h-12" style={{ animationDelay: `${i * 0.1}s` }} />
           ))}
         </div>
 
         {/* Sidebar */}
-        <div className="w-60 hidden md:flex bg-surface-channel flex-shrink-0 flex-col pt-4 px-2">
+        <div className="w-60 hidden md:flex bg-surface-channel flex-shrink-0 flex-col pt-4 px-2 md:pl-[96px]">
           {/* Header bar */}
           <div className="skeleton skeleton-bar w-[60%] h-4 mb-6 ml-2" />
           {/* Channel items */}
@@ -403,12 +446,12 @@ export function AppLayout() {
         {/* UserSettings is a pushed screen on mobile (MobileSettingsScreen), not a modal */}
         <SpaceSettingsModal />
         <ChannelSettingsModal />
+        <BulkPermissionsModal />
         <CategorySettingsModal />
         <NewDmModal />
         <AddDmMemberModal />
         <GroupDmSettings />
         <UserProfileModal />
-        <IncomingCallModal />
         <ImagePreview />
         {/* PictureInPicture is desktop-only. Mobile has its own purpose-built
             voice chrome (MobileVoiceMiniBar + MobileVoiceFullScreen) mounted
@@ -429,7 +472,7 @@ export function AppLayout() {
 
   // ── Desktop layout ──
   return (
-    <div className="h-full flex flex-col md:grid md:grid-cols-[312px_1fr] md:grid-rows-[minmax(0,1fr)] bg-surface-base overflow-hidden">
+    <div className="h-full flex flex-col md:grid md:grid-cols-[336px_1fr] md:grid-rows-[minmax(0,1fr)] bg-surface-base overflow-hidden">
       {/* Space sidebar - always visible on desktop */}
       <div className={`fixed inset-y-0 left-0 z-40 flex w-[312px] transition-transform duration-200 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} md:static md:z-auto md:w-auto md:transform-none`}>
         <SpaceSidebar />
@@ -437,7 +480,7 @@ export function AppLayout() {
       </div>
 
       {/* Main content area */}
-      <div className="flex-1 flex min-w-0 min-h-0 bg-surface-chat relative">
+      <div className="flex-1 flex min-w-0 min-h-0 bg-surface-chat relative overflow-hidden">
         <MainContent />
         <RightPanel />
       </div>
@@ -451,12 +494,14 @@ export function AppLayout() {
       <UserSettingsModal />
       <SpaceSettingsModal />
       <ChannelSettingsModal />
+      <BulkPermissionsModal />
       <CategorySettingsModal />
       <NewDmModal />
       <AddDmMemberModal />
       <GroupDmSettings />
       <UserProfileModal />
-      <IncomingCallModal />
+      <PersonalizationEditorModal />
+      <PremiumBlockModal />
       <ImagePreview />
       <PictureInPicture />
       <SoundController />

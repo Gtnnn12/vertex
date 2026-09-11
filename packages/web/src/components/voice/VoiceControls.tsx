@@ -1,14 +1,10 @@
 import React, { useState, useRef } from 'react';
 import { useVoiceStore } from '../../stores/voiceStore';
 import { useSpaceStore, getChannelOrigin } from '../../stores/spaceStore';
-import { getActiveRoom } from '../../hooks/useLiveKit';
 import { wsSend } from '../../hooks/useWebSocket';
-import { ScreenShareSettingsPopover } from './ScreenShareSettingsPopover';
 import { ConnectionInfoPopover } from './ConnectionInfoPopover';
-import { startScreenShare, stopScreenShare } from '../../utils/screenShare';
 import { hasPermissionBit, PermissionBits } from '../../utils/permissions';
-import { broadcastVoiceStatus } from '../../utils/voice';
-import { handleCameraAction } from '../../utils/voiceActions';
+import { handleCameraAction, handleScreenShareAction } from '../../utils/voiceActions';
 import { useLanguage } from '../../contexts/LanguageContext';
 
 /**
@@ -26,53 +22,25 @@ export function VoiceControls() {
   const isLiveKitConnected = useVoiceStore((s) => s.isLiveKitConnected);
   const connectionQuality = useVoiceStore((s) => s.connectionQuality);
   const channels = useSpaceStore((s) => s.channels);
-  const [showScreenShareSettings, setShowScreenShareSettings] = useState(false);
   const [showConnectionInfo, setShowConnectionInfo] = useState(false);
   const connectionBtnRef = useRef<HTMLButtonElement>(null);
-  const qualityBtnRef = useRef<HTMLButtonElement>(null);
 
-  const activeDmCall = useVoiceStore((s) => s.activeDmCall);
   const channelPerms = useSpaceStore((s) => currentVoiceChannelId ? s.channelPermissions.get(currentVoiceChannelId) : undefined);
 
-  // In DM calls, all permissions are granted; in space channels, check SPEAK and STREAM
-  const isDmCall = !!activeDmCall;
-  const canSpeak = isDmCall || hasPermissionBit(channelPerms, PermissionBits.SPEAK);
-  const canStream = isDmCall || hasPermissionBit(channelPerms, PermissionBits.STREAM);
+  const canSpeak = hasPermissionBit(channelPerms, PermissionBits.SPEAK);
+  const canStream = hasPermissionBit(channelPerms, PermissionBits.STREAM);
 
   const voiceOrigin = currentVoiceChannelId ? getChannelOrigin(currentVoiceChannelId) : '';
 
-  if (!currentVoiceChannelId && !activeDmCall) return null;
+  if (!currentVoiceChannelId) return null;
 
   const channel = channels.find(c => c.id === currentVoiceChannelId);
-  const channelName = channel?.name ?? (activeDmCall ? t('dm_call') : t('voice_channel'));
-
-  const handleScreenShare = async () => {
-    const room = getActiveRoom();
-    console.log('[SS] handleScreenShare clicked, room:', !!room, 'isScreenSharing:', isScreenSharing);
-    if (!room) return;
-    try {
-      if (!isScreenSharing) {
-        const started = await startScreenShare(room);
-        if (started) broadcastVoiceStatus();
-      } else {
-        await stopScreenShare(room);
-        broadcastVoiceStatus();
-      }
-    } catch (err) {
-      console.error('[VoiceControls] Failed to toggle screen share:', err);
-    }
-  };
+  const channelName = channel?.name ?? t('voice_channel');
 
   const handleDisconnect = () => {
-    const { activeDmCall, disconnectFn, federatedCallId, callOrigin } = useVoiceStore.getState();
-    if (activeDmCall) {
-      const origin = callOrigin || getChannelOrigin(activeDmCall.dmChannelId);
-      wsSend({ type: 'dm_call_end', dmChannelId: activeDmCall.dmChannelId, federatedCallId }, origin);
-      useVoiceStore.getState().setActiveDmCall(null);
-    } else {
-      wsSend({ type: 'voice_leave' }, voiceOrigin);
-      useVoiceStore.getState().leaveVoice();
-    }
+    const { disconnectFn } = useVoiceStore.getState();
+    wsSend({ type: 'voice_leave' }, voiceOrigin);
+    useVoiceStore.getState().leaveVoice();
     if (disconnectFn) disconnectFn();
   };
 
@@ -97,8 +65,8 @@ export function VoiceControls() {
           ? 'text-txt-danger'
           : statusColor; // 'unknown' falls back to connection-state color
 
-  const btnBase = 'flex-1 h-[34px] flex items-center justify-center rounded-[4px] transition-colors';
-  const btnDefaultStyle = 'bg-surface-base text-txt-tertiary hover:bg-surface-channel hover:text-txt-secondary';
+  const btnBase = 'flex-1 h-[34px] flex items-center justify-center rounded-[8px] transition-colors';
+  const btnDefaultStyle = 'bg-white/[0.02] text-txt-tertiary/85 hover:bg-white/[0.06] hover:text-txt-primary';
 
   return (
     <>
@@ -108,7 +76,6 @@ export function VoiceControls() {
           ref={connectionBtnRef}
           onClick={() => {
             setShowConnectionInfo(!showConnectionInfo);
-            if (!showConnectionInfo) setShowScreenShareSettings(false);
           }}
           className={`w-8 h-8 rounded-lg ${statusBgColor} flex items-center justify-center flex-shrink-0 hover:brightness-125 transition-all`}
           title={t('connection_info')}
@@ -147,14 +114,14 @@ export function VoiceControls() {
         />
       </div>
 
-      {/* Row 2: Camera, Screen Share, Video Quality, Noise Suppression */}
+      {/* Row 2: Camera, Screen Share, Noise Suppression */}
       <div className="relative flex items-center gap-1 px-3 pb-2 pt-1">
         {canSpeak && (
           <button
             onClick={handleCameraAction}
             className={`${btnBase} ${
               isCameraOn
-                ? 'bg-surface-base text-status-online hover:bg-surface-channel'
+                ? 'bg-white/[0.08] text-status-online hover:bg-white/[0.1]'
                 : btnDefaultStyle
             }`}
             title={isCameraOn ? t('turn_off_camera') : t('turn_on_camera')}
@@ -174,10 +141,10 @@ export function VoiceControls() {
 
         {canStream && (
           <button
-            onClick={handleScreenShare}
+            onClick={() => void handleScreenShareAction()}
             className={`${btnBase} ${
               isScreenSharing
-                ? 'bg-surface-base text-status-online hover:bg-surface-channel'
+                ? 'bg-white/[0.08] text-status-online hover:bg-white/[0.1]'
                 : btnDefaultStyle
             }`}
             title={isScreenSharing ? t('stop_sharing') : t('share_screen')}
@@ -189,32 +156,12 @@ export function VoiceControls() {
           </button>
         )}
 
-        {/* Video Quality */}
-        <button
-          ref={qualityBtnRef}
-          onClick={() => {
-            setShowScreenShareSettings(!showScreenShareSettings);
-            if (!showScreenShareSettings) setShowConnectionInfo(false);
-          }}
-          className={`${btnBase} ${
-            showScreenShareSettings
-              ? 'bg-surface-base text-accent-primary hover:bg-surface-channel'
-              : btnDefaultStyle
-          }`}
-          title={t('video_quality')}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M3 5v14h18V5H3zm16 12H5V7h14v10z" />
-            <path d="M8 15l2.5-3.21L13 15l2-2.5L18 17H6z" />
-          </svg>
-        </button>
-
         {/* AI Noise Suppression (RNNoise) */}
         <button
           onClick={() => setRnnoiseEnabled(!rnnoiseEnabled)}
           className={`${btnBase} ${
             rnnoiseEnabled
-              ? 'bg-surface-base text-status-online hover:bg-surface-channel'
+              ? 'bg-white/[0.08] text-status-online hover:bg-white/[0.1]'
               : btnDefaultStyle
           }`}
           title={rnnoiseEnabled ? t('disable_ai_noise_suppression') : t('enable_ai_noise_suppression')}
@@ -236,13 +183,6 @@ export function VoiceControls() {
             )}
           </svg>
         </button>
-
-        {/* Screen Share Settings Popover */}
-        <ScreenShareSettingsPopover
-          open={showScreenShareSettings}
-          onClose={() => setShowScreenShareSettings(false)}
-          anchorRef={qualityBtnRef}
-        />
       </div>
     </>
   );

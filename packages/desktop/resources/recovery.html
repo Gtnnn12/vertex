@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Backspace — Recovery</title>
+  <title>VERTEX — Recovery</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     * { box-sizing: border-box; }
@@ -128,7 +128,7 @@
   <div class="content">
     <div class="container">
       <div class="card">
-        <h1>Backspace couldn't load.</h1>
+        <h1>VERTEX couldn't load.</h1>
         <p class="hint" id="hint">Loading…</p>
 
         <div class="actions">
@@ -147,7 +147,7 @@
           <pre id="diagnostic">loading…</pre>
         </details>
 
-        <button class="action subtle" id="btn-quit">Quit Backspace</button>
+        <button class="action subtle" id="btn-quit">Quit VERTEX</button>
       </div>
     </div>
   </div>
@@ -270,7 +270,7 @@
 
     async function init() {
       if (!window.backspace) {
-        $('hint').textContent = 'Recovery bridge unavailable. Please quit and reinstall Backspace.';
+        $('hint').textContent = 'Recovery bridge unavailable. Please quit and reinstall VERTEX.';
         return;
       }
       try {

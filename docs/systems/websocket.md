@@ -71,7 +71,7 @@ Source: `packages/server/src/ws/handler.ts`, `packages/server/src/ws/events.ts`
 ### DM Calls
 | type | fields | notes |
 |------|--------|-------|
-| `dm_call_start` | dmChannelId?, federatedCallId? | `dmChannelId` can be null when `federatedCallId` is provided. 60s auto-timeout if not accepted |
+| `dm_call_start` | dmChannelId?, federatedCallId?, video? | `dmChannelId` can be null when `federatedCallId` is provided. 60s auto-timeout if not accepted. `video` (boolean) marks a video call (camera ON) vs voice call (camera OFF). |
 | `dm_call_accept` | dmChannelId?, federatedCallId? | ringing→active |
 | `dm_call_reject` | dmChannelId?, federatedCallId? | |
 | `dm_call_end` | dmChannelId?, federatedCallId? | |
@@ -167,7 +167,7 @@ reason: `'displaced'` (new tab) | `'session_closed'`
 ### DM Calls
 | type | fields | scope |
 |------|--------|-------|
-| `dm_call_incoming` | dmChannelId?, federatedCallId, callerId, callerName, callOrigin?, livekitUrl?, livekitToken? | DM members (excludes caller). `dmChannelId` can be null for Path B federated calls (no local DM channel). `callOrigin` identifies the hosting instance for cross-instance calls. |
+| `dm_call_incoming` | dmChannelId?, federatedCallId, callerId, callerName, callOrigin?, livekitUrl?, livekitToken?, video? | DM members (excludes caller). `dmChannelId` can be null for Path B federated calls (no local DM channel). `callOrigin` identifies the hosting instance for cross-instance calls. `video` mirrors the caller's call type so the callee knows whether to start with the camera ON. |
 | `dm_call_accepted` | dmChannelId?, federatedCallId? | DM members |
 | `dm_call_rejected` | dmChannelId?, federatedCallId? | DM members |
 | `dm_call_ended` | dmChannelId?, federatedCallId? | DM members |

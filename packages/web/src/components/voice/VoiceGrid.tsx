@@ -71,6 +71,11 @@ export function VoiceGrid({ participants }: VoiceGridProps) {
     ? tiles.find((t) => t.key === focusedParticipantId)
     : null;
 
+  console.log(`[VOICE_GRID] focusedParticipantId=${focusedParticipantId} tiles.length=${tiles.length} focusedTile=${focusedTile ? 'found' : 'null'} firstTileKey=${tiles[0]?.key ?? 'none'} ts=${Date.now()}`);
+  if (focusedTile) {
+    console.log(`[VOICE_GRID_FOCUSED] key=${focusedTile.key} kind=${focusedTile.kind} participant.identity=${(focusedTile as any).participant?.identity ?? 'none'} screenTrackId=${(focusedTile as any).screenTrack?.id ?? 'null'} ts=${Date.now()}`);
+  }
+
   // Render a single tile polymorphically
   const renderTile = (tile: GridTile, large?: boolean) =>
     tile.kind === 'user' ? (

@@ -1,16 +1,15 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import ReactMarkdown from 'react-markdown';
 import type { User } from '@backspace/shared';
-import { Avatar } from '../ui/Avatar';
-import { Username } from '../ui/Username';
+import { ProfileIdentityCard } from './ProfileIdentityCard';
 import { useSpaceStore, getApiForOrigin, resolveUserOrigin } from '../../stores/spaceStore';
 import { api } from '../../api/client';
 import { useUIStore } from '../../stores/uiStore';
-import { getAvatarGradient, adjustColor, mutedGradient } from '../../utils/gradients';
 import { parseFederatedUsername } from '../../utils/identity';
 import { useCanonicalUserView } from '../../utils/userViewLookup';
 import { loadFederatedMutuals } from '../../utils/mutuals';
+import { StaffBadge, NetrexChip } from './StaffBadge';
+import { SpotifyVinylBlock } from '../spotify/SpotifyVinylBlock';
 import { computeFloatingPosition, type AnchorRect, type Placement } from '../../hooks/useFloatingPosition';
 import { useLanguage } from '../../contexts/LanguageContext';
 
@@ -44,6 +43,10 @@ export function UserProfilePopout({ user: propUser, onClose, anchor, placement =
   const userApi = getApiForOrigin(origin);
 
   const [mutualCounts, setMutualCounts] = useState<{ friends: number; spaces: number } | null>(null);
+
+  // “Listening now” — one shared block for every profile surface, with the
+  // exact lookup the activity panel uses (same store, same key).
+  const spotifyLookupId = user.homeUserId ?? user.id;
 
   useEffect(() => {
     loadFederatedMutuals(user.id, user.homeUserId)
@@ -117,16 +120,13 @@ export function UserProfilePopout({ user: propUser, onClose, anchor, placement =
     handleViewFullProfile();
   };
 
-  // Banner display
+  // Banner source
   const bannerSrc = user.banner
     ? (user.banner.startsWith('http') || user.banner.startsWith('/') ? user.banner : userApi.uploads.url(user.banner))
     : null;
-  const bannerFallback = user.accentColor
-    ? mutedGradient(user.accentColor, adjustColor(user.accentColor, -40))
-    : (() => {
-        const g = getAvatarGradient(user.homeUserId ?? user.id, displayName, user.avatarColor);
-        return mutedGradient(g.from, g.to);
-      })();
+  const avatarSrc = user.avatar
+    ? (user.avatar.startsWith('http') || user.avatar.startsWith('/') ? user.avatar : userApi.uploads.url(user.avatar))
+    : null;
 
   // Parked off-screen for the one layout pass before the card knows how tall it
   // is; `useLayoutEffect` places it before the browser paints, so it never
@@ -137,118 +137,71 @@ export function UserProfilePopout({ user: propUser, onClose, anchor, placement =
     <div
       ref={cardRef}
       data-user-profile-popout
-      className="fixed z-[200] w-[340px] rounded-[12px] overflow-hidden animate-fade-in select-none glass-modal"
+      className="fixed z-[200] w-[340px] animate-fade-in"
       style={cardStyle}
     >
-      {/* Banner */}
-      <div
-        className="h-[80px] rounded-t-[12px]"
-        style={bannerSrc
-          ? { backgroundImage: `url(${bannerSrc})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-          : { background: bannerFallback }
-        }
-      />
-
-      {/* Body */}
-      <div className="px-4 pb-4 relative">
-        {/* Avatar */}
-        {/* The picture escalates to the full profile — the card is a preview, and
-            clicking the face is the obvious way to ask for the whole thing. It
-            deliberately does NOT reopen the card (see issue #37). */}
-        <Avatar
-          src={user.avatar}
-          name={displayName}
-          size={80}
-          status={user.status as 'online' | 'idle' | 'dnd' | 'offline' | null}
-          userId={user.homeUserId ?? user.id}
-          user={user}
-          onClick={handleAvatarClick}
-          ring={{ width: 4, color: 'rgba(20,20,26,0.85)' }}
-          className="mt-[-44px] mb-3"
-        />
-
-        {/* Name & info */}
-        <div>
-          <Username
-            username={user.displayName ?? baseName}
-            className="text-[16px] font-semibold leading-tight"
-          />
-          <div className="text-[13px] text-txt-tertiary">
-            <Username username={user.username} showAt className="text-[13px] text-txt-tertiary" />
-          </div>
-          {user.customStatus && (
-            <div className="text-[13px] text-txt-secondary italic mt-1">
-              {user.customStatus}
-            </div>
-          )}
-        </div>
-
-        {/* Bio */}
-        {user.bio && (
+      <ProfileIdentityCard
+        displayName={displayName}
+        username={baseName}
+        avatarSrc={avatarSrc}
+        bannerSrc={bannerSrc}
+        avatarColor={user.avatarColor}
+        accentColor={user.accentColor}
+        userId={user.homeUserId ?? user.id}
+        status={user.status as 'online' | 'idle' | 'dnd' | 'offline' | null}
+        customStatus={user.customStatus}
+        bio={user.bio}
+        nameSuffix={
           <>
-            <div className="border-t border-white/[0.06] my-3" />
-            <div>
-              <span className="text-[11px] uppercase tracking-wide font-semibold text-txt-tertiary">
-                {t('about_me')}
-              </span>
-              <div className="text-[13px] text-txt-secondary mt-1 whitespace-pre-wrap break-words leading-relaxed [&_strong]:font-semibold [&_strong]:text-txt-primary [&_em]:italic [&_a]:text-accent-primary [&_a]:underline">
-                <ReactMarkdown
-                  allowedElements={['p', 'strong', 'em', 'a', 'br']}
-                  unwrapDisallowed
-                  components={{
-                    a: ({ href, children }) => (
-                      <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
-                    ),
-                  }}
-                >
-                  {user.bio}
-                </ReactMarkdown>
+            {user.staffRole && <StaffBadge role={user.staffRole} />}
+            {user.netrexEnabled && <NetrexChip />}
+          </>
+        }
+        onAvatarClick={handleAvatarClick}
+        footer={
+          <>
+            {/* Spotify vinyl — only when the user is actually listening. */}
+            <SpotifyVinylBlock lookupUserId={spotifyLookupId} isSelf />
+
+
+            {/* Member since + Mutuals — hairline stat pills row */}
+            <div data-stagger="4" className="space-y-1.5">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="inline-flex items-center h-[22px] px-2 rounded-md bg-white/[0.04] border border-white/[0.06] text-[11px] font-medium text-txt-secondary">
+                  <span className="uppercase tracking-[0.1em] text-[10px] text-txt-tertiary mr-1.5">{t('member_since')}</span>
+                  {new Date(user.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                </span>
+                {mutualCounts && mutualCounts.friends > 0 && (
+                  <span className="inline-flex items-center h-[22px] px-2 rounded-md bg-white/[0.04] border border-white/[0.06] text-[11px] font-medium text-txt-secondary">
+                    {mutualCounts.friends === 1 ? t('mutual_friend') : t('mutual_friends').replace('{count}', String(mutualCounts.friends))}
+                  </span>
+                )}
+                {mutualCounts && mutualCounts.spaces > 0 && (
+                  <span className="inline-flex items-center h-[22px] px-2 rounded-md bg-white/[0.04] border border-white/[0.06] text-[11px] font-medium text-txt-secondary">
+                    {mutualCounts.spaces === 1 ? t('mutual_space') : t('mutual_spaces').replace('{count}', String(mutualCounts.spaces))}
+                  </span>
+                )}
               </div>
             </div>
-          </>
-        )}
 
-        <div className="border-t border-white/[0.06] my-3" />
-
-        {/* Member since + Mutuals */}
-        <div className="space-y-1.5">
-          <div>
-            <span className="text-[11px] uppercase tracking-wide font-semibold text-txt-tertiary">
-              {t('member_since')}
-            </span>
-            <span className="text-[12px] text-txt-secondary ml-2">
-              {new Date(user.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-            </span>
-          </div>
-          {mutualCounts && (mutualCounts.friends > 0 || mutualCounts.spaces > 0) && (
-            <div className="text-[12px] text-txt-tertiary">
-              {mutualCounts.friends > 0 && (
-                <span>{mutualCounts.friends} {mutualCounts.friends === 1 ? t('mutual_friend') : t('mutual_friends')}</span>
-              )}
-              {mutualCounts.friends > 0 && mutualCounts.spaces > 0 && (
-                <span className="mx-1">&middot;</span>
-              )}
-              {mutualCounts.spaces > 0 && (
-                <span>{mutualCounts.spaces} {mutualCounts.spaces === 1 ? t('mutual_space') : t('mutual_spaces')}</span>
-              )}
+            {/* Actions — luminous hover buttons */}
+            <div data-stagger="5">
+              <button
+                onClick={handleSendMessage}
+                className="w-full mt-3 py-2 rounded-lg text-[13px] font-medium text-txt-primary bg-white/[0.06] hover:bg-white/[0.10] border border-white/[0.08] dm-icon-btn transition-colors"
+              >
+                {t('send_message')}
+              </button>
+              <button
+                onClick={handleViewFullProfile}
+                className="w-full mt-1.5 py-2 rounded-lg text-[13px] font-medium text-txt-tertiary hover:text-txt-secondary bg-transparent hover:bg-white/[0.04] transition-colors"
+              >
+                {t('view_full_profile')}
+              </button>
             </div>
-          )}
-        </div>
-
-        {/* Actions */}
-        <button
-          onClick={handleSendMessage}
-          className="w-full mt-3 py-2 rounded-lg text-[13px] font-medium text-txt-primary bg-white/[0.06] hover:bg-white/[0.10] border border-white/[0.08] transition-colors"
-        >
-          {t('send_message')}
-        </button>
-        <button
-          onClick={handleViewFullProfile}
-          className="w-full mt-1.5 py-2 rounded-lg text-[13px] font-medium text-txt-tertiary hover:text-txt-secondary bg-transparent hover:bg-white/[0.04] transition-colors"
-        >
-          {t('view_full_profile')}
-        </button>
-      </div>
+          </>
+        }
+      />
     </div>
   );
 }

@@ -39,19 +39,12 @@ export function VoiceUser({ tile, large }: VoiceUserProps) {
 
   // --- VIDEO & UI ---
 
-  const activeVideoTrack = tile.videoTrack;
-  const hasVideo = activeVideoTrack !== null;
+  const remoteVideoTrack = !isLocal ? tile.videoTrack : null;
+  const hasVideo = remoteVideoTrack !== null || tile.lkVideoTrack !== null;
 
-  // Force re-render when tracks end/mute
-  useEffect(() => {
-    if (!tile.videoTrack) return;
-    const onEnded = () => forceUpdate((n) => n + 1);
-    tile.videoTrack.addEventListener('ended', onEnded);
-    return () => tile.videoTrack?.removeEventListener('ended', onEnded);
-  }, [tile.videoTrack]);
+  console.log(`[VOICE_USER_RENDER] id='${participant.identity}' isLocal=${isLocal} remoteVideoTrack?.id=${remoteVideoTrack?.id ?? 'null'} remoteVideoTrack?.readyState=${remoteVideoTrack?.readyState ?? 'null'} lkVideoTrack=${tile.lkVideoTrack ? 'set' : 'null'} hasVideo=${hasVideo} videoElMounted=${hasVideo} ts=${Date.now()}`);
 
-  // Attach Video — use LiveKit's track.attach() to register the element
-  // with the adaptive stream observer (enables SFU layer switching by viewport size)
+  // Attach Video — use LiveKit's track.attach() for adaptive streaming
   useEffect(() => {
     const videoEl = videoRef.current;
     if (!videoEl) return;
@@ -59,10 +52,18 @@ export function VoiceUser({ tile, large }: VoiceUserProps) {
     if (lkTrack) {
       lkTrack.attach(videoEl);
       return () => { lkTrack.detach(videoEl); };
+    } else if (!isLocal && remoteVideoTrack) {
+      // Remote participant — use remote video track from tile
+      const stream = new MediaStream([remoteVideoTrack]);
+      videoEl.srcObject = stream;
+      videoEl.play().catch(() => {});
+      return () => {
+        videoEl.srcObject = null;
+      };
     } else {
       videoEl.srcObject = null;
     }
-  }, [tile.lkVideoTrack]);
+  }, [isLocal, remoteVideoTrack, tile.lkVideoTrack]);
 
   // Context Menu
   const handleContextMenu = useCallback(

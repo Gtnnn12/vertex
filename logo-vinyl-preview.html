@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>VERTEX logo — vinyl mock</title>
+<style>
+  body { background:#111; font-family: system-ui, sans-serif; color:#ddd; display:flex; gap:48px; align-items:center; justify-content:center; height:100vh; margin:0; }
+  .vinyl { border-radius:9999px; position:relative; background:
+    repeating-radial-gradient(circle at center, rgba(0,0,0,0.4) 0 2px, rgba(255,255,255,0.035) 3px 4px), #0a0a0a;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), 0 4px 14px -6px rgba(0,0,0,0.8); }
+  .big { width:220px; height:220px; } .small { width:76px; height:76px; } .tiny { width:24px; height:24px; }
+  .label { position:absolute; inset:21%; border-radius:9999px; background:rgba(255,255,255,0.08);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; }
+  .label img { width:50%; height:50%; opacity:0.85; }
+  .center-hole { position:absolute; left:50%; top:50%; width:8%; height:8%; transform:translate(-50%,-50%);
+    border-radius:9999px; background:#0a0a0a; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.25); }
+  figure { text-align:center; margin:0; } figcaption { margin-top:10px; font-size:12px; color:#888; }
+</style>
+</head>
+<body>
+  <figure><div class="vinyl big"><div class="label"><img src="packages/web/public/icons/logo-mark.svg" alt=""></div><div class="center-hole"></div></div><figcaption>vinyl label — 220px disc</figcaption></figure>
+  <figure><div class="vinyl small"><div class="label"><img src="packages/web/public/icons/logo-mark.svg" alt=""></div><div class="center-hole"></div></div><figcaption>compact popout — 76px disc</figcaption></figure>
+  <figure><div class="vinyl tiny"><div class="label"><img src="packages/web/public/icons/logo-mark.svg" alt=""></div><div class="center-hole"></div></div><figcaption>24px stress test</figcaption></figure>
+</body>
+</html>

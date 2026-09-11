@@ -31,6 +31,7 @@ export function SpaceInviteCard({ payload, senderName }: Props) {
   useEffect(() => {
     let cancelled = false;
     const client = getApiForOrigin(payload.spaceInstanceOrigin);
+    if (!client) return;
     client.spaces.invitePreview(payload.inviteCode).then(
       (preview) => {
         if (cancelled) return;

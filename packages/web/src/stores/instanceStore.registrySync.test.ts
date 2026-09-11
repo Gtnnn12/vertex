@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 const getFederationRegistry = vi.fn();
-const putFederationRegistry = vi.fn(async () => ({ ok: true, updatedAt: 1 }));
-const ensurePeered = vi.fn(async () => ({ peeringStatus: 'active' }));
+const putFederationRegistry = vi.fn(async (data?: unknown) => ({ ok: true, updatedAt: 1 }));
+const ensurePeered = vi.fn(async (data?: unknown) => ({ peeringStatus: 'active' }));
 
 vi.mock('../api/client', () => ({
   api: {
@@ -105,7 +105,7 @@ describe('instanceStore registry sync gating', () => {
 
     expect(useInstanceStore.getState()._registrySyncReady).toBe(true);
     expect(putFederationRegistry).toHaveBeenCalledTimes(1);
-    const payload = putFederationRegistry.mock.calls[0]![0] as { registry: unknown[] };
+    const payload = putFederationRegistry.mock.calls[0]?.[0] as unknown as { registry: unknown[] };
     expect(payload.registry).toHaveLength(1);
   });
 

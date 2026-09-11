@@ -1,7 +1,7 @@
 # VERTEX Contributor License Agreement
 
 Thank you for your interest in contributing to VERTEX ("the Project"), owned
-and maintained by **Jannis Braun** ("the Maintainer", "I", "me", or "my").
+and maintained by **gtnn12** ("the Maintainer", "I", "me", or "my").
 
 This Contributor License Agreement ("Agreement") governs the intellectual
 property rights in Contributions made by any person or entity ("You") to the

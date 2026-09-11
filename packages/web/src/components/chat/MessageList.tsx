@@ -733,23 +733,25 @@ export function MessageList({ channelId, jumpToMessageId, onJumpComplete }: Mess
             return (
               <React.Fragment key={msg.id}>
                 {showDate && (
-                  <div className="flex items-center px-5 my-2 select-none pointer-events-none">
-                    <div className="flex-1 h-[1px] bg-border-hard" />
-                    <span className="px-[14px] text-[11px] font-bold text-txt-tertiary leading-tight">
+                  <div className="dm-date-in flex items-center px-5 my-4 select-none pointer-events-none">
+                    <div className="dm-date-rule" />
+                    <span className="px-[14px] text-[10px] font-semibold tracking-[0.1em] uppercase text-txt-tertiary leading-tight">
                       {formatDateDivider(msg.createdAt)}
                     </span>
-                    <div className="flex-1 h-[1px] bg-border-hard" />
+                    <div className="dm-date-rule" />
                   </div>
                 )}
                 {msg.type === 'system' ? (
                   <SystemMessage message={msg} dm={currentDm ?? null} />
                 ) : (
-                  <Message
-                    message={msg}
-                    isCompact={!isFirstInGroup}
-                    isFirstInGroup={isFirstInGroup}
-                    previousMessageId={realPrevId}
-                  />
+                  <div className="dm-msg-in">
+                    <Message
+                      message={msg}
+                      isCompact={!isFirstInGroup}
+                      isFirstInGroup={isFirstInGroup}
+                      previousMessageId={realPrevId}
+                    />
+                  </div>
                 )}
               </React.Fragment>
             );
@@ -840,48 +842,47 @@ function WelcomeHeader({ channelId }: { channelId: string }) {
       };
 
       return (
-        <div className="px-4 pt-8 pb-4">
-          <div className="mb-2">
-            <AvatarStack members={otherMembers} size={80} border="chat" iconUrl={dm.icon} />
+        <div className="px-5 pt-12 pb-4">
+          <div className="mb-5">
+            <AvatarStack members={otherMembers} size={64} border="chat" iconUrl={dm.icon} />
           </div>
-          <h3 className="text-[32px] leading-10 font-bold text-txt-primary mt-2">{groupName}</h3>
-          <p className="text-txt-secondary text-[14px] mt-1">
+          <h3 className="text-[26px] leading-9 font-semibold tracking-[-0.02em] text-txt-primary">{groupName}</h3>
+          <p className="text-[13.5px] text-txt-tertiary mt-2">
             {t('group_beginning_message')}
           </p>
-          <p className="text-xs text-txt-tertiary mt-1">
+          <p className="text-xs text-txt-tertiary mt-2">
             {t('owner')}:{' '}
             {ownerMember ? (
               <button
                 type="button"
                 onClick={handleOwnerClick}
-                className="font-bold text-txt-secondary hover:text-txt-primary hover:underline transition-colors"
+                className="font-semibold text-txt-secondary hover:text-txt-primary hover:underline transition-colors"
               >
                 @{ownerName}
               </button>
             ) : (
-              <strong>@{ownerName}</strong>
+              <strong className="font-semibold text-txt-secondary">@{ownerName}</strong>
             )}
           </p>
           {hasFederated && (
-            <p className="text-xs text-txt-tertiary mt-1">
+            <p className="text-xs text-txt-tertiary mt-2">
               {t('group_federation_notice')}
             </p>
           )}
-          <div className="mt-4 flex items-center gap-2">
+          <div className="mt-5 flex items-center gap-2">
             <button
               onClick={handleOpenSettings}
-              className="px-4 py-1.5 bg-accent-primary hover:bg-accent-primary/80 text-white text-[14px] font-medium rounded-[3px] transition-colors"
+              className="px-4 py-1.5 bg-accent-primary hover:bg-accent-primary-hover text-white text-[13px] font-semibold rounded-full transition-colors"
             >
               {t('open_group_settings')}
             </button>
             <button
               onClick={handleLeaveGroup}
-              className="px-4 py-1.5 bg-surface-elevated hover:bg-interactive-hover text-[14px] font-medium text-txt-primary rounded-[3px] transition-colors"
+              className="px-4 py-1.5 bg-white/[0.04] hover:bg-white/[0.07] text-[13px] font-medium text-txt-primary rounded-full transition-colors"
             >
               {t('leave_group')}
             </button>
           </div>
-          <div className="mt-6 border-b border-interactive-muted" />
         </div>
       );
     }
@@ -894,37 +895,36 @@ function WelcomeHeader({ channelId }: { channelId: string }) {
     const isFriend = otherUser ? friends.some(f => f.id === otherUser.id) : false;
 
     return (
-      <div className="px-4 pt-8 pb-4">
-        <div className="mb-2">
-          <ProfileAvatar src={otherUser?.avatar} name={displayName} size={80} user={otherUser ?? undefined} />
+      <div className="px-5 pt-12 pb-4">
+        <div className="mb-5">
+          <ProfileAvatar src={otherUser?.avatar} name={displayName} size={64} user={otherUser ?? undefined} />
         </div>
-        <h3 className="text-[32px] leading-10 font-bold text-txt-primary">{displayName}</h3>
-        <p className="text-txt-secondary text-[14px] mt-1">
-          {t('dm_history_beginning')} <strong>@{mentionName}</strong>.
+        <h3 className="text-[26px] leading-9 font-semibold tracking-[-0.02em] text-txt-primary">{displayName}</h3>
+        <p className="text-[13.5px] text-txt-tertiary mt-2">
+          {t('dm_history_beginning')} <span className="text-txt-secondary font-medium">@{mentionName}</span>.
         </p>
         {otherUser?.homeInstance && (
-          <p className="text-xs text-txt-tertiary mt-1">
+          <p className="text-xs text-txt-tertiary mt-2">
             {t('dm_federation_notice')}
           </p>
         )}
         {isFriend && otherUser && (
-          <div className="mt-4">
+          <div className="mt-5">
             <button
               onClick={() => removeFriend(otherUser.id)}
-              className="px-4 py-1.5 bg-surface-elevated hover:bg-surface-elevated text-[14px] font-medium text-txt-primary rounded-[3px] transition-colors"
+              className="px-4 py-1.5 bg-white/[0.04] hover:bg-white/[0.07] text-[13px] font-medium text-txt-primary rounded-full transition-colors"
             >
               {t('remove_friend')}
             </button>
           </div>
         )}
-        <div className="mt-6 border-b border-interactive-muted" />
       </div>
     );
   }
 
   return (
     <div className="px-4 pt-8 pb-4">
-      <div className="w-[68px] h-[68px] rounded-full bg-surface-elevated flex items-center justify-center mb-4 text-white">
+      <div className="w-[68px] h-[68px] rounded-full bg-surface-elevated flex items-center justify-center mb-4 text-txt-secondary">
         <svg width="42" height="42" viewBox="0 0 24 24" fill="currentColor">
           <path d="M5.88657 21C5.57547 21 5.3399 20.7189 5.39427 20.4126L6.00001 17H2.59511C2.28449 17 2.04905 16.7198 2.10259 16.4138L2.27759 15.4138C2.31946 15.1746 2.52722 15 2.77011 15H6.35001L7.41001 9H4.00511C3.69449 9 3.45905 8.71977 3.51259 8.41381L3.68759 7.41381C3.72946 7.17456 3.93722 7 4.18011 7H7.76001L8.39677 3.41262C8.43914 3.17391 8.64664 3 8.88907 3H9.87344C10.1845 3 10.4201 3.28107 10.3657 3.58738L9.76001 7H15.76L16.3968 3.41262C16.4391 3.17391 16.6466 3 16.8891 3H17.8734C18.1845 3 18.4201 3.28107 18.3657 3.58738L17.76 7H21.1649C21.4755 7 21.711 7.28023 21.6574 7.58619L21.4824 8.58619C21.4406 8.82544 21.2328 9 20.9899 9H17.41L16.35 15H19.7549C20.0655 15 20.301 15.2802 20.2474 15.5862L20.0724 16.5862C20.0306 16.8254 19.8228 17 19.5799 17H16L15.3632 20.5874C15.3209 20.8261 15.1134 21 14.8709 21H13.8866C13.5755 21 13.3399 20.7189 13.3943 20.4126L14 17H8.00001L7.36325 20.5874C7.32088 20.8261 7.11337 21 6.87094 21H5.88657ZM9.41001 9L8.35001 15H14.35L15.41 9H9.41001Z" />
         </svg>

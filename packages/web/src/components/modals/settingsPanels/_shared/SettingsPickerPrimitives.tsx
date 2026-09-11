@@ -1,17 +1,15 @@
 import type { ReactNode } from 'react';
+import { SettingsCard } from './SettingsCard';
 
 /**
  * Section wrapper used by audio/video picker subsections (AudioInputSection,
- * AudioOutputSection, …). Provides the small uppercase title above a soft
- * inset card. Settings-panel-internal — kept under `_shared/` rather than
+ * AudioOutputSection, …). Renders the shared premium settings card with a
+ * title only. Settings-panel-internal — kept under `_shared/` rather than
  * promoted to `ui/` because nothing outside settings panels needs this look.
  */
 export function SectionShell({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div>
-      <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">{title}</div>
-      <div className="rounded-lg bg-white/[0.03] border border-white/[0.04] p-3.5">{children}</div>
-    </div>
+    <SettingsCard title={title}>{children}</SettingsCard>
   );
 }
 
