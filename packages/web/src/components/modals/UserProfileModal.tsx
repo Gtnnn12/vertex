@@ -116,6 +116,10 @@ export function UserProfileModal() {
   const [loadingMutuals, setLoadingMutuals] = useState(false);
   const [friendActionLoading, setFriendActionLoading] = useState(false);
   const [profileAccent, setProfileAccent] = useState<string | null>(null);
+  // Last value actually persisted to the server. Lets the picker update local
+  // state freely while dragging (zero network) and commit exactly one PUT on
+  // release/blur — even if both pointerup and blur fire.
+  const savedAccentRef = useRef<string | null>(null);
 
   // “Listening now” — one shared block for every profile surface, with the
   // exact lookup the activity panel uses (same store, same key). Must be
@@ -139,6 +143,7 @@ export function UserProfileModal() {
       const u = await targetApi.users.get(id);
       setUser(u);
       setProfileAccent(u.profileAccent ?? null);
+      savedAccentRef.current = u.profileAccent ?? null;
       useSpaceStore.getState().upsertUserView(u, origin);
     } catch {
       // User not found
@@ -168,6 +173,7 @@ export function UserProfileModal() {
       if (passedUser) {
         setUser(passedUser);
         setProfileAccent(passedUser.profileAccent ?? null);
+        savedAccentRef.current = passedUser.profileAccent ?? null;
       } else {
         loadUser(userId, origin);
       }
@@ -183,6 +189,7 @@ export function UserProfileModal() {
       setMutualFriends([]);
       setMutualSpaces([]);
       setProfileAccent(null);
+      savedAccentRef.current = null;
     }
   }, [isOpen]);
 
@@ -204,19 +211,22 @@ export function UserProfileModal() {
   const { barRef, tabsWrapRef } = useSlidingIndicator(activeTab, loadingMutuals);
 
   // Persist the personal profile tint (self profile only). Optimistic: apply
-  // locally first, roll back on failure with a toast.
+  // locally first, roll back on failure with a toast. Skips the request when
+  // the value is already saved (dedupes pointerup + blur commits to one PUT).
   // Hook MUST run unconditionally — calling this after the early return below
   // changed the hook count between renders and crashed React.
   const handleProfileAccentChange = useCallback(async (hex: string | null) => {
-    const prev = profileAccent;
+    const prev = savedAccentRef.current;
     setProfileAccent(hex);
+    if (hex === prev) return;
     try {
       await api.users.update({ profileAccent: hex ?? '' });
+      savedAccentRef.current = hex;
     } catch (err) {
       setProfileAccent(prev);
       addToast((err as Error).message || 'Could not save profile color', 'warning');
     }
-  }, [profileAccent, addToast]);
+  }, [addToast]);
 
   if (!isOpen || !user) return null;
 
@@ -685,7 +695,13 @@ export function UserProfileModal() {
                   <input
                     type="color"
                     value={accent ?? '#7c6cff'}
-                    onChange={(e) => void handleProfileAccentChange(e.target.value)}
+                    // Drag: local state only — zero network, instant preview via
+                    // the existing --profile-accent CSS var.
+                    onChange={(e) => setProfileAccent(e.target.value)}
+                    // Commit: exactly one PUT on release (deduped with blur by
+                    // savedAccentRef inside handleProfileAccentChange).
+                    onPointerUp={(e) => void handleProfileAccentChange((e.target as HTMLInputElement).value)}
+                    onBlur={(e) => void handleProfileAccentChange(e.target.value)}
                     className="w-5 h-5 rounded cursor-pointer bg-transparent border border-white/[0.15] p-0.5"
                     aria-label="Profile color"
                   />
