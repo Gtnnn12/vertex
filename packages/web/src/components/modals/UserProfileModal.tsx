@@ -203,6 +203,21 @@ export function UserProfileModal() {
   const boardTabLabel = t('board_tab');
   const { barRef, tabsWrapRef } = useSlidingIndicator(activeTab, loadingMutuals);
 
+  // Persist the personal profile tint (self profile only). Optimistic: apply
+  // locally first, roll back on failure with a toast.
+  // Hook MUST run unconditionally — calling this after the early return below
+  // changed the hook count between renders and crashed React.
+  const handleProfileAccentChange = useCallback(async (hex: string | null) => {
+    const prev = profileAccent;
+    setProfileAccent(hex);
+    try {
+      await api.users.update({ profileAccent: hex ?? '' });
+    } catch (err) {
+      setProfileAccent(prev);
+      addToast((err as Error).message || 'Could not save profile color', 'warning');
+    }
+  }, [profileAccent, addToast]);
+
   if (!isOpen || !user) return null;
 
   const { baseName, domain } = parseFederatedUsername(user.username);
@@ -305,18 +320,6 @@ export function UserProfileModal() {
     navigate(`/channels/${spaceId}`);
   };
 
-  // Persist the personal profile tint (self profile only). Optimistic: apply
-  // locally first, roll back on failure with a toast.
-  const handleProfileAccentChange = useCallback(async (hex: string | null) => {
-    const prev = profileAccent;
-    setProfileAccent(hex);
-    try {
-      await api.users.update({ profileAccent: hex ?? '' });
-    } catch (err) {
-      setProfileAccent(prev);
-      addToast((err as Error).message || 'Could not save profile color', 'warning');
-    }
-  }, [profileAccent, addToast]);
 
   const tabs: { key: Tab; label: string; count?: number }[] = [
     { key: 'about', label: 'About' },
