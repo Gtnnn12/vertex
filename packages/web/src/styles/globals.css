@@ -2084,6 +2084,41 @@ body::after {
 }
 @keyframes match-card-blink { 50% { opacity: 0.2; } }
 
+/* CS2 score row — real numbers only (matchData). Arena tabular style. */
+.match-card-score {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+.match-card-score .n {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.match-card-score .n.you {
+  color: var(--mc-user-accent);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--mc-user-accent) 45%, transparent);
+}
+.match-card-score .n.them { color: rgb(236 232 225 / 0.45); }
+.match-card-score .sep { font-size: 14px; color: rgb(236 232 225 / 0.3); }
+.match-card-score .round {
+  margin-left: 6px;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mc-accent);
+}
+.match-card.is-compact .match-card-score .n { font-size: 16px; }
+.match-card.is-compact .match-card-score .round { font-size: 7px; }
+
+.light .match-card-score .n.them,
+.theme-light .match-card-score .n.them { color: rgb(18 22 28 / 0.4); }
+.light .match-card-score .sep,
+.theme-light .match-card-score .sep { color: rgb(18 22 28 / 0.3); }
+
 /* Spotify fine secondary line. */
 .match-card-song {
   position: relative;

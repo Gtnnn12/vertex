@@ -8,12 +8,13 @@ import type { Activity, ActivitySpotify } from '@backspace/shared';
  *
  * When the user's primary activity is a detected GAME, the widget renders
  * this card instead of the music box: game icon with breathing glow, big
- * game name, mode/map when the activity carries them (details/state —
- * NEVER invented), live match timer from `timestamps.start`, and the
- * Spotify track as a fine secondary line when music is playing at the
- * same time. Score and party rows only render with real data (there is
- * no score/party source yet, so they simply never render — honest
- * placeholders by omission).
+ * game name, and ONLY the data that actually arrived:
+ *  - Riot (VALORANT): 'ingame'/'menu' in `state`, "Mode · Map" in `details`.
+ *  - CS2: real map/score/round via `matchData` (GSI-style local source);
+ *    score row + round + map render only when those numbers exist.
+ *  - Bare process detection → "Jugando a <game>" / "En menú". Nothing invented.
+ *
+ * Per-game accent: cs2 → arena orange, valorant → coral (VERTEX palettes).
  *
  * Reduced motion: no entry animation, static glow, frozen timer.
  */
@@ -26,6 +27,12 @@ function formatElapsed(ms: number): string {
   if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
+
+/** Per-game accent colours (VERTEX-original palettes). */
+const GAME_ACCENTS: Record<string, string> = {
+  cs2: '#de9b35',      // arena orange
+  valorant: '#ff4655', // coral
+};
 
 export function MatchCard({
   game,
@@ -53,15 +60,19 @@ export function MatchCard({
     : null;
   const ingame = matchState === 'ingame';
 
+  // Real match data (map, scores, round) when a local game API provides it.
+  const matchData = game.matchData;
+  const hasScore = typeof matchData?.scoreYou === 'number' && typeof matchData?.scoreThem === 'number';
+
   // details = "Mode · Map" (real data only — the desktop never invents it).
   const rawDetails = game.details?.trim() ?? '';
   let mode = '';
-  let map = '';
+  let map = matchData?.map ?? '';
   if (rawDetails.includes('·')) {
     const [a, ...rest] = rawDetails.split('·');
     mode = a.trim();
-    map = rest.join('·').trim();
-  } else {
+    map = map || rest.join('·').trim();
+  } else if (!map) {
     mode = rawDetails;
   }
 
@@ -80,9 +91,9 @@ export function MatchCard({
     return () => clearInterval(id);
   }, [start, prefersReduced]);
 
-  // Game accent: coral default; activities may carry a per-game accent later
-  // via assets.smallText — not invented when absent.
-  const accent = '#ff4655';
+  // Game accent: per-game VERTEX palette; coral default.
+  const gameId = matchData?.gameId ?? '';
+  const accent = GAME_ACCENTS[gameId] ?? '#ff4655';
 
   return (
     <motion.div
@@ -99,9 +110,23 @@ export function MatchCard({
         <div className="match-card-icon" aria-hidden>
           <svg viewBox="0 0 96 96">
             <rect width="96" height="96" rx="18" className="mc-icon-bg" />
-            <polygon points="48,14 78,48 48,82 18,48" fill="none" className="mc-icon-frame" strokeWidth="3" />
-            <polygon points="48,30 66,48 48,66 30,48" className="mc-icon-fill" />
-            <polygon points="48,40 56,48 48,56 40,48" className="mc-icon-core" />
+            {gameId === 'cs2' ? (
+              // CS2 glyph: crosshair target — VERTEX original, no game logos.
+              <>
+                <circle cx="48" cy="48" r="26" fill="none" className="mc-icon-frame" strokeWidth="3" />
+                <circle cx="48" cy="48" r="10" className="mc-icon-fill" />
+                <rect x="45.5" y="12" width="5" height="16" className="mc-icon-core" />
+                <rect x="45.5" y="68" width="5" height="16" className="mc-icon-core" />
+                <rect x="12" y="45.5" width="16" height="5" className="mc-icon-core" />
+                <rect x="68" y="45.5" width="16" height="5" className="mc-icon-core" />
+              </>
+            ) : (
+              <>
+                <polygon points="48,14 78,48 48,82 18,48" fill="none" className="mc-icon-frame" strokeWidth="3" />
+                <polygon points="48,30 66,48 48,66 30,48" className="mc-icon-fill" />
+                <polygon points="48,40 56,48 48,56 40,48" className="mc-icon-core" />
+              </>
+            )}
           </svg>
         </div>
 
@@ -121,13 +146,23 @@ export function MatchCard({
           )}
 
           <div className="match-card-score-row">
-            {/* Score: only when real data exists (no source yet — never invented). */}
+            {/* CS2 score + round — ONLY when the real numbers arrived. */}
+            {hasScore && (
+              <div className="match-card-score" data-game={gameId}>
+                <span className="n you">{matchData!.scoreYou}</span>
+                <span className="sep">—</span>
+                <span className="n them">{matchData!.scoreThem}</span>
+                {typeof matchData!.round === 'number' && (
+                  <span className="round">{t('matchcard_round').replace('{n}', String(matchData!.round))}</span>
+                )}
+              </div>
+            )}
             <div className="match-card-timer">
               <span className="t">
                 {ingame && start && !prefersReduced && <span className="live-dot" aria-hidden />}
                 {ingame && start ? formatElapsed(elapsed) : ingame ? t('matchcard_in_progress') : t('matchcard_in_menu')}
               </span>
-              {ingame && !compact && <span className="cap">{t('matchcard_match_time')}</span>}
+              {ingame && !compact && !hasScore && <span className="cap">{t('matchcard_match_time')}</span>}
             </div>
           </div>
         </div>

@@ -6,7 +6,7 @@ import { connectionManager } from './handler.js';
 import type { VoiceRoom, DmRoomMeta, SpaceRoomMeta } from './handler.js';
 import { isMember, getChannelSpaceId, isDmMember, isDeadOneOnOne, hasPermission, computePermissions, PermissionBits } from '../utils/permissions.js';
 import { broadcastDmMessage, getDmMessageWithUser } from '../routes/dm.js';
-import { MAX_MESSAGE_LENGTH, type MessageWithUser, type Attachment, type DmMessageWithUser, type Embed, type Activity, type ActivityType, type ActivityTimestamps, type ActivityAssets, type ActivitySpotify, type ServerEvent, type DmCallUndeliverableFailure, type DmCallUndeliverableReason } from '@backspace/shared';
+import { MAX_MESSAGE_LENGTH, type MessageWithUser, type Attachment, type DmMessageWithUser, type Embed, type Activity, type ActivityType, type ActivityTimestamps, type ActivityAssets, type ActivitySpotify, type ActivityMatchData, type ServerEvent, type DmCallUndeliverableFailure, type DmCallUndeliverableReason } from '@backspace/shared';
 import type { CallRelayResult, CallFanoutFailure } from '../utils/federationOutbox.js';
 import { mapCallReasonToEventReason } from '../utils/federationOutbox.js';
 import { ACTIVITY_LIMITS } from '@backspace/shared/src/activities.js';
@@ -519,6 +519,23 @@ function validateActivities(raw: unknown): Activity[] | null {
         };
         activity.spotify = spotify;
       }
+    }
+
+    // Real match data for game activities (local game APIs / dev mocks).
+    // Strict sanitization: only finite non-negative small numbers and short
+    // strings survive — anything missing is simply absent (never defaulted).
+    if (obj.matchData && typeof obj.matchData === 'object') {
+      const m = obj.matchData as Record<string, unknown>;
+      const matchData: ActivityMatchData = {};
+      if (typeof m.gameId === 'string' && m.gameId.length > 0 && m.gameId.length <= 32) matchData.gameId = m.gameId;
+      if (typeof m.map === 'string' && m.map.length > 0 && m.map.length <= ACTIVITY_LIMITS.MAX_ASSET_TEXT_LENGTH) matchData.map = m.map.trim();
+      const scoreYou = m.scoreYou;
+      if (typeof scoreYou === 'number' && Number.isFinite(scoreYou) && scoreYou >= 0 && scoreYou <= 1024) matchData.scoreYou = Math.floor(scoreYou);
+      const scoreThem = m.scoreThem;
+      if (typeof scoreThem === 'number' && Number.isFinite(scoreThem) && scoreThem >= 0 && scoreThem <= 1024) matchData.scoreThem = Math.floor(scoreThem);
+      const round = m.round;
+      if (typeof round === 'number' && Number.isFinite(round) && round >= 0 && round <= 1024) matchData.round = Math.floor(round);
+      if (Object.keys(matchData).length > 0) activity.matchData = matchData;
     }
 
     validated.push(activity);
