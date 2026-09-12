@@ -1961,3 +1961,181 @@ body::after {
     transition: none;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   MATCH CARD — the "playing a game" state of the profile widget.
+   While a game is detected (Netrex), the widget shows the match card:
+   game icon with breathing glow, big game name, mode/map when real,
+   live timer, Spotify as a fine secondary line. Sober and pro.
+   ══════════════════════════════════════════════════════════════════ */
+.match-card {
+  --mc-accent: #ff4655;
+  --mc-user-accent: #35e0ff;
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid rgb(255 255 255 / 0.07);
+  background: #0a0e13;
+  text-align: left;
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.04) inset,
+    0 8px 24px -12px rgb(0 0 0 / 0.7);
+}
+.match-card-glow {
+  position: absolute;
+  inset: -32px;
+  pointer-events: none;
+  background: radial-gradient(circle at 14% 42%, var(--mc-accent) 0%, transparent 44%);
+  opacity: 0.14;
+  animation: match-card-breathe 5.5s ease-in-out infinite;
+}
+@keyframes match-card-breathe {
+  0%, 100% { opacity: 0.10; }
+  50% { opacity: 0.22; }
+}
+
+.match-card-body {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  padding: 13px 14px;
+  align-items: center;
+}
+
+/* Game icon article — VERTEX glyph, breathing glow ring. */
+.match-card-icon {
+  position: relative;
+  flex-shrink: 0;
+  width: 58px;
+  height: 58px;
+}
+.match-card-icon svg { width: 100%; height: 100%; display: block; }
+.match-card-icon .mc-icon-bg { fill: #10161d; }
+.match-card-icon .mc-icon-frame { stroke: var(--mc-accent); }
+.match-card-icon .mc-icon-fill { fill: var(--mc-accent); }
+.match-card-icon .mc-icon-core { fill: #ece8e1; }
+.match-card-icon::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  pointer-events: none;
+  box-shadow:
+    0 0 16px 2px color-mix(in srgb, var(--mc-accent) 34%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--mc-accent) 26%, transparent);
+  animation: match-card-breathe 5.5s ease-in-out infinite;
+}
+
+.match-card-main { flex: 1; min-width: 0; }
+.match-card-game {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  color: #ece8e1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.match-card-mode {
+  margin-top: 2px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgb(236 232 225 / 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.match-card-mode b { color: var(--mc-user-accent); font-weight: 700; }
+
+.match-card-score-row {
+  display: flex;
+  align-items: baseline;
+  margin-top: 8px;
+}
+.match-card-timer { margin-left: 0; text-align: left; font-family: var(--font-mono, ui-monospace, monospace); }
+.match-card-timer .t {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #ece8e1;
+  font-variant-numeric: tabular-nums;
+}
+.match-card-timer .cap {
+  display: block;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgb(236 232 225 / 0.35);
+  margin-top: 2px;
+}
+.match-card-timer .live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--mc-accent);
+  animation: match-card-blink 1.6s steps(1) infinite;
+}
+@keyframes match-card-blink { 50% { opacity: 0.2; } }
+
+/* Spotify fine secondary line. */
+.match-card-song {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border-top: 1px solid rgb(255 255 255 / 0.06);
+  font-size: 11px;
+  color: rgb(236 232 225 / 0.55);
+  white-space: nowrap;
+}
+.match-card-song .note { color: var(--mc-user-accent); flex-shrink: 0; font-size: 12px; }
+.match-card-song .name { overflow: hidden; text-overflow: ellipsis; }
+
+/* Compact variant (popout). */
+.match-card.is-compact .match-card-body { padding: 10px 11px; gap: 10px; }
+.match-card.is-compact .match-card-icon { width: 44px; height: 44px; }
+.match-card.is-compact .match-card-game { font-size: 14px; }
+.match-card.is-compact .match-card-mode { font-size: 9px; letter-spacing: 0.1em; }
+.match-card.is-compact .match-card-timer .t { font-size: 12px; }
+.match-card.is-compact .match-card-song { padding: 5px 11px; font-size: 9.5px; }
+
+/* Light theme: warm paper surface, same structure. */
+.light .match-card,
+.theme-light .match-card {
+  background: #f2efe9;
+  border-color: #d3cec2;
+  box-shadow: 0 8px 24px -14px rgb(0 0 0 / 0.25);
+}
+.light .match-card-game,
+.theme-light .match-card-game { color: #12161c; }
+.light .match-card-mode,
+.theme-light .match-card-mode { color: rgb(18 22 28 / 0.55); }
+.light .match-card-timer .t,
+.theme-light .match-card-timer .t { color: #12161c; }
+.light .match-card-timer .cap,
+.theme-light .match-card-timer .cap { color: rgb(18 22 28 / 0.4); }
+.light .match-card-icon .mc-icon-bg,
+.theme-light .match-card-icon .mc-icon-bg { fill: #e4e0d7; }
+.light .match-card-icon .mc-icon-core,
+.theme-light .match-card-icon .mc-icon-core { fill: #12161c; }
+.light .match-card-song,
+.theme-light .match-card-song {
+  border-top-color: #d3cec2;
+  color: rgb(18 22 28 / 0.55);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .match-card-glow,
+  .match-card-icon::after,
+  .match-card-timer .live-dot {
+    animation: none;
+  }
+}

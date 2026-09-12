@@ -1511,5 +1511,8 @@
   "music_style_prism_name": "Glass Prism",
   "music_style_prism_desc": "Glassmorphism with a blurred, saturated cover — perfect contrast.",
   "music_style_arcade_name": "Arcade Chiptune",
-  "music_style_arcade_desc": "Pixel-art CRT with scanlines and neon glow — free base style."
+  "music_style_arcade_desc": "Pixel-art CRT with scanlines and neon glow — free base style.",
+  "matchcard_in_progress": "Match in progress",
+  "matchcard_match_time": "Match time",
+  "matchcard_playing_now": "In game"
 }
