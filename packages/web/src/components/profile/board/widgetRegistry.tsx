@@ -25,19 +25,18 @@ export function WidgetCardShell({ icon, labelKey, children, accent }: WidgetShel
   return (
     <div
       tabIndex={0}
-      className="board-widget group/board min-w-0 rounded-xl border border-white/[0.07] bg-white/[0.03] p-3 outline-none transition-[transform,opacity,border-color,background-color] duration-200 hover:border-white/[0.12] hover:bg-white/[0.05] focus-visible:border-accent-primary/50 focus-visible:ring-1 focus-visible:ring-accent-primary/30"
+      className="board-widget group/board min-w-0 rounded-xl border border-white/[0.06] bg-transparent p-4 outline-none transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-white/[0.12] hover:shadow-[0_10px_28px_-14px_var(--profile-accent,rgb(var(--accent-primary)))66] focus-visible:border-accent-primary/50 focus-visible:ring-1 focus-visible:ring-accent-primary/30 motion-reduce:transition-none motion-reduce:hover:transform-none"
+      style={{ boxShadow: '0 0 0 0 transparent' }}
     >
-      <div className="mb-2 flex items-center gap-2">
+      <div className="mb-2.5 flex items-baseline gap-2">
+        <span className="text-[10px] text-txt-tertiary" aria-hidden>✦</span>
         <span
-          className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-txt-secondary"
-          style={accent ? { background: `${accent}1f`, color: accent } : { background: 'rgb(var(--accent-primary)/0.12)', color: 'rgb(var(--accent-primary))' }}
-          aria-hidden
+          className="truncate text-[10px] font-bold uppercase tracking-[0.18em] text-txt-tertiary"
+          style={accent ? { color: accent } : undefined}
         >
-          {icon}
-        </span>
-        <span className="truncate text-[10px] font-bold uppercase tracking-[0.14em] text-txt-tertiary">
           {t(labelKey)}
         </span>
+        <span className="sr-only">{icon}</span>
       </div>
       <div className="min-w-0">{children}</div>
     </div>
@@ -62,34 +61,47 @@ function useRealBadges(): string[] {
 }
 
 function FavoriteGameValue({ config }: RendererProps) {
-  const { t } = useLanguage();
   const title = typeof config.title === 'string' ? config.title : null;
   const description = typeof config.description === 'string' ? config.description : null;
   const cover = typeof config.coverUrl === 'string' ? config.coverUrl : null;
   if (!title && !cover) {
     return <EmptyValue textKey="board_empty_default" />;
   }
+  // Editorial two-column card: big cover (40%) with soft overlay + fluid
+  // text column (60%) with a display-serif title.
   return (
-    <div className="flex items-start gap-2.5">
+    <div className="flex items-stretch gap-3.5">
       {cover && (
-        <img
-          src={resolveUploadSrc(cover)}
-          alt=""
-          loading="lazy"
-          className="h-14 w-14 shrink-0 rounded-lg border border-white/[0.08] object-cover"
-        />
+        <div className="relative w-[40%] max-w-[132px] shrink-0 overflow-hidden rounded-lg">
+          <img
+            src={resolveUploadSrc(cover)}
+            alt=""
+            loading="lazy"
+            className="aspect-[3/4] h-full w-full object-cover"
+          />
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{ background: 'linear-gradient(180deg, transparent 55%, rgba(0,0,0,0.45) 100%)' }}
+            aria-hidden
+          />
+        </div>
       )}
-      <div className="min-w-0">
-        {title && <div className="truncate text-[13px] font-semibold text-txt-primary">{title}</div>}
+      <div className="flex min-w-0 flex-1 flex-col justify-center">
+        {title && (
+          <div
+            className="break-words text-[19px] font-semibold italic leading-tight"
+            style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
+          >
+            {title}
+          </div>
+        )}
         {description && (
-          <p className="mt-0.5 line-clamp-3 text-[12px] leading-snug text-txt-secondary">{description}</p>
+          <p className="mt-1.5 line-clamp-4 text-[12.5px] leading-relaxed text-txt-secondary">{description}</p>
         )}
         {!title && !description && <EmptyValue textKey="board_empty_default" />}
       </div>
     </div>
   );
-  // t referenced for i18n parity; labels come from the shell.
-  void t;
 }
 
 function NowSongValue({ lookupUserId, isSelf }: RendererProps) {
@@ -103,9 +115,14 @@ function QuoteValue({ config }: RendererProps) {
   if (!text) return <EmptyValue textKey="board_empty_quote" />;
   return (
     <blockquote className="min-w-0">
-      <p className="break-words text-[14px] font-medium italic leading-snug text-txt-primary">“{text}”</p>
+      <p
+        className="break-words text-[16px] font-medium italic leading-snug text-txt-primary"
+        style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
+      >
+        “{text}”
+      </p>
       {author && (
-        <footer className="mt-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-txt-tertiary">
+        <footer className="mt-2 text-[10px] font-bold uppercase tracking-[0.16em] text-txt-tertiary">
           — {author}
         </footer>
       )}
@@ -114,25 +131,19 @@ function QuoteValue({ config }: RendererProps) {
 }
 
 function MoodValue({ config }: RendererProps) {
-  const { t } = useLanguage();
   const text = typeof config.text === 'string' ? config.text : null;
   const emoji = typeof config.emoji === 'string' ? config.emoji : '✦';
   const color = typeof config.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(config.color) ? config.color : null;
   if (!text) return <EmptyValue textKey="board_empty_mood" />;
   return (
-    <div className="flex items-center gap-2.5">
-      <span
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border text-[18px] leading-none"
-        style={{
-          borderColor: color ? `${color}44` : 'rgba(255,255,255,0.08)',
-          background: color ? `${color}1a` : 'rgba(255,255,255,0.04)',
-        }}
-        aria-hidden
-      >
+    <div className="flex items-start gap-2.5">
+      <span className="mt-0.5 shrink-0 text-[14px] leading-none" style={color ? { color } : undefined} aria-hidden>
         {emoji}
       </span>
-      <span className="min-w-0 break-words text-[13px] text-txt-primary">{text}</span>
-      {void t}
+      <span className="min-w-0 break-words text-[14px] italic leading-snug text-txt-primary"
+        style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}>
+        {text}
+      </span>
     </div>
   );
 }
