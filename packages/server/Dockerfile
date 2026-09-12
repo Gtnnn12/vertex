@@ -33,7 +33,6 @@ ENV NODE_ENV=production \
     BACKUP_DISABLED=true
 
 EXPOSE 3005
-VOLUME /data
 
 WORKDIR /app/packages/server
 CMD ["node", "--import", "tsx/esm", "src/index.ts"]
