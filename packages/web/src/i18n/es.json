@@ -1517,5 +1517,7 @@
   "matchcard_playing_now": "En juego",
   "matchcard_playing": "Jugando a {game}",
   "matchcard_in_menu": "En menú",
-  "matchcard_round": "Ronda {n}"
+  "matchcard_round": "Ronda {n}",
+  "matchcard_agent_select": "Seleccionando agentes",
+  "matchcard_party": "Party de {n}"
 }

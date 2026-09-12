@@ -535,6 +535,8 @@ function validateActivities(raw: unknown): Activity[] | null {
       if (typeof scoreThem === 'number' && Number.isFinite(scoreThem) && scoreThem >= 0 && scoreThem <= 1024) matchData.scoreThem = Math.floor(scoreThem);
       const round = m.round;
       if (typeof round === 'number' && Number.isFinite(round) && round >= 0 && round <= 1024) matchData.round = Math.floor(round);
+      const partySize = m.partySize;
+      if (typeof partySize === 'number' && Number.isFinite(partySize) && partySize >= 1 && partySize <= 64) matchData.partySize = Math.floor(partySize);
       if (Object.keys(matchData).length > 0) activity.matchData = matchData;
     }
 
