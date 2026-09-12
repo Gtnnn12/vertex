@@ -1512,6 +1512,8 @@
   "music_style_prism_desc": "Glassmorphism with a blurred, saturated cover — perfect contrast.",
   "music_style_arcade_name": "Arcade Chiptune",
   "music_style_arcade_desc": "Pixel-art CRT with scanlines and neon glow — free base style.",
+  "music_style_kawaii_name": "Kawaii Dream",
+  "music_style_kawaii_desc": "Pastel clouds, floating hearts and a soft pink glow — tender and slow.",
   "matchcard_in_progress": "Match in progress",
   "matchcard_match_time": "Match time",
   "matchcard_playing_now": "In game",

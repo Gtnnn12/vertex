@@ -85,6 +85,7 @@ export function MusicDisc({
       {style === 'boombox' && <BoomboxVisual playing={playing} />}
       {style === 'glass-prism' && <PrismVisual spotify={spotify} />}
       {style === 'arcade' && <ArcadeVisual spotify={spotify} />}
+      {style === 'kawaii-dream' && <KawaiiVisual spotify={spotify} playing={playing} />}
       {(style === 'vinyl' || !style) && <VinylVisual spotify={spotify} playing={playing} />}
     </div>
   );
@@ -244,7 +245,7 @@ function PrismVisual({ spotify }: { spotify: ActivitySpotify }): React.ReactElem
   );
 }
 
-/* ── 8. ARCADE ────────────────────────────────────────────────────────────── */
+/* ── 8. ARCADE ─────────────────────────────────────────────────────────────── */
 function ArcadeVisual({ spotify }: { spotify: ActivitySpotify }): React.ReactElement {
   return (
     <div className="music-arcade music-arcade--premium" role="img" aria-label={spotify.albumName ?? spotify.song}>
@@ -253,6 +254,25 @@ function ArcadeVisual({ spotify }: { spotify: ActivitySpotify }): React.ReactEle
       </div>
       <span className="music-arcade-heart" aria-hidden />
       <span className="music-arcade-scanlines" aria-hidden />
+    </div>
+  );
+}
+
+/* ── 9. KAWAII DREAM — cloud frame + floating hearts/stars, pastel glow ───── */
+function KawaiiVisual({ spotify, playing }: { spotify: ActivitySpotify; playing: boolean }): React.ReactElement {
+  return (
+    <div className={`music-kawaii${playing ? ' is-playing' : ''}`} role="img" aria-label={spotify.albumName ?? spotify.song}>
+      {/* Floating charms — decorative, aria-hidden, transform/opacity only. */}
+      <span className="music-kawaii-heart h1" aria-hidden>♥</span>
+      <span className="music-kawaii-heart h2" aria-hidden>♥</span>
+      <span className="music-kawaii-star s1" aria-hidden>✦</span>
+      <span className="music-kawaii-star s2" aria-hidden>✧</span>
+      {/* Cloud-shaped cover frame (lace scallops live in CSS). */}
+      <div className="music-kawaii-cloud" aria-hidden>
+        <div className="music-kawaii-cover">
+          <CoverImg spotify={spotify} />
+        </div>
+      </div>
     </div>
   );
 }
