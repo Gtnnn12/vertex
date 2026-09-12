@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { app } from 'electron';
 import { getSpotifyEnrichment } from './spotifyDesktop';
+import { getRiotMatchInfo, type RiotMatchInfo } from './riotSession';
 
 // ─── Local Activity type (structural match with @backspace/shared Activity) ─
 
@@ -64,6 +65,15 @@ let onChangeCallback: ((activity: Activity | null) => void) | null = null;
  * 15s polls.
  */
 let enrichmentJobId = 0;
+
+/**
+ * Riot (VALORANT) enrichment state: last known real match info from the
+ * local lockfile API. Cached so the timer/state survives the 15s polls;
+ * cleared when the game exits.
+ */
+let riotInfo: RiotMatchInfo | null = null;
+/** Map/gameId → only VALORANT uses the Riot lockfile enrichment today. */
+const RIOT_ENRICHED_GAME_IDS = new Set(['valorant']);
 
 // ─── Dictionary loading ────────────────────────────────────────────────────
 
@@ -520,6 +530,7 @@ function poll(): void {
 
       if (matchedEntry.id !== currentGameId) {
         // New game detected (or game changed)
+        riotInfo = null; // stale from a previous game
         currentGameId = matchedEntry.id;
         currentActivity = {
           type: matchedEntry.type ?? 'playing',
@@ -528,14 +539,52 @@ function poll(): void {
         };
         activityKey = JSON.stringify(currentActivity);
         onChangeCallback?.(currentActivity);
+      } else if (RIOT_ENRICHED_GAME_IDS.has(matchedEntry.id)) {
+        // Same game still running — try the local Riot session for real
+        // match state. Async: emits on its own when the state changes.
+        const jobId = ++enrichmentJobId;
+        const gameEntry = matchedEntry;
+        void getRiotMatchInfo().then((info) => {
+          if (jobId !== enrichmentJobId) return; // a newer poll superseded this
+          const prevStateKey = riotInfo ? `${riotInfo.state}|${riotInfo.map ?? ''}|${riotInfo.mode ?? ''}` : '';
+          riotInfo = info;
+          const nextStateKey = info ? `${info.state}|${info.map ?? ''}|${info.mode ?? ''}` : '';
+          if (nextStateKey === prevStateKey) return; // nothing changed
+          if (!info) {
+            // No provable state (lockfile gone / client closed API): degrade to
+            // the bare process activity — honest, no invented data.
+            currentActivity = {
+              type: gameEntry.type ?? 'playing',
+              name: gameEntry.name,
+              timestamps: { start: currentActivity?.timestamps?.start ?? Date.now() },
+            };
+          } else {
+            // Real state: 'menu' | 'ingame' in state; map/mode ONLY when real.
+            // The match timer uses the activity start while ingame (the local
+            // API exposes no per-match start; app-launch start is the honest
+            // floor until a dedicated match timestamp exists).
+            currentActivity = {
+              type: gameEntry.type ?? 'playing',
+              name: gameEntry.name,
+              state: info.state,
+              ...(info.mode || info.map
+                ? { details: [info.mode, info.map].filter(Boolean).join(' · ') }
+                : {}),
+              timestamps: { start: currentActivity?.timestamps?.start ?? Date.now() },
+            };
+          }
+          activityKey = JSON.stringify(currentActivity);
+          onChangeCallback?.(currentActivity);
+        });
       }
-      // Same game still running — no change, skip IPC
+      // Same non-Riot game still running — no change, skip IPC
     } else {
       if (currentGameId !== null) {
         // Game exited
         currentGameId = null;
         currentActivity = null;
         activityKey = null;
+        riotInfo = null;
         onChangeCallback?.(null);
       }
       // No game was running before either — skip

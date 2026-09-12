@@ -42,33 +42,30 @@ export function MatchCard({
   const { t } = useLanguage();
   const prefersReduced = useReducedMotion();
 
-  // details = mode, state = map when the activity carries them. The activity
-  // pipeline may also pack "Mode · Map" into details — split on the middle
-  // dot in that case. Anything missing degrades to "Partida en curso".
-  const rawDetails = game.details?.trim() ?? '';
+  // HONESTY RULE: the process running only proves the game is open.
+  // Real match state comes from the enriched payload: the desktop pipeline
+  // puts 'ingame' | 'menu' in `state` (Riot lockfile local API) and packs the
+  // REAL mode/map as "Mode · Map" into `details`. Without that enrichment we
+  // only know the process runs → "Jugando a <game>", never a fake match.
   const rawState = game.state?.trim() ?? '';
-  let mode = rawDetails;
-  let map = rawState;
-  if (rawDetails.includes('·') && !rawState) {
+  const matchState = rawState === 'ingame' || rawState === 'menu'
+    ? rawState
+    : null;
+  const ingame = matchState === 'ingame';
+
+  // details = "Mode · Map" (real data only — the desktop never invents it).
+  const rawDetails = game.details?.trim() ?? '';
+  let mode = '';
+  let map = '';
+  if (rawDetails.includes('·')) {
     const [a, ...rest] = rawDetails.split('·');
     mode = a.trim();
     map = rest.join('·').trim();
-  } else if (rawDetails && !rawState) {
-    map = '';
+  } else {
+    mode = rawDetails;
   }
 
   const hasModeLine = Boolean(mode || map);
-
-  // HONESTY RULE: the process running only proves the game is open.
-  // A real match exists ONLY when the enriched payload says so:
-  //  - matchState === 'ingame' (lockfile/local API: real session), or
-  //  - a real match start timestamp distinct from the app launch, or
-  //  - real map/mode data arrived.
-  // Otherwise we are at best in a menu/lobby → "Jugando a <game>".
-  const matchState = game.state === 'ingame' || game.details === 'ingame' ? 'ingame'
-    : game.state === 'menu' || game.details === 'menu' ? 'menu'
-    : null;
-  const ingame = matchState === 'ingame';
 
   // Live match timer ONLY during a real match (from the real match start).
   const start = ingame ? game.timestamps?.start ?? 0 : 0;
