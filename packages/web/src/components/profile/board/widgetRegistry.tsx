@@ -3,6 +3,7 @@ import type { BoardWidget, BoardWidgetType, StaffRole } from '@backspace/shared'
 import { BOARD_FIELD_LIMITS, BOARD_WIDGET_TYPES } from '@backspace/shared';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { StaffBadge, NetrexChip } from '../../ui/StaffBadge';
+import { useAuthStore } from '../../../stores/authStore';
 import { SpotifyVinylBlock } from '../../spotify/SpotifyVinylBlock';
 import { resolveUploadSrc } from './boardUtils';
 
@@ -46,6 +47,19 @@ export function WidgetCardShell({ icon, labelKey, children, accent }: WidgetShel
 // ─── Value renderers (one per type — paint the value, nothing else) ─────────
 
 type RendererProps = { config: Record<string, unknown>; lookupUserId: string; isSelf: boolean };
+
+/**
+ * The viewer's own real badges (session user): staffRole + Netrex. Used by
+ * the badges widget — staff roles can never be hand-picked in the editor.
+ */
+function useRealBadges(): string[] {
+  const staffRole = useAuthStore((s) => s.user?.staffRole ?? null);
+  const netrexEnabled = useAuthStore((s) => s.user?.netrexEnabled ?? false);
+  const badges: string[] = [];
+  if (staffRole) badges.push(staffRole);
+  if (netrexEnabled) badges.push('netrex');
+  return badges.slice(0, BOARD_FIELD_LIMITS.maxBadges);
+}
 
 function FavoriteGameValue({ config }: RendererProps) {
   const { t } = useLanguage();
@@ -148,17 +162,22 @@ function SocialLinksValue({ config }: RendererProps) {
 }
 
 function BadgesValue({ config }: RendererProps) {
-  const badges = Array.isArray(config.badges) ? (config.badges as string[]) : [];
-  if (badges.length === 0) return <EmptyValue textKey="board_empty_badges" />;
+  // SECURITY: badges are never taken from config — they are derived from the
+  // signed-in user's REAL entitlements (auth store). A viewer's board always
+  // shows that board owner's own real badges via lookupUserId; self-edit
+  // derives from the session user. The server strips fake badges on save.
+  const realBadges = useRealBadges();
+  if (realBadges.length === 0) return <EmptyValue textKey="board_empty_badges" />;
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      {badges.map((b) =>
+      {realBadges.map((b) =>
         b === 'netrex'
           ? <NetrexChip key={b} showLabel />
           : <StaffBadge key={b} role={b as StaffRole} showLabel />,
       )}
     </div>
   );
+  void config;
 }
 
 function GoalValue({ config }: RendererProps) {

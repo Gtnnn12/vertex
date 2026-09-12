@@ -4,7 +4,7 @@ import { getDb, schema } from '../db/index.js';
 import { authenticate, verifyPassword, hashPassword, signJwt } from '../utils/auth.js';
 import { connectionManager } from '../ws/handler.js';
 import type { UpdateUserRequest, VerifyPasswordRequest, VerifyPasswordResponse, ChangePasswordRequest, ChangePasswordResponse, DeleteAccountRequest, ReplicatedInstance, SpaceLayoutItem, SpaceFolder, Activity, FederationIdentityDeleteRequest, FederationIdentityDeleteResponse, FederationIdentityDeleteResult, FederationProfileUpdatePayload, MusicWidgetStyle, BoardWidget, UpdateBoardRequest, UpdateBoardResponse } from '@backspace/shared';
-import { AVATAR_COLORS, MUSIC_WIDGET_STYLES, MUSIC_WIDGET_FREE_STYLES, BOARD_WIDGET_TYPES, MAX_BOARD_WIDGETS, BOARD_FIELD_LIMITS } from '@backspace/shared';
+import { AVATAR_COLORS, MUSIC_WIDGET_STYLES, MUSIC_WIDGET_FREE_STYLES, BOARD_WIDGET_TYPES, MAX_BOARD_WIDGETS, BOARD_FIELD_LIMITS, STAFF_ROLES } from '@backspace/shared';
 import { sanitizeUser } from '../utils/sanitize.js';
 import { deleteUploadFile, deleteAttachmentByFilename } from '../utils/fileCleanup.js';
 import { tombstoneUser, collectDeletionBroadcastTargets, collectProfileBroadcastTargetIds } from '../utils/userDeletion.js';
@@ -86,7 +86,11 @@ function isHexColor(value: unknown): boolean {
  * individually dropped when invalid — a widget with an empty config after
  * cleaning is still accepted (the renderer shows its empty state).
  */
-function sanitizeBoardWidgetConfig(type: string, raw: Record<string, unknown>): Record<string, unknown> | null {
+function sanitizeBoardWidgetConfig(
+  type: string,
+  raw: Record<string, unknown>,
+  ownerRow?: typeof schema.users.$inferSelect | null,
+): Record<string, unknown> | null {
   const L = BOARD_FIELD_LIMITS;
   switch (type) {
     case 'favorite-game': {
@@ -130,12 +134,14 @@ function sanitizeBoardWidgetConfig(type: string, raw: Record<string, unknown>): 
       return { links };
     }
     case 'badges': {
-      if (!Array.isArray(raw.badges)) return { badges: [] };
-      const VALID = new Set(['owner', 'administrator', 'developer', 'senior_moderator', 'moderator', 'support', 'netrex']);
-      const badges = raw.badges
-        .filter((b): b is string => typeof b === 'string' && VALID.has(b))
-        .slice(0, L.maxBadges);
-      return { badges: [...new Set(badges)] };
+      // SECURITY: the client never chooses badges. The stored list is ALWAYS
+      // recomputed from the saving user's REAL entitlements — any badge in
+      // the payload the user does not hold is silently dropped.
+      const realBadges: string[] = [];
+      const role = ownerRow?.staffRole;
+      if (typeof role === 'string' && (STAFF_ROLES as readonly string[]).includes(role)) realBadges.push(role);
+      if (ownerRow && computeNetrexEntitlement(ownerRow)) realBadges.push('netrex');
+      return { badges: realBadges.slice(0, L.maxBadges) };
     }
     case 'goal': {
       const cfg: Record<string, unknown> = {};
@@ -190,7 +196,7 @@ function sanitizeBoardWidgetConfig(type: string, raw: Record<string, unknown>): 
  * MAX_BOARD_WIDGETS rather than rejected (matches the music-style gate's
  * "agree on the stored value" philosophy).
  */
-export function sanitizeBoardPayload(widgets: unknown): BoardWidget[] | null {
+export function sanitizeBoardPayload(widgets: unknown, ownerRow?: typeof schema.users.$inferSelect | null): BoardWidget[] | null {
   if (!Array.isArray(widgets)) return null;
   const seenIds = new Set<string>();
   const out: BoardWidget[] = [];
@@ -201,7 +207,7 @@ export function sanitizeBoardPayload(widgets: unknown): BoardWidget[] | null {
     if (!BOARD_TYPE_SET.has(w.type as string) || typeof w.type !== 'string') continue;
     if (seenIds.has(w.id)) continue;
     seenIds.add(w.id);
-    const config = sanitizeBoardWidgetConfig(w.type, (w.config && typeof w.config === 'object' ? w.config : {}) as Record<string, unknown>);
+    const config = sanitizeBoardWidgetConfig(w.type, (w.config && typeof w.config === 'object' ? w.config : {}) as Record<string, unknown>, ownerRow);
     if (config === null) continue;
     out.push({ id: w.id, type: w.type as BoardWidget['type'], visible: w.visible !== false, config });
   }
@@ -789,7 +795,7 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
     if (!computeNetrexEntitlement(user)) {
       return reply.code(403).send({ error: 'Netrex entitlement required', statusCode: 403 });
     }
-    const widgets = sanitizeBoardPayload(request.body?.widgets);
+    const widgets = sanitizeBoardPayload(request.body?.widgets, user);
     if (widgets === null) {
       return reply.code(400).send({ error: 'widgets must be an array', statusCode: 400 });
     }
