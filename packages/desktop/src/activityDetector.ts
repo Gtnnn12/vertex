@@ -32,6 +32,7 @@ interface Activity {
     scoreYou?: number;
     scoreThem?: number;
     round?: number;
+    partySize?: number;
   };
 }
 
@@ -623,9 +624,11 @@ function poll(): void {
         const gameEntry = matchedEntry;
         void getRiotMatchInfo().then((info) => {
           if (jobId !== enrichmentJobId) return; // a newer poll superseded this
-          const prevStateKey = riotInfo ? `${riotInfo.state}|${riotInfo.map ?? ''}|${riotInfo.mode ?? ''}` : '';
+          const stateKey = (i: RiotMatchInfo | null) =>
+            i ? `${i.state}|${i.map ?? ''}|${i.mode ?? ''}|${i.scoreYou ?? ''}|${i.scoreThem ?? ''}|${i.partySize ?? ''}` : '';
+          const prevStateKey = stateKey(riotInfo);
           riotInfo = info;
-          const nextStateKey = info ? `${info.state}|${info.map ?? ''}|${info.mode ?? ''}` : '';
+          const nextStateKey = stateKey(info);
           if (nextStateKey === prevStateKey) return; // nothing changed
           if (!info) {
             // No provable state (lockfile gone / client closed API): degrade to
@@ -636,10 +639,19 @@ function poll(): void {
               timestamps: { start: currentActivity?.timestamps?.start ?? Date.now() },
             };
           } else {
-            // Real state: 'menu' | 'ingame' in state; map/mode ONLY when real.
-            // The match timer uses the activity start while ingame (the local
-            // API exposes no per-match start; app-launch start is the honest
-            // floor until a dedicated match timestamp exists).
+            // Real state: 'menu' | 'agents' | 'ingame' in state; everything
+            // else (map/mode/score/party) ONLY when the presence delivered it.
+            const realMatchData: Activity['matchData'] | undefined =
+              info.map || info.mode || info.scoreYou !== undefined || info.partySize !== undefined
+                ? {
+                    gameId: gameEntry.id,
+                    ...(info.map ? { map: info.map } : {}),
+                    ...(info.scoreYou !== undefined && info.scoreThem !== undefined
+                      ? { scoreYou: info.scoreYou, scoreThem: info.scoreThem }
+                      : {}),
+                    ...(info.partySize ? { partySize: info.partySize } : {}),
+                  }
+                : undefined;
             currentActivity = {
               type: gameEntry.type ?? 'playing',
               name: gameEntry.name,
@@ -647,6 +659,7 @@ function poll(): void {
               ...(info.mode || info.map
                 ? { details: [info.mode, info.map].filter(Boolean).join(' · ') }
                 : {}),
+              ...(realMatchData ? { matchData: realMatchData } : {}),
               timestamps: { start: currentActivity?.timestamps?.start ?? Date.now() },
             };
           }

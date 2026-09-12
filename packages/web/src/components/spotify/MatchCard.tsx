@@ -38,8 +38,10 @@ const GAME_ACCENTS: Record<string, string> = {
 /** Shared hooks/values for both card variants. */
 function useMatchCardState(game: Activity, prefersReduced: boolean | null) {
   // HONESTY RULE: the process running only proves the game is open.
+  // Real states from the local Riot API: 'ingame' | 'agents' | 'menu'.
   const rawState = game.state?.trim() ?? '';
   const ingame = rawState === 'ingame';
+  const inAgents = rawState === 'agents';
 
   // Real match data (map, scores, round) when a local game API provides it.
   const matchData = game.matchData;
@@ -70,7 +72,7 @@ function useMatchCardState(game: Activity, prefersReduced: boolean | null) {
     return () => clearInterval(id);
   }, [start, prefersReduced]);
 
-  return { ingame, matchData, hasScore, mode, map, start, elapsed };
+  return { ingame, inAgents, matchData, hasScore, mode, map, start, elapsed };
 }
 
 /* ── CS2 RADAR ─────────────────────────────────────────────────────────── */
@@ -87,7 +89,7 @@ function Cs2RadarCard({
   prefersReduced: boolean | null;
 }) {
   const { t } = useLanguage();
-  const { ingame, matchData, hasScore, mode, map, start, elapsed } = useMatchCardState(game, prefersReduced);
+  const { ingame, inAgents, matchData, hasScore, mode, map, start, elapsed } = useMatchCardState(game, prefersReduced);
 
   return (
     <motion.div
@@ -95,6 +97,7 @@ function Cs2RadarCard({
       animate={prefersReduced ? { opacity: 1 } : { opacity: 1, y: 0 }}
       transition={{ type: 'spring', stiffness: 260, damping: 24 }}
       className={`match-card radar-card${compact ? ' is-compact' : ''}${ingame ? '' : ' standby'}`}
+      data-variant={game.matchData?.gameId || 'cs2'}
       style={{ '--mc-accent': '#e8963c', '--mc-user-accent': 'var(--user-accent, #35e0ff)' } as React.CSSProperties}
     >
       <div className="radar-wrap">
@@ -102,8 +105,8 @@ function Cs2RadarCard({
           <p className="radar-game" title={game.name}>{game.name}</p>
 
           {/* Map — only when real (hidden in lobby: name already above). */}
-          {ingame && map && <p className="radar-map">{map}</p>}
-          {ingame && mode && <p className="radar-mode">{mode}</p>}
+          {(ingame || inAgents) && map && <p className="radar-map">{map}</p>}
+          {(ingame || inAgents) && mode && <p className="radar-mode">{mode}</p>}
 
           {/* Score — ONLY when the real numbers arrived. */}
           {hasScore ? (
@@ -120,7 +123,8 @@ function Cs2RadarCard({
             </div>
           ) : (
             <div className="radar-status">
-              {ingame ? t('matchcard_in_progress') : (
+              {inAgents ? t('matchcard_agent_select')
+                : ingame ? t('matchcard_in_progress') : (
                 <>
                   {t('matchcard_playing').replace('{game}', game.name)}
                   <span className="sep-dot"> · </span>
@@ -128,6 +132,11 @@ function Cs2RadarCard({
                 </>
               )}
             </div>
+          )}
+
+          {/* Real party size — only when the presence delivered it. */}
+          {typeof matchData?.partySize === 'number' && matchData.partySize > 1 && (
+            <p className="radar-party">{t('matchcard_party').replace('{n}', String(matchData.partySize))}</p>
           )}
 
           {/* Live clock — own hairline row, only during a real match. */}
@@ -187,7 +196,7 @@ function DefaultMatchCard({
   gameId: string;
 }) {
   const { t } = useLanguage();
-  const { ingame, matchData, hasScore, mode, map, start, elapsed } = useMatchCardState(game, prefersReduced);
+  const { ingame, inAgents, matchData, hasScore, mode, map, start, elapsed } = useMatchCardState(game, prefersReduced);
   const hasModeLine = Boolean(mode || map);
 
   return (

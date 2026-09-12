@@ -486,6 +486,8 @@ export interface ActivityMatchData {
   scoreThem?: number;
   /** Current round number. */
   round?: number;
+  /** Real party size (local player included). */
+  partySize?: number;
 }
 
 /** Spotify “listening now” payload carried by a spotify-type activity. */
