@@ -24,6 +24,7 @@ export function ensureDefaults(db: Database.Database): void {
   ensureColumn('users', 'netrex_enabled', 'netrex_enabled INTEGER DEFAULT 0');
   ensureColumn('users', 'netrex_expires_at', 'netrex_expires_at INTEGER');
   ensureColumn('users', 'profile_board', 'profile_board TEXT');
+  ensureColumn('users', 'profile_accent', 'profile_accent TEXT');
   ensureColumn('users', 'staff_role', 'staff_role TEXT');
   ensureColumn('users', 'last_seen_at', 'last_seen_at INTEGER');
   ensureColumn('users', 'banned_until', 'banned_until INTEGER');

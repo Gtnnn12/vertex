@@ -67,6 +67,7 @@ export function sanitizeUser(row: typeof schema.users.$inferSelect, isSelf = fal
     ...(isSelf ? { showActivity: false } : {}),
     musicWidgetStyle: 'vinyl',
     profileBoard: [],
+    profileAccent: null,
   };
   }
 
@@ -120,5 +121,7 @@ export function sanitizeUser(row: typeof schema.users.$inferSelect, isSelf = fal
     // Profile board (Tablero). Visible to EVERYONE — it's the Netrex
     // showcase; only EDITING is entitlement-gated (server-side, on save).
     profileBoard: sanitizeBoard(row.profileBoard),
+    // Personal profile tint. Stored value is hex-validated at write time.
+    profileAccent: row.profileAccent ?? null,
   };
 }
