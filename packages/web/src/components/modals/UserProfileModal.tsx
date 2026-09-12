@@ -222,12 +222,24 @@ export function UserProfileModal() {
     try {
       await api.users.update({ profileAccent: hex ?? '' });
       addToast('Personalización guardada', 'success');
+      // Persistence: patch EVERY cache the modal / popout can re-read from.
+      // On reopen with a passedUser snapshot the modal never re-fetches, so
+      // each store must carry the new accent (same pattern as the board's
+      // onBoardSaved optimistic update).
+      setUser((prev) => (prev ? { ...prev, profileAccent: hex } : prev));
+      const selfUser = useAuthStore.getState().user;
+      if (user && selfUser && (user.id === selfUser.id || (user.homeUserId && user.homeUserId === (selfUser.homeUserId ?? selfUser.id)))) {
+        useAuthStore.getState().setUser({ ...selfUser, profileAccent: hex });
+      }
+      if (user) {
+        useSpaceStore.getState().upsertUserView({ ...user, profileAccent: hex }, userOrigin);
+      }
     } catch (err) {
       setProfileAccent(prev);
       fx.ref.current?.style.setProperty('--profile-accent', prev ?? '');
       addToast((err as Error).message || 'Could not save profile color', 'warning');
     }
-  }, [profileAccent, addToast, fx.ref]);
+  }, [profileAccent, addToast, fx.ref, user, userOrigin]);
 
   if (!isOpen || !user) return null;
 
