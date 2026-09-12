@@ -471,6 +471,23 @@ export interface ActivityAssets {
   smallText?: string;
 }
 
+/**
+ * Real match data for game activities (local APIs / GSI-style sources).
+ * Every field is OPTIONAL — render only what actually arrived, never invent.
+ */
+export interface ActivityMatchData {
+  /** Stable game id for per-game rendering (e.g. 'cs2', 'valorant'). */
+  gameId?: string;
+  /** Real map name (e.g. "Dust II", "Split"). */
+  map?: string;
+  /** Local team's round score. */
+  scoreYou?: number;
+  /** Opponent's round score. */
+  scoreThem?: number;
+  /** Current round number. */
+  round?: number;
+}
+
 /** Spotify “listening now” payload carried by a spotify-type activity. */
 export interface ActivitySpotify {
   song: string;
@@ -493,6 +510,8 @@ export interface Activity {
   assets?: ActivityAssets;
   url?: string;
   spotify?: ActivitySpotify;
+  /** Real match data when a local game API provides it (honest or absent). */
+  matchData?: ActivityMatchData;
 }
 
 // ─── WebSocket Event Types ──────────────────────────────────────────────────

@@ -1516,5 +1516,6 @@
   "matchcard_match_time": "Match time",
   "matchcard_playing_now": "In game",
   "matchcard_playing": "Playing {game}",
-  "matchcard_in_menu": "In menu"
+  "matchcard_in_menu": "In menu",
+  "matchcard_round": "Round {n}"
 }
