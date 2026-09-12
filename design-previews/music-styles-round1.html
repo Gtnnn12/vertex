@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>VERTEX · Rediseño musical — Ronda 1: Pixel Core & Comic Dash</title>
+<style>
+  /* ══════════════════════════════════════════════════════════════════
+     ART-FIRST PREVIEW — standalone, sin dependencias.
+     Ronda 1: PIXEL CORE (Game Boy) y COMIC DASH (cómic original).
+     3 tamaños: mini (footer de popout) · widget (perfil) · grande (Hub).
+     Dark + Light en panel separado. Datos reales: portada/canción/artista.
+     Los dos estilos comparten DATOS pero comparten CERO ADN visual.
+     ══════════════════════════════════════════════════════════════════ */
+
+  :root {
+    --page: #131318;
+    --page-ink: #c9c9d4;
+    --panel-dark: #1b1b21;
+    --panel-light: #e9e7e2;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--page);
+    color: var(--page-ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 32px 20px 80px;
+  }
+  h1 { font-size: 20px; color: #fff; letter-spacing: .01em; }
+  h1 small { display:block; font-weight: 500; font-size: 12.5px; color: #8b8b98; margin-top: 6px; letter-spacing: .02em;}
+  .note {
+    margin: 14px 0 0; font-size: 12.5px; line-height: 1.6; color: #8b8b98; max-width: 860px;
+  }
+  .section { margin-top: 44px; }
+  .section > h2 {
+    font-size: 15px; color: #fff; margin-bottom: 4px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section > h2 .chip { font-size: 10px; font-weight: 700; letter-spacing: .12em; padding: 3px 8px; border-radius: 4px; }
+  .section > p.sub { font-size: 12.5px; color: #8b8b98; margin-bottom: 18px; max-width: 760px; line-height: 1.6; }
+
+  /* Theme panels: contenedores que simulan dark/light de la app */
+  .theme-panel { border-radius: 14px; padding: 22px 20px 18px; margin-top: 14px; }
+  .theme-panel > .tag {
+    font-size: 10px; font-weight: 800; letter-spacing: .16em; margin-bottom: 14px; display:block;
+  }
+  .theme-dark  { background: var(--panel-dark); border: 1px solid #2a2a33; }
+  .theme-dark  > .tag { color: #6f6f7c; }
+  .theme-light { background: var(--panel-light); border: 1px solid #d5d2cb; }
+  .theme-light > .tag { color: #8a867d; }
+
+  .row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 18px;
+    align-items: start;
+  }
+  .cell { min-width: 0; }
+  .cell > .size-tag {
+    display: block; font-size: 10.5px; font-weight: 600; letter-spacing: .08em;
+    margin-bottom: 8px; text-transform: uppercase;
+  }
+  .theme-dark  .cell > .size-tag { color: #62626e; }
+  .theme-light .cell > .size-tag { color: #8a867d; }
+
+  /* Datos de muestra idénticos para los 4 cuadrantes */
+  .sample-data { display:none; }
+
+  /* ══════════════════════════════════════════════════════════════════
+     PIXEL CORE — identidad: consola retro · LCD Game Boy · scanlines
+     Paleta propia (4 tonos GB): #0f380f #306230 #8bac0f #9bbc0f
+     ══════════════════════════════════════════════════════════════════ */
+  .pixel {
+    /* vars por tamaño (mini por defecto) */
+    --cover: 44px;
+    --pad: 10px;
+    --title: 12px;
+    --meta: 9.5px;
+    --gap: 8px;
+
+    font-family: ui-monospace, "Cascadia Mono", "Consolas", "Courier New", monospace;
+    background: #2d3a2d;                    /* plástico verde oliva */
+    border: 3px solid #0f380f;              /* marco inyectado */
+    border-radius: 10px;
+    box-shadow: inset 0 2px 0 rgba(155,188,15,.25), 0 3px 0 #0b2b0b, 0 8px 18px -8px rgba(0,0,0,.7);
+    padding: var(--pad);
+    color: #0f380f;
+    max-width: 100%;
+  }
+  .pixel.size-widget { --cover: 64px; --pad: 12px; --title: 13px; --meta: 10.5px; --gap: 10px; }
+  .pixel.size-large  { --cover: 104px; --pad: 16px; --title: 16px; --meta: 11.5px; --gap: 12px; border-radius: 14px; }
+
+  /* Barra superior tipo HUD */
+  .px-topbar {
+    display: flex; align-items: center; gap: 6px;
+    font-size: calc(var(--meta) - 1px);
+    font-weight: 800; letter-spacing: .14em; text-transform: uppercase;
+    color: #9bbc0f;
+    margin-bottom: 8px;
+  }
+  .theme-light .pixel { background: #3a4a3a; box-shadow: inset 0 2px 0 rgba(155,188,15,.3), 0 3px 0 #0b2b0b, 0 8px 18px -10px rgba(0,0,0,.45); }
+  .px-play { color: #cada69; animation: px-blink 1.1s steps(2, start) infinite; }
+  @keyframes px-blink { 50% { opacity: 0; } }
+  .px-topbar .px-grow { flex: 1; }
+  /* batería pixel: contorno + 2 celdas */
+  .px-batt { display: inline-flex; align-items: center; gap: 1px; padding: 2px; border: 1.5px solid #9bbc0f; border-radius: 1px; position: relative; }
+  .px-batt::after { content:""; position:absolute; right:-4px; top:50%; transform: translateY(-50%); width: 2px; height: 5px; background:#9bbc0f; }
+  .px-batt i { width: 4px; height: 6px; background: #9bbc0f; }
+
+  /* Pantalla LCD con scanlines */
+  .px-screen {
+    position: relative;
+    background: #9bbc0f;
+    border: 2.5px solid #0f380f;
+    border-radius: 4px;
+    padding: var(--gap);
+    display: flex;
+    gap: var(--gap);
+    align-items: center;
+    overflow: hidden;
+    box-shadow: inset 0 0 0 1.5px #8bac0f;
+  }
+  .theme-dark .px-screen { box-shadow: inset 0 0 0 1.5px #8bac0f, 0 0 22px -4px rgba(155,188,15,.35); } /* LCD iluminada en sala oscura */
+  .px-screen::after {                    /* scanlines */
+    content: "";
+    position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(0deg, rgba(15,56,15,.16) 0 1px, transparent 1px 3px);
+  }
+
+  .px-cover {
+    width: var(--cover); height: var(--cover);
+    flex: none;
+    border: 2px solid #0f380f;
+    background: #8bac0f;
+    overflow: hidden;
+  }
+  .px-cover svg { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+
+  .px-meta { min-width: 0; flex: 1; }
+  .px-title {
+    font-size: var(--title); font-weight: 800; text-transform: uppercase;
+    letter-spacing: .04em; color: #0f380f;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .px-artist {
+    font-size: var(--meta); font-weight: 700; color: #306230;
+    margin-top: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  /* Barra de progreso segmentada tipo HP de consola */
+  .px-bar { display: flex; gap: 2px; margin-top: 7px; }
+  .px-bar i { height: 7px; flex: 1; background: rgba(48,98,48,.28); border: 1px solid rgba(15,56,15,.4); }
+  .px-bar i.on { background: #306230; border-color: #0f380f; box-shadow: inset 0 1px 0 #8bac0f; }
+  .size-large .px-bar i { height: 10px; }
+
+  .px-foot {
+    margin-top: 8px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: calc(var(--meta) - 2px);
+    font-weight: 700; letter-spacing: .18em; text-transform: uppercase;
+    color: #6a7a4a;
+  }
+  .size-mini .px-foot { display: none; }  /* el mini no lleva placa inferior */
+
+  /* D-pad decorativo (mini, esquina) — solo grande/widget para no saturar */
+  .px-dpad { display: grid; grid-template-columns: repeat(3, 6px); grid-template-rows: repeat(3, 6px); gap: 1px; }
+  .px-dpad i { background: #1d2b1d; border-radius: 1px; }
+  .px-dpad i:nth-child(2), .px-dpad i:nth-child(4), .px-dpad i:nth-child(5), .px-dpad i:nth-child(6) { background: #9bbc0f; }
+  .size-large .px-dpad i { width: 8px; height: 8px; }
+
+  /* ══════════════════════════════════════════════════════════════════
+     COMIC DASH — identidad: panel de cómic · tinta · halftone · burst
+     Paleta propia: tinta #111 · papel #f4eede · rojo #e5383b ·
+     amarillo #ffd23f · azul #274690. 100% original VERTEX.
+     ══════════════════════════════════════════════════════════════════ */
+  .comic {
+    --cover: 46px;
+    --pad: 9px;
+    --title: 13px;
+    --meta: 10px;
+
+    --paper: #f4eede;
+    --ink: #141414;
+    --red: #e5383b;
+    --yellow: #ffd23f;
+    --blue: #274690;
+
+    font-family: Impact, "Arial Black", "Franklin Gothic Bold", sans-serif;
+    background: var(--paper);
+    border: 3px solid var(--ink);
+    border-radius: 3px;
+    box-shadow: 5px 5px 0 var(--ink);
+    padding: var(--pad);
+    color: var(--ink);
+    max-width: 100%;
+    position: relative;
+  }
+  .comic.size-widget { --cover: 66px; --pad: 12px; --title: 16px; --meta: 11px; }
+  .comic.size-large  { --cover: 106px; --pad: 16px; --title: 21px; --meta: 12.5px; box-shadow: 7px 7px 0 var(--ink); }
+
+  /* Edición nocturna: mismo cómic, tinta sobre fondo oscuro */
+  .theme-dark .comic { --paper: #262433; --ink: #0d0d14; }
+  .theme-dark .comic, .theme-dark .comic .cc-caption, .theme-dark .comic .cc-bar { border-color: #0d0d14; }
+  .theme-dark .comic { color: #f2ead8; }
+  .theme-dark .comic .cc-artist { color: #b9b3c7; }
+  .theme-dark .comic .cc-title { color: #fff; text-shadow: 2px 2px 0 var(--red); }
+
+  /* Cabecera: caption box de cómic */
+  .cc-caption {
+    display: inline-block;
+    background: var(--yellow);
+    border: 2px solid var(--ink);
+    box-shadow: 2px 2px 0 var(--ink);
+    padding: 2px 7px 1px;
+    font-size: calc(var(--meta) - 1px);
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink);
+    margin-bottom: var(--pad);
+  }
+  .size-mini .cc-caption { margin-bottom: 7px; }
+
+  .cc-body { display: flex; gap: var(--pad); align-items: center; }
+  .comic.size-large .cc-body { align-items: flex-start; }
+
+  /* Portada: foto pegada en el panel, ligera rotación */
+  .cc-cover {
+    position: relative;
+    width: var(--cover); height: var(--cover);
+    flex: none;
+    border: 2.5px solid var(--ink);
+    transform: rotate(-2deg);
+    background: var(--blue);
+    overflow: visible;
+  }
+  .cc-cover .art { display: block; width: 100%; height: 100%; overflow: hidden; }
+  .cc-cover .art svg { display: block; width: 100%; height: 100%; }
+  .size-large .cc-cover { width: var(--cover); height: calc(var(--cover) * 1.12); transform: rotate(-2.5deg); }
+
+  /* Speed lines detrás de la zona media (solo widget/large) */
+  .comic:not(.size-mini)::before {
+    content: "";
+    position: absolute; left: 0; right: 0; top: 38%; height: 34%;
+    background: repeating-linear-gradient(115deg, transparent 0 9px, rgba(20,20,20,.08) 9px 12px);
+    pointer-events: none;
+  }
+  .theme-dark .comic:not(.size-mini)::before {
+    background: repeating-linear-gradient(115deg, transparent 0 9px, rgba(242,234,216,.07) 9px 12px);
+  }
+
+  /* Burst de onomatopeya — estrella original, texto VERTEX */
+  .cc-burst {
+    position: absolute; top: -12px; right: -14px;
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--red);
+    color: #fff;
+    font-size: 9.5px; letter-spacing: .04em;
+    transform: rotate(8deg);
+    clip-path: polygon(50% 0%, 59% 12%, 73% 5%, 76% 20%, 92% 18%, 87% 33%, 100% 40%, 88% 50%, 100% 60%, 87% 67%, 92% 82%, 76% 80%, 73% 95%, 59% 88%, 50% 100%, 41% 88%, 27% 95%, 24% 80%, 8% 82%, 13% 67%, 0% 60%, 12% 50%, 0% 40%, 13% 33%, 8% 18%, 24% 20%, 27% 5%, 41% 12%);
+    animation: cc-pop 2.4s ease-in-out infinite;
+  }
+  .size-large .cc-burst { width: 56px; height: 56px; font-size: 12.5px; top: -16px; right: -18px; }
+  .size-mini  .cc-burst { width: 32px; height: 32px; font-size: 8px; top: -10px; right: -11px; }
+  @keyframes cc-pop { 0%,100% { transform: rotate(8deg) scale(1); } 50% { transform: rotate(6deg) scale(1.07); } }
+
+  .cc-meta { min-width: 0; flex: 1; position: relative; z-index: 1; }
+  /* Halftone tras el título (esquina) */
+  .cc-meta::before {
+    content: "";
+    position: absolute; top: -6px; right: -4px; width: 44%; height: 130%;
+    background-image: radial-gradient(currentColor 1px, transparent 1.4px);
+    background-size: 6px 6px;
+    opacity: .1;
+    pointer-events: none;
+  }
+  .cc-title {
+    font-size: var(--title);
+    letter-spacing: .02em;
+    line-height: 1.05;
+    text-transform: uppercase;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .size-large .cc-title { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .cc-artist {
+    font-family: system-ui, sans-serif;
+    font-weight: 700; font-style: italic;
+    font-size: var(--meta);
+    color: #454545;
+    margin-top: 3px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .cc-artist .dot { color: var(--blue); font-style: normal; }
+
+  /* Barra de progreso: bloque rojo con rayado de velocidad */
+  .cc-bar {
+    margin-top: 8px;
+    height: 12px;
+    border: 2px solid var(--ink);
+    background: #fff;
+    overflow: hidden;
+    position: relative;
+  }
+  .size-mini .cc-bar { height: 8px; }
+  .cc-bar i {
+    display: block; height: 100%; width: 62%;
+    background: repeating-linear-gradient(-45deg, var(--red) 0 7px, #c1272d 7px 12px);
+  }
+  .size-large .cc-times {
+    display: flex; justify-content: space-between;
+    font-family: system-ui, sans-serif; font-weight: 700;
+    font-size: calc(var(--meta) - 1px); color: #454545;
+    margin-top: 5px;
+  }
+
+  /* ══════════════════════════════════════════════════════════════════
+     EXTRA (demo) — modo "Personalizado": --accent tiñe glow/borde/barra
+     ══════════════════════════════════════════════════════════════════ */
+  .accent-demo { margin-top: 44px; }
+  .accent-controls { display: flex; align-items: center; gap: 12px; margin: 14px 0 18px; font-size: 12.5px; }
+  .accent-controls input[type="color"] { width: 42px; height: 30px; border: 1px solid #3a3a45; border-radius: 6px; background: #1b1b21; padding: 2px; cursor: pointer; }
+  .pixel.accent .px-screen { box-shadow: inset 0 0 0 1.5px #8bac0f, 0 0 26px -2px var(--accent); border-color: color-mix(in srgb, #0f380f 55%, var(--accent)); }
+  .pixel.accent .px-topbar, .pixel.accent .px-play { color: var(--accent); }
+  .pixel.accent .px-bar i.on { background: color-mix(in srgb, #306230 40%, var(--accent)); }
+  .comic.accent .cc-caption { background: var(--accent); }
+  .comic.accent .cc-bar i { background: repeating-linear-gradient(-45deg, var(--accent) 0 7px, color-mix(in srgb, var(--accent) 72%, #000) 7px 12px); }
+  .comic.accent .cc-title { text-shadow: 2px 2px 0 var(--accent); }
+
+  .demo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .px-play { animation: none; }
+    .cc-burst { animation: none; }
+  }
+  @media (max-width: 560px) {
+    body { padding: 20px 12px 60px; }
+    .theme-panel { padding: 16px 12px 14px; }
+  }
+</style>
+</head>
+<body>
+
+  <h1>VERTEX · Rediseño musical — Ronda 1</h1>
+  <small>Pixel Core &amp; Comic Dash · 3 tamaños × dark/light · mismos datos, cero ADN visual compartido. Preview standalone — nada integrado aún.</small>
+  <p class="note">
+    Datos de muestra idénticos en las 16 tarjetas para comparar limpiamente. Mini = footer del popout ·
+    Widget = tarjeta del perfil · Grande = preview del Hub. Las portadas son SVG de autor (sin assets externos):
+    la de Pixel Core es pixel-art real 16×16 en los 4 tonos Game Boy; la de Comic Dash es composición abstracta
+    tinta/rojo/amarillo/azul — cero personajes, cero marcas ajenas.
+  </p>
+
+  <!-- ══════════ DATOS DE MUESTRA (SVG reutilizados vía <defs> + <use>) ══════════ -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <!-- Portada pixel-art: paisaje GB 16x16, 4 tonos -->
+      <g id="cover-pixel">
+        <svg viewBox="0 0 16 16" shape-rendering="crispEdges" preserveAspectRatio="none">
+          <!-- cielo con dithering -->
+          <rect width="16" height="16" fill="#9bbc0f"/>
+          <rect x="0" y="0" width="16" height="1" fill="#8bac0f"/>
+          <rect x="2" y="2" width="1" height="1" fill="#8bac0f"/><rect x="6" y="1" width="1" height="1" fill="#8bac0f"/>
+          <rect x="10" y="2" width="1" height="1" fill="#8bac0f"/><rect x="14" y="1" width="1" height="1" fill="#8bac0f"/>
+          <!-- sol pixel -->
+          <rect x="11" y="2" width="3" height="1" fill="#0f380f"/>
+          <rect x="10" y="3" width="5" height="1" fill="#0f380f"/>
+          <rect x="10" y="4" width="5" height="1" fill="#306230"/>
+          <rect x="11" y="5" width="3" height="1" fill="#306230"/>
+          <!-- montañas -->
+          <rect x="0" y="8" width="3" height="1" fill="#306230"/><rect x="1" y="7" width="1" height="1" fill="#306230"/>
+          <rect x="0" y="9" width="16" height="2" fill="#306230"/>
+          <rect x="4" y="8" width="2" height="1" fill="#0f380f"/><rect x="5" y="9" width="3" height="2" fill="#0f380f"/>
+          <rect x="12" y="8" width="2" height="1" fill="#0f380f"/><rect x="11" y="9" width="4" height="2" fill="#0f380f"/>
+          <!-- suelo -->
+          <rect x="0" y="11" width="16" height="1" fill="#0f380f"/>
+          <rect x="0" y="12" width="16" height="4" fill="#8bac0f"/>
+          <rect x="2" y="13" width="1" height="1" fill="#306230"/><rect x="7" y="14" width="1" height="1" fill="#306230"/>
+          <rect x="12" y="13" width="1" height="1" fill="#306230"/><rect x="4" y="15" width="1" height="1" fill="#306230"/>
+          <rect x="9" y="12" width="1" height="1" fill="#306230"/><rect x="14" y="15" width="1" height="1" fill="#306230"/>
+        </svg>
+      </g>
+      <!-- Portada cómic: abstracta rojo/azul/amarillo + halftone -->
+      <g id="cover-comic">
+        <svg viewBox="0 0 40 44" preserveAspectRatio="none">
+          <defs>
+            <pattern id="ht" width="5" height="5" patternUnits="userSpaceOnUse">
+              <circle cx="1.4" cy="1.4" r="1.1" fill="#141414" opacity=".55"/>
+            </pattern>
+          </defs>
+          <rect width="40" height="44" fill="#274690"/>
+          <polygon points="0,0 40,0 0,26" fill="#e5383b"/>
+          <rect x="0" y="20" width="40" height="24" fill="url(#ht)"/>
+          <circle cx="29" cy="31" r="9.5" fill="#ffd23f" stroke="#141414" stroke-width="2"/>
+          <polygon points="29,25.5 30.6,29.2 34.6,29.4 31.5,31.9 32.6,35.8 29,33.5 25.4,35.8 26.5,31.9 23.4,29.4 27.4,29.2" fill="#141414"/>
+          <rect x="0" y="0" width="40" height="44" fill="none" stroke="#141414" stroke-width="2"/>
+        </svg>
+      </g>
+    </defs>
+  </svg>
+
+  <!-- ══════════════════════════ PIXEL CORE ══════════════════════════ -->
+  <section class="section" id="pixel-core">
+    <h2><span class="chip" style="background:#9bbc0f;color:#0f380f">1 · PIXEL CORE</span> Consola retro · LCD Game Boy · scanlines</h2>
+    <p class="sub">
+      El widget ES una consola de mano: plástico oliva con marco inyectado, HUD superior (► parpadeante + batería),
+      pantalla LCD con scanlines, portada pixelada, barra de progreso segmentada tipo HP. Dark = consola en sala
+      oscura (LCD con glow). Light = luz de día, sin glow.
+    </p>
+
+    <div class="theme-panel theme-dark">
+      <span class="tag">DARK</span>
+      <div class="row">
+        <div class="cell"><span class="size-tag">Mini · footer popout</span>
+          <article class="pixel size-mini">
+            <div class="px-topbar"><span class="px-play">►</span><span>NOW PLAYING</span><span class="px-grow"></span><span class="px-batt"><i></i><i></i></span></div>
+            <div class="px-screen">
+              <div class="px-cover"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" preserveAspectRatio="none"><use href="#cover-pixel"/></svg></div>
+              <div class="px-meta">
+                <div class="px-title">Midnight Circuitry</div>
+                <div class="px-artist">The Voltage Kids</div>
+                <div class="px-bar"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div>
+              </div>
+            </div>
+          </article>
+        </div>
+        <div class="cell"><span class="size-tag">Widget · perfil</span>
+          <article class="pixel size-widget">
+            <div class="px-topbar"><span class="px-play">►</span><span>NOW PLAYING</span><span class="px-grow"></span><span class="px-batt"><i></i><i></i></span></div>
+            <div class="px-screen">
+              <div class="px-cover"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" preserveAspectRatio="none"><use href="#cover-pixel"/></svg></div>
+              <div class="px-meta">
+                <div class="px-title">Midnight Circuitry</div>
+                <div class="px-artist">The Voltage Kids</div>
+                <div class="px-bar"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div>
+              </div>
+            </div>
+            <div class="px-foot"><span>Vertex dot matrix</span><span class="px-dpad"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></div>
+          </article>
+        </div>
+        <div class="cell"><span class="size-tag">Grande · Hub</span>
+          <article class="pixel size-large">
+            <div class="px-topbar"><span class="px-play">►</span><span>NOW PLAYING</span><span class="px-grow"></span><span class="px-batt"><i></i><i></i></span></div>
+            <div class="px-screen">
+              <div class="px-cover"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" preserveAspectRatio="none"><use href="#cover-pixel"/></svg></div>
+              <div class="px-meta">
+                <div class="px-title">Midnight Circuitry</div>
+                <div class="px-artist">The Voltage Kids · Neon Sessions</div>
+                <div class="px-bar"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div>
+              </div>
+            </div>
+            <div class="px-foot"><span>Vertex dot matrix · stereo</span><span class="px-dpad"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></div>
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="theme-panel theme-light">
+      <span class="tag">LIGHT</span>
+      <div class="row">
+        <div class="cell"><span class="size-tag">Mini · footer popout</span>
+          <article class="pixel size-mini">
+            <div class="px-topbar"><span class="px-play">►</span><span>NOW PLAYING</span><span class="px-grow"></span><span class="px-batt"><i></i><i></i></span></div>
+            <div class="px-screen">
+              <div class="px-cover"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" preserveAspectRatio="none"><use href="#cover-pixel"/></svg></div>
+              <div class="px-meta">
+                <div class="px-title">Midnight Circuitry</div>
+                <div class="px-artist">The Voltage Kids</div>
+                <div class="px-bar"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div>
+              </div>
+            </div>
+          </article>
+        </div>
+        <div class="cell"><span class="size-tag">Widget · perfil</span>
+          <article class="pixel size-widget">
+            <div class="px-topbar"><span class="px-play">►</span><span>NOW PLAYING</span><span class="px-grow"></span><span class="px-batt"><i></i><i></i></span></div>
+            <div class="px-screen">
+              <div class="px-cover"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" preserveAspectRatio="none"><use href="#cover-pixel"/></svg></div>
+              <div class="px-meta">
+                <div class="px-title">Midnight Circuitry</div>
+                <div class="px-artist">The Voltage Kids</div>
+                <div class="px-bar"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div>
+              </div>
+            </div>
+            <div class="px-foot"><span>Vertex dot matrix</span><span class="px-dpad"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></div>
+          </article>
+        </div>
+        <div class="cell"><span class="size-tag">Grande · Hub</span>
+          <article class="pixel size-large">
+            <div class="px-topbar"><span class="px-play">►</span><span>NOW PLAYING</span><span class="px-grow"></span><span class="px-batt"><i></i><i></i></span></div>
+            <div class="px-screen">
+              <div class="px-cover"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" preserveAspectRatio="none"><use href="#cover-pixel"/></svg></div>
+              <div class="px-meta">
+                <div class="px-title">Midnight Circuitry</div>
+                <div class="px-artist">The Voltage Kids · Neon Sessions</div>
+                <div class="px-bar"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div>
+              </div>
+            </div>
+            <div class="px-foot"><span>Vertex dot matrix · stereo</span><span class="px-dpad"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></div>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════ COMIC DASH ══════════════════════════ -->
+  <section class="section" id="comic-dash">
+    <h2><span class="chip" style="background:#e5383b;color:#fff">2 · COMIC DASH</span> Panel de cómic · tinta · halftone · burst</h2>
+    <p class="sub">
+      El widget ES un panel de cómic: papel, borde de tinta grueso, sombra plana offset, portada pegada con rotación,
+      caption amarillo, burst rojo "¡LIVE!" (estrella original VERTEX), halftone y speed lines. Dark = "edición
+      nocturna": papel oscuro, tinta profunda, el burst mantiene el pop. Barra roja rayada estilo velocidad.
+    </p>
+
+    <div class="theme-panel theme-dark">
+      <span class="tag">DARK · edición nocturna</span>
+      <div class="row">
+        <div class="cell"><span class="size-tag">Mini · footer popout</span>
+          <article class="comic size-mini">
+            <span class="cc-caption">Sonando ahora</span>
+            <div class="cc-body">
+              <div class="cc-cover"><span class="art"><svg viewBox="0 0 40 44" preserveAspectRatio="none"><use href="#cover-comic"/></svg></span><span class="cc-burst">¡LIVE!</span></div>
+              <div class="cc-meta">
+                <div class="cc-title">Midnight Circuitry</div>
+                <div class="cc-artist">The Voltage Kids <span class="dot">·</span> Neon Sessions</div>
+                <div class="cc-bar"><i></i></div>
+              </div>
+            </div>
+          </article>
+        </div>
+        <div class="cell"><span class="size-tag">Widget · perfil</span>
+          <article class="comic size-widget">
+            <span class="cc-caption">Sonando ahora</span>
+            <div class="cc-body">
+              <div class="cc-cover"><span class="art"><svg viewBox="0 0 40 44" preserveAspectRatio="none"><use href="#cover-comic"/></svg></span><span class="cc-burst">¡LIVE!</span></div>
+              <div class="cc-meta">
+                <div class="cc-title">Midnight Circuitry</div>
+                <div class="cc-artist">The Voltage Kids <span class="dot">·</span> Neon Sessions</div>
+                <div class="cc-bar"><i></i></div>
+              </div>
+            </div>
+          </article>
+        </div>
+        <div class="cell"><span class="size-tag">Grande · Hub</span>
+          <article class="comic size-large">
+            <span class="cc-caption">Sonando ahora</span>
+            <div class="cc-body">
+              <div class="cc-cover"><span class="art"><svg viewBox="0 0 40 44" preserveAspectRatio="none"><use href="#cover-comic"/></svg></span><span class="cc-burst">¡LIVE!</span></div>
+              <div class="cc-meta">
+                <div class="cc-title">Midnight Circuitry</div>
+                <div class="cc-artist">The Voltage Kids <span class="dot">·</span> Neon Sessions · 2026</div>
+                <div class="cc-bar"><i></i></div>
+                <div class="cc-times"><span>2:11</span><span>3:40</span></div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="theme-panel theme-light">
+      <span class="tag">LIGHT · papel noticias</span>
+      <div class="row">
+        <div class="cell"><span class="size-tag">Mini · footer popout</span>
+          <article class="comic size-mini">
+            <span class="cc-caption">Sonando ahora</span>
+            <div class="cc-body">
+              <div class="cc-cover"><span class="art"><svg viewBox="0 0 40 44" preserveAspectRatio="none"><use href="#cover-comic"/></svg></span><span class="cc-burst">¡LIVE!</span></div>
+              <div class="cc-meta">
+                <div class="cc-title">Midnight Circuitry</div>
+                <div class="cc-artist">The Voltage Kids <span class="dot">·</span> Neon Sessions</div>
+                <div class="cc-bar"><i></i></div>
+              </div>
+            </div>
+          </article>
+        </div>
+        <div class="cell"><span class="size-tag">Widget · perfil</span>
+          <article class="comic size-widget">
+            <span class="cc-caption">Sonando ahora</span>
+            <div class="cc-body">
+              <div class="cc-cover"><span class="art"><svg viewBox="0 0 40 44" preserveAspectRatio="none"><use href="#cover-comic"/></svg></span><span class="cc-burst">¡LIVE!</span></div>
+              <div class="cc-meta">
+                <div class="cc-title">Midnight Circuitry</div>
+                <div class="cc-artist">The Voltage Kids <span class="dot">·</span> Neon Sessions</div>
+                <div class="cc-bar"><i></i></div>
+              </div>
+            </div>
+          </article>
+        </div>
+        <div class="cell"><span class="size-tag">Grande · Hub</span>
+          <article class="comic size-large">
+            <span class="cc-caption">Sonando ahora</span>
+            <div class="cc-body">
+              <div class="cc-cover"><span class="art"><svg viewBox="0 0 40 44" preserveAspectRatio="none"><use href="#cover-comic"/></svg></span><span class="cc-burst">¡LIVE!</span></div>
+              <div class="cc-meta">
+                <div class="cc-title">Midnight Circuitry</div>
+                <div class="cc-artist">The Voltage Kids <span class="dot">·</span> Neon Sessions · 2026</div>
+                <div class="cc-bar"><i></i></div>
+                <div class="cc-times"><span>2:11</span><span>3:40</span></div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════ EXTRA · demo del modo "Personalizado" ════════════════ -->
+  <section class="section accent-demo" id="accent-demo">
+    <h2>EXTRA · Color personalizado (demo del concepto)</h2>
+    <p class="sub">
+      Así teñiría el modo "Personalizado": <code>--accent</code> tiñe glow del LCD (Pixel Core), caption/título/barra
+      (Comic Dash). "Automático" = los colores de identidad de arriba, derivados de la portada como ahora.
+      Elige un color y mira las dos tarjetas de abajo (theme dark, tamaño widget).
+    </p>
+    <div class="accent-controls">
+      <label for="accent-pick">Accent:</label>
+      <input type="color" id="accent-pick" value="#ff2d78" />
+      <span id="accent-val">#ff2d78</span>
+    </div>
+    <div class="demo-grid" id="accent-stage" style="--accent:#ff2d78">
+      <div class="theme-panel theme-dark" style="margin-top:0">
+        <span class="tag">PIXEL CORE · accent personalizado</span>
+        <article class="pixel size-widget accent">
+          <div class="px-topbar"><span class="px-play">►</span><span>NOW PLAYING</span><span class="px-grow"></span><span class="px-batt"><i></i><i></i></span></div>
+          <div class="px-screen">
+            <div class="px-cover"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" preserveAspectRatio="none"><use href="#cover-pixel"/></svg></div>
+            <div class="px-meta">
+              <div class="px-title">Midnight Circuitry</div>
+              <div class="px-artist">The Voltage Kids</div>
+              <div class="px-bar"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div>
+            </div>
+          </div>
+          <div class="px-foot"><span>Vertex dot matrix</span><span class="px-dpad"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></div>
+        </article>
+      </div>
+      <div class="theme-panel theme-dark" style="margin-top:0">
+        <span class="tag">COMIC DASH · accent personalizado</span>
+        <article class="comic size-widget accent">
+          <span class="cc-caption">Sonando ahora</span>
+          <div class="cc-body">
+            <div class="cc-cover"><span class="art"><svg viewBox="0 0 40 44" preserveAspectRatio="none"><use href="#cover-comic"/></svg></span><span class="cc-burst">¡LIVE!</span></div>
+            <div class="cc-meta">
+              <div class="cc-title">Midnight Circuitry</div>
+              <div class="cc-artist">The Voltage Kids <span class="dot">·</span> Neon Sessions</div>
+              <div class="cc-bar"><i></i></div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+<script>
+  // Demo mínima del color personalizado (solo preview, 4 líneas de JS).
+  const pick = document.getElementById('accent-pick');
+  const stage = document.getElementById('accent-stage');
+  const label = document.getElementById('accent-val');
+  pick.addEventListener('input', () => {
+    stage.style.setProperty('--accent', pick.value);
+    label.textContent = pick.value;
+  });
+</script>
+</body>
+</html>

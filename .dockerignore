@@ -11,6 +11,14 @@ dist-electron
 .DS_Store
 .idea
 .vscode
-packages/desktop
 npm
 livekit
+design-previews
+packages/desktop
+packages/web
+packages/server/node_modules
+packages/server/dist
+packages/server/inspect*.cjs
+packages/server/repair*.cjs
+packages/server/_dbinspect.cjs
+packages/server/verify-livekit.ts
