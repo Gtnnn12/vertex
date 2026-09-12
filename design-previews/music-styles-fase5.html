@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VERTEX — Ronda 5 · Tactical Ops / Esport Arena / Manga Ink / Sticker Bomb + Estilos por juego</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', system-ui, sans-serif; background: #0b0b0f; color: #e8e8ee; padding: 32px 24px 90px; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .sub { color: #8a8a97; font-size: 12.5px; margin-bottom: 28px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.18em; color: #9a9aa8; margin: 42px 0 6px; font-weight: 700; }
+  .h2-note { color: #6c6c78; font-size: 12px; margin-bottom: 16px; max-width: 780px; }
+  .netrex { display: inline-block; font-size: 9px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; vertical-align: 2px; margin-left: 8px; background: #a78bfa22; color: #a78bfa; border: 1px solid #a78bfa55; }
+  .new { color: #ffd23f; font-size: 10px; vertical-align: 2px; margin-left: 6px; }
+  .theme { border: 1px solid rgb(255 255 255 / 0.07); border-radius: 16px; padding: 20px; margin-top: 14px; }
+  .theme.dark  { background: #101014; }
+  .theme.light { background: #eceef2; color: #17171c; }
+  .theme-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.2em; color: #7a7a88; margin-bottom: 16px; }
+  .row { display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-start; }
+  .cover { width: 100%; height: 100%; object-fit: cover; display: block; image-rendering: pixelated; }
+  .widget { width: 340px; }
+
+  /* ══════════════════════════════════════════════════════════════════
+     A) TACTICAL OPS — HUD shooter táctico
+     ══════════════════════════════════════════════════════════════════ */
+  .to-card {
+    --to-bg: #14161a; --to-red: #e84855; --to-blue: #3d5af1; --to-line: #2a2f38; --to-txt: #dfe7f2;
+    position: relative; display: block; overflow: hidden;
+    border-radius: 3px; text-decoration: none;
+    background: var(--to-bg); border: 1px solid var(--to-line);
+    font-family: 'Consolas', 'Courier New', monospace;
+  }
+  /* retícula sutil de fondo */
+  .to-card::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background:
+      repeating-linear-gradient(0deg, rgb(223 231 242 / 0.025) 0 1px, transparent 1px 22px),
+      repeating-linear-gradient(90deg, rgb(223 231 242 / 0.025) 0 1px, transparent 1px 22px);
+  }
+  .to-scanline { /* HUD scan sweep on open — the ONLY animation */
+    position: absolute; left: 0; right: 0; top: -8%; height: 14%; z-index: 4; pointer-events: none;
+    background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--to-red) 16%, transparent) 55%, rgb(223 231 242 / 0.10) 72%, transparent);
+    animation: to-scan 2.6s cubic-bezier(.4, 0, .2, 1) infinite;
+  }
+  @keyframes to-scan { 0% { top: -14%; opacity: 0; } 12% { opacity: 1; } 70% { top: 104%; opacity: 1; } 78%, 100% { top: 104%; opacity: 0; } }
+  .to-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px 6px; position: relative; z-index: 2; }
+  .to-op { font-size: 9.5px; font-weight: 700; letter-spacing: 0.22em; color: var(--to-txt); opacity: .85; }
+  .to-op b { color: var(--to-red); }
+  .to-status { font-size: 9px; font-weight: 700; letter-spacing: 0.16em; color: var(--to-blue); }
+  .to-status.paused { color: #8a93a8; }
+  .to-body { position: relative; display: flex; gap: 12px; padding: 4px 12px 10px; z-index: 2; }
+  /* briefing screen with brackets + minimap corner */
+  .to-brief { position: relative; width: 38%; flex-shrink: 0; aspect-ratio: 1; background: #090b0e; border: 1px solid var(--to-line); }
+  .to-brief .cover { opacity: .9; filter: saturate(0.85) contrast(1.06); }
+  .to-brief::before, .to-brief::after, .to-bl, .to-br { content: ''; position: absolute; width: 12px; height: 12px; z-index: 2; }
+  .to-brief::before { top: -1px; left: -1px; border-top: 2px solid var(--to-red); border-left: 2px solid var(--to-red); }
+  .to-brief::after { top: -1px; right: -1px; border-top: 2px solid var(--to-red); border-right: 2px solid var(--to-red); }
+  .to-bl { bottom: -1px; left: -1px; border-bottom: 2px solid var(--to-blue); border-left: 2px solid var(--to-blue); }
+  .to-br { bottom: -1px; right: -1px; border-bottom: 2px solid var(--to-blue); border-right: 2px solid var(--to-blue); }
+  /* mini-map: decorative grid blob top-right of card */
+  .to-map {
+    position: absolute; top: 34px; right: 10px; width: 58px; height: 42px; z-index: 2;
+    background:
+      repeating-linear-gradient(0deg, rgb(61 90 241 / 0.16) 0 1px, transparent 1px 8px),
+      repeating-linear-gradient(90deg, rgb(61 90 241 / 0.16) 0 1px, transparent 1px 8px),
+      #0a0d13;
+    border: 1px solid color-mix(in srgb, var(--to-blue) 40%, transparent);
+  }
+  .to-map::before { /* blips */
+    content: ''; position: absolute; width: 3px; height: 3px; background: var(--to-red);
+    box-shadow: 0 0 5px var(--to-red);
+    left: 30%; top: 40%;
+    animation: to-blip 2s ease-in-out infinite;
+  }
+  .to-map::after {
+    content: ''; position: absolute; width: 3px; height: 3px; background: var(--to-blue);
+    left: 68%; top: 62%;
+  }
+  @keyframes to-blip { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+  .to-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; padding-right: 4px; }
+  .to-title { font-size: 14px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--to-txt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .to-artist { font-size: 10.5px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--to-blue); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .to-meta { margin-top: auto; display: flex; align-items: center; justify-content: space-between; }
+  .to-ticks { width: 64px; height: 4px; background: repeating-linear-gradient(90deg, var(--to-red) 0 3px, transparent 3px 8px); opacity: .9; }
+  .to-coords { font-size: 8.5px; letter-spacing: 0.1em; color: #6a7482; }
+  .to-progress { display: flex; gap: 2px; padding: 0 12px 10px; }
+  .to-progress i { flex: 1; height: 3px; background: var(--to-line); }
+  .to-progress i.on { background: var(--to-red); }
+  .to-progress i.half { background: color-mix(in srgb, var(--to-red) 40%, var(--to-line)); }
+  /* diagonal warning stripes footer */
+  .to-diag { height: 6px;
+    background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--to-red) 32%, transparent) 0 6px, transparent 6px 13px, color-mix(in srgb, var(--to-blue) 26%, transparent) 13px 19px, transparent 19px 27px);
+  }
+
+  /* ══════════════════════════════════════════════════════════════════
+     B) ESPORT ARENA — estadio, jumbotrimón, focos, scoreboard
+     ══════════════════════════════════════════════════════════════════ */
+  .es-card {
+    --es-bg: #070b18; --es-blue: #2e6fff; --es-gold: #ffc93c; --es-txt: #eef2ff;
+    position: relative; display: block; overflow: hidden;
+    border-radius: 12px; text-decoration: none;
+    background:
+      radial-gradient(120% 80% at 50% -20%, #101b3a 0%, transparent 60%),
+      var(--es-bg);
+    border: 1px solid color-mix(in srgb, var(--es-blue) 30%, transparent);
+    box-shadow: 0 18px 44px -20px color-mix(in srgb, var(--es-blue) 50%, transparent);
+  }
+  /* crossed spotlights behind everything */
+  .es-lights { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  .es-lights i {
+    position: absolute; top: -30%; width: 46%; height: 150%;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--es-blue) 20%, transparent), transparent 70%);
+    clip-path: polygon(46% 0, 54% 0, 100% 100%, 0 100%);
+    transform-origin: top center;
+  }
+  .es-lights i:nth-child(1) { left: -8%; animation: es-sweep1 9s ease-in-out infinite; }
+  .es-lights i:nth-child(2) { right: -8%; background: linear-gradient(180deg, color-mix(in srgb, var(--es-gold) 16%, transparent), transparent 70%); animation: es-sweep2 11s ease-in-out infinite; }
+  @keyframes es-sweep1 { 0%, 100% { transform: rotate(-14deg); } 50% { transform: rotate(10deg); } }
+  @keyframes es-sweep2 { 0%, 100% { transform: rotate(12deg); } 50% { transform: rotate(-12deg); } }
+  /* confetti on hover */
+  .es-conf { position: absolute; inset: 0; pointer-events: none; z-index: 3; opacity: 0; transition: opacity .2s; }
+  .es-card:hover .es-conf { opacity: 1; }
+  .es-conf i { position: absolute; top: -8px; width: 5px; height: 8px; border-radius: 1px; animation: es-fall 1.6s linear infinite; }
+  .es-conf i:nth-child(1) { left: 12%; background: var(--es-gold); animation-delay: 0s; }
+  .es-conf i:nth-child(2) { left: 30%; background: #fff; animation-delay: .4s; }
+  .es-conf i:nth-child(3) { left: 55%; background: var(--es-blue); animation-delay: .8s; }
+  .es-conf i:nth-child(4) { left: 78%; background: var(--es-gold); animation-delay: .2s; }
+  .es-conf i:nth-child(5) { left: 92%; background: #fff; animation-delay: 1s; }
+  @keyframes es-fall { from { transform: translateY(-10px) rotate(0); } to { transform: translateY(230px) rotate(300deg); } }
+  /* jumbotron = the cover */
+  .es-body { position: relative; z-index: 2; padding: 12px 14px 10px; }
+  .es-jumbo { position: relative; border-radius: 8px; overflow: hidden; border: 2px solid #05070f; aspect-ratio: 16 / 7.4;
+    box-shadow: 0 0 26px -4px color-mix(in srgb, var(--es-blue) 45%, transparent); }
+  .es-jumbo .cover { object-position: center; }
+  .es-jumbo::after { /* stadium screen glow + scan */
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background:
+      repeating-linear-gradient(0deg, rgb(0 0 0 / 0.10) 0 1px, transparent 1px 3px),
+      radial-gradient(110% 90% at 50% 10%, rgb(255 255 255 / 0.09), transparent 45%);
+    animation: es-glow 3.4s ease-in-out infinite;
+  }
+  @keyframes es-glow { 0%, 100% { opacity: .8; } 50% { opacity: 1; } }
+  .es-vs {
+    margin-top: 10px; display: flex; align-items: stretch; gap: 0;
+    border: 1.5px solid color-mix(in srgb, var(--es-blue) 35%, transparent);
+    border-radius: 6px; overflow: hidden;
+    background: #0a0f22;
+  }
+  .es-score { padding: 7px 12px; text-align: center; min-width: 58px; }
+  .es-score .n { display: block; font-size: 15px; font-weight: 800; color: var(--es-gold); line-height: 1; }
+  .es-score .l { display: block; margin-top: 2px; font-size: 7.5px; font-weight: 700; letter-spacing: 0.18em; color: #6a7ba0; text-transform: uppercase; }
+  .es-mid { flex: 1; min-width: 0; padding: 6px 10px; border-left: 1.5px solid color-mix(in srgb, var(--es-blue) 25%, transparent); border-right: 1.5px solid color-mix(in srgb, var(--es-blue) 25%, transparent); }
+  .es-title { font-size: 13px; font-weight: 800; letter-spacing: 0.02em; color: var(--es-txt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .es-artist { font-size: 10.5px; font-weight: 600; color: #8fa3cc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .es-pill { display: flex; align-items: center; padding: 0 10px; font-size: 8.5px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--es-blue); }
+  .es-pill.live { color: var(--es-gold); }
+  .es-foot { display: flex; gap: 2px; padding: 0 14px 12px; }
+  .es-foot i { flex: 1; height: 3px; border-radius: 1px; background: rgb(46 111 255 / 0.22); }
+  .es-foot i.on { background: var(--es-blue); box-shadow: 0 0 6px color-mix(in srgb, var(--es-blue) 70%, transparent); }
+  .es-foot i.gold { background: var(--es-gold); box-shadow: 0 0 6px color-mix(in srgb, var(--es-gold) 70%, transparent); }
+
+  /* ══════════════════════════════════════════════════════════════════
+     C) MANGA INK — B/N con tinta + 1 acento (variable del usuario)
+     ══════════════════════════════════════════════════════════════════ */
+  .mi-card {
+    --mi-ink: #14141a; --mi-paper: #faf8f4; --mi-accent: #e84855;
+    position: relative; display: block; overflow: hidden;
+    border-radius: 6px; text-decoration: none;
+    background: var(--mi-paper); color: var(--mi-ink);
+    border: 2.5px solid var(--mi-ink);
+    box-shadow: 5px 5px 0 var(--mi-ink);
+  }
+  .mi-head { display: flex; align-items: baseline; justify-content: space-between; padding: 10px 14px 0; }
+  .mi-title { font-size: 17px; font-weight: 900; letter-spacing: 0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 65%; }
+  .mi-kana { font-size: 10px; font-weight: 700; letter-spacing: 0.3em; opacity: .55; }
+  .mi-body { position: relative; display: flex; gap: 12px; padding: 10px 14px 12px; }
+  .mi-cover {
+    position: relative; width: 36%; flex-shrink: 0; aspect-ratio: 1; overflow: hidden;
+    border: 2.5px solid var(--mi-ink);
+    transform: rotate(-1.6deg);
+  }
+  /* cover in ink: grayscale, high contrast + screentone overlay */
+  .mi-cover .cover { filter: grayscale(1) contrast(1.35) brightness(1.06); }
+  .mi-cover::after { /* screentone dots */
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(rgb(20 20 26 / 0.32) 1px, transparent 1.35px);
+    background-size: 5px 5px;
+  }
+  /* ink splash on hover */
+  .mi-splash {
+    position: absolute; right: -18px; top: -18px; width: 74px; height: 74px; z-index: 3;
+    pointer-events: none; opacity: 0; transform: scale(0.4) rotate(-30deg);
+    transition: opacity .16s ease-out, transform .22s cubic-bezier(.2, 1.5, .4, 1);
+  }
+  .mi-card:hover .mi-splash { opacity: 1; transform: scale(1) rotate(-12deg); }
+  .mi-splash svg { display: block; }
+  .mi-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .mi-artist {
+    font-size: 12.5px; font-weight: 800; letter-spacing: 0.06em;
+    color: var(--mi-accent);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .mi-artist::before { content: '✒ '; }
+  .mi-line { margin-top: 8px; height: 0; border-top: 2px solid var(--mi-ink); position: relative; }
+  .mi-line::after { /* rough double stroke */
+    content: ''; position: absolute; left: 0; right: 0; top: 2px; border-top: 1px solid var(--mi-ink); opacity: .6;
+    transform: scaleY(0.6) translateY(1px) skewX(-14deg);
+  }
+  .mi-times { margin-top: auto; padding-top: 8px; display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 10px; }
+  .mi-bar { flex: 1; height: 9px; border: 2px solid var(--mi-ink); background: #fff; }
+  .mi-bar i { display: block; height: 100%; background: var(--mi-ink);
+    background-image: radial-gradient(rgb(255 255 255 / 0.35) 1px, transparent 1.3px); background-size: 4px 4px; }
+  .mi-status { margin-top: 6px; font-size: 9px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: var(--mi-accent); }
+  .mi-status.paused { color: var(--mi-ink); opacity: .6; }
+  /* speed strokes on hover, crossing the panel */
+  .mi-speed { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .15s; }
+  .mi-card:hover .mi-speed { opacity: 1; }
+  .mi-speed i { position: absolute; height: 2px; background: var(--mi-ink); width: 42%;
+    animation: mi-dash .5s linear infinite; }
+  .mi-speed i:nth-child(1) { top: 22%; left: 8%; transform: rotate(-14deg); }
+  .mi-speed i:nth-child(2) { top: 52%; left: 30%; transform: rotate(-14deg); width: 30%; animation-delay: .1s; }
+  .mi-speed i:nth-child(3) { top: 76%; left: 12%; transform: rotate(-14deg); width: 36%; animation-delay: .2s; }
+  @keyframes mi-dash { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+
+  /* ══════════════════════════════════════════════════════════════════
+     D) STICKER BOMB — collage de pegatinas
+     ══════════════════════════════════════════════════════════════════ */
+  .sb-card {
+    --sb-bg: #2a2440; --sb-yellow: #ffd23f; --sb-pink: #ff6ec7; --sb-blue: #3f8cff; --sb-green: #2ee6a8;
+    position: relative; display: block; overflow: hidden;
+    border-radius: 14px; text-decoration: none;
+    background:
+      repeating-linear-gradient(45deg, #2a2440 0 14px, #251f3a 14px 28px);
+    border: 2px solid #14101f;
+    padding: 16px;
+  }
+  /* background doodle pattern */
+  .sb-card::before {
+    content: ''; position: absolute; inset: 0; opacity: .14; pointer-events: none;
+    background:
+      radial-gradient(circle 3px at 20% 20%, #fff 40%, transparent 41%),
+      radial-gradient(circle 2px at 70% 40%, #fff 40%, transparent 41%),
+      radial-gradient(circle 3px at 40% 75%, #fff 40%, transparent 41%),
+      radial-gradient(circle 2px at 85% 85%, #fff 40%, transparent 41%),
+      radial-gradient(circle 2px at 10% 55%, #fff 40%, transparent 41%);
+    background-size: 120px 120px;
+  }
+  .sb-body { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; }
+  /* main sticker = cover with curved white sticker border, slightly rotated */
+  .sb-main {
+    position: relative; width: 46%; aspect-ratio: 1; padding: 7px; background: #fff;
+    border-radius: 22px; transform: rotate(-4deg);
+    box-shadow: 0 8px 18px -8px rgb(0 0 0 / 0.7);
+    transition: transform .2s cubic-bezier(.2, 1.4, .4, 1), box-shadow .2s;
+  }
+  .sb-card:hover .sb-main { transform: rotate(-1deg) scale(1.04) translateY(-2px); box-shadow: 0 14px 26px -10px rgb(0 0 0 / 0.8); }
+  .sb-cover { width: 100%; aspect-ratio: 1; border-radius: 16px; overflow: hidden; }
+  .sb-hover-star {
+    position: absolute; top: -14px; right: -12px; z-index: 3;
+    font-style: normal; font-size: 24px; color: var(--sb-yellow);
+    text-shadow: 2px 2px 0 #14101f;
+    transform: scale(0) rotate(-40deg); transform-origin: center;
+    transition: transform .22s cubic-bezier(.2, 1.6, .4, 1);
+  }
+  .sb-card:hover .sb-hover-star { transform: scale(1) rotate(12deg); }
+  /* small stickers — lift on card hover */
+  .sb-mini {
+    position: absolute; z-index: 2; padding: 5px 9px; background: #fff;
+    font-size: 11px; font-weight: 900; letter-spacing: 0.04em; color: #14101f;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px -4px rgb(0 0 0 / 0.7);
+    transition: transform .2s cubic-bezier(.2, 1.4, .4, 1);
+  }
+  .sb-mini.m1 { top: 14px; left: 12px; background: var(--sb-yellow); transform: rotate(-10deg); }
+  .sb-mini.m2 { top: 52px; right: 10px; background: var(--sb-pink); transform: rotate(8deg); color: #fff; border: 2px solid #fff; background: var(--sb-pink); }
+  .sb-mini.m3 { bottom: 58px; left: 14px; background: var(--sb-blue); color: #fff; transform: rotate(-7deg); }
+  .sb-mini.m4 { bottom: 44px; right: 16px; background: var(--sb-green); transform: rotate(11deg); }
+  .sb-card:hover .sb-mini.m1 { transform: rotate(-14deg) translate(-2px, -4px); }
+  .sb-card:hover .sb-mini.m2 { transform: rotate(12deg) translate(3px, -4px); }
+  .sb-card:hover .sb-mini.m3 { transform: rotate(-10deg) translate(-3px, -3px); }
+  .sb-card:hover .sb-mini.m4 { transform: rotate(15deg) translate(2px, -5px); }
+  .sb-title-sticker {
+    position: relative; z-index: 2; margin-top: 14px; padding: 6px 16px;
+    background: #fff; border-radius: 12px; transform: rotate(1.5deg);
+    box-shadow: 0 5px 12px -6px rgb(0 0 0 / 0.7);
+    text-align: center; max-width: 92%;
+  }
+  .sb-title { display: block; font-size: 15px; font-weight: 900; color: #14101f; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sb-artist { display: block; font-size: 11px; font-weight: 800; color: #7a6cff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sb-status {
+    position: relative; z-index: 2; margin-top: 10px;
+    font-size: 9px; font-weight: 900; letter-spacing: 0.18em; text-transform: uppercase;
+    color: #fff; background: var(--sb-pink); border-radius: 999px; padding: 3px 12px;
+    transform: rotate(-2deg); box-shadow: 0 4px 10px -4px rgb(0 0 0 / 0.6);
+  }
+  .sb-status.paused { background: #8a8fa8; }
+  .sb-progress { position: relative; z-index: 2; margin-top: 12px; width: 100%; height: 9px; border-radius: 999px; background: rgb(255 255 255 / 0.18); border: 2px solid #14101f; overflow: hidden; }
+  .sb-progress i { display: block; height: 100%; background: repeating-linear-gradient(115deg, var(--sb-yellow) 0 9px, var(--sb-pink) 9px 18px, var(--sb-blue) 18px 27px); }
+
+  /* ══════════════════════════════════════════════════════════════════
+     GAME BINDING — mini-editor "Estilos por juego"
+     ══════════════════════════════════════════════════════════════════ */
+  .gb-wrap { max-width: 720px; margin: 0 auto; display: grid; grid-template-columns: 1fr 300px; gap: 18px; align-items: start; }
+  .gb-editor { border: 1px solid rgb(255 255 255 / 0.08); border-radius: 14px; background: #0e0e13; padding: 16px; }
+  .gb-title { font-size: 13.5px; font-weight: 800; margin-bottom: 3px; }
+  .gb-sub { font-size: 11px; color: #8a8a97; margin-bottom: 14px; line-height: 1.5; }
+  .gb-row {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+    border: 1px solid rgb(255 255 255 / 0.08); border-radius: 10px; margin-bottom: 8px; background: #14141a;
+  }
+  .gb-game { flex: 1; min-width: 0; }
+  .gb-game .g { font-size: 12.5px; font-weight: 700; }
+  .gb-game .s { font-size: 10.5px; color: #8a8a97; }
+  .gb-arrow { color: #6c6c78; font-size: 13px; }
+  .gb-style-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px;
+    background: rgb(255 255 255 / 0.06); border: 1px solid rgb(255 255 255 / 0.12); color: #e8e8ee;
+    cursor: pointer; user-select: none;
+  }
+  .gb-style-chip .dot { width: 7px; height: 7px; border-radius: 50%; }
+  .gb-add { width: 100%; margin-top: 4px; padding: 9px 0; text-align: center; font-size: 11.5px; font-weight: 700;
+    color: #9a9aa8; background: transparent; border: 1.5px dashed rgb(255 255 255 / 0.16); border-radius: 10px; cursor: pointer; }
+  .gb-note { margin-top: 12px; font-size: 10.5px; color: #6c6c78; line-height: 1.5; }
+  .gb-note b { color: #9a9aa8; }
+  .gb-live { border: 1px solid rgb(255 255 255 / 0.08); border-radius: 14px; background: #0e0e13; padding: 14px; }
+  .gb-live-label { font-size: 9.5px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: #7a7a88; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+  .gb-live-label .pulse { width: 7px; height: 7px; border-radius: 50%; background: #2ee6a8; animation: gb-pulse 2s ease-in-out infinite; }
+  @keyframes gb-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+  .gb-detect { font-size: 10.5px; color: #8a8a97; margin-bottom: 10px; }
+  .gb-detect b { color: #e8e8ee; }
+  .gb-switch { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 10.5px; color: #9a9aa8; cursor: pointer; user-select: none; }
+  .gb-switch .sw { width: 30px; height: 17px; border-radius: 999px; background: #6c5ce7; position: relative; }
+  .gb-switch .sw::after { content: ''; position: absolute; top: 2px; right: 2px; width: 13px; height: 13px; border-radius: 50%; background: #fff; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+  @media (max-width: 700px) { .gb-wrap { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<h1>VERTEX — Ronda 5</h1>
+<p class="sub">4 conceptos de reemplazo (2 gamer + 2 expresivos) + mini-editor "Estilos por juego" · Solo arte · Nada integrado</p>
+
+<h2>A1 · Tactical Ops <span class="netrex">Netrex</span> <span class="new">★ concepto</span></h2>
+<p class="h2-note">HUD de shooter táctico: brackets en las esquinas de la portada-briefing, retícula de fondo, MINI-MAP decorativo con blips, diagonales rojas/azules sobre gris carbón, tipografía militar mono · La línea de escaneo del HUD recorre la tarjeta al abrir (y cada ciclo).</p>
+<div class="theme dark">
+  <div class="theme-label">Dark · hábitat natural</div>
+  <div class="row">
+    <a class="to-card widget" href="#">
+      <span class="to-scanline"></span>
+      <div class="to-head"><span class="to-op">OP-07 // <b>MUSIC BRIEFING</b></span><span class="to-status">◉ LIVE</span></div>
+      <div class="to-body">
+        <div class="to-brief"><canvas class="cover" data-mode="to" width="26" height="26"></canvas><span class="to-bl"></span><span class="to-br"></span></div>
+        <div class="to-map"></div>
+        <div class="to-info">
+          <span class="to-title">Neon Cortex</span>
+          <span class="to-artist">Bitwave Runner</span>
+          <div class="to-meta"><span class="to-ticks"></span><span class="to-coords">62% // SP</span></div>
+        </div>
+      </div>
+      <div class="to-progress"><i class="on"></i><i class="on"></i><i class="on"></i><i class="half"></i><i></i><i></i></div>
+      <div class="to-diag"></div>
+    </a>
+  </div>
+</div>
+<div class="theme light">
+  <div class="theme-label">Light</div>
+  <div class="row">
+    <a class="to-card widget" href="#">
+      <span class="to-scanline"></span>
+      <div class="to-head"><span class="to-op">OP-07 // <b>MUSIC BRIEFING</b></span><span class="to-status paused">❙❙ HOLD</span></div>
+      <div class="to-body">
+        <div class="to-brief"><canvas class="cover" data-mode="to" width="26" height="26"></canvas><span class="to-bl"></span><span class="to-br"></span></div>
+        <div class="to-map"></div>
+        <div class="to-info">
+          <span class="to-title">Neon Cortex</span>
+          <span class="to-artist">Bitwave Runner</span>
+          <div class="to-meta"><span class="to-ticks"></span><span class="to-coords">24% // HOLD</span></div>
+        </div>
+      </div>
+      <div class="to-progress"><i class="half"></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="to-diag"></div>
+    </a>
+  </div>
+</div>
+
+<h2>A2 · Esport Arena <span class="netrex">Netrex</span> <span class="new">★ concepto</span></h2>
+<p class="h2-note">Escenario de competición: la portada en el JUMBOTRÓN del estadio (glow azul), focos cruzados barriendo detrás, CONFETI al hover, marcador-scoreboard abajo con la canción · Azules eléctricos + dorado trofeo.</p>
+<div class="theme dark">
+  <div class="theme-label">Dark · arena nocturna</div>
+  <div class="row">
+    <a class="es-card widget" href="#">
+      <div class="es-lights"><i></i><i></i></div>
+      <div class="es-conf"><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="es-body">
+        <div class="es-jumbo"><canvas class="cover" data-mode="es" width="32" height="18"></canvas></div>
+        <div class="es-vs">
+          <span class="es-score"><span class="n">62</span><span class="l">Beat%</span></span>
+          <span class="es-mid"><span class="es-title">Neon Cortex</span><span class="es-artist">Bitwave Runner</span></span>
+          <span class="es-pill live">● En vivo</span>
+        </div>
+        <div class="es-foot"><i class="on"></i><i class="on"></i><i class="on"></i><i class="gold"></i><i></i><i></i></div>
+      </div>
+    </a>
+  </div>
+</div>
+<div class="theme light">
+  <div class="theme-label">Light</div>
+  <div class="row">
+    <a class="es-card widget" href="#">
+      <div class="es-lights"><i></i><i></i></div>
+      <div class="es-conf"><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="es-body">
+        <div class="es-jumbo"><canvas class="cover" data-mode="es" width="32" height="18"></canvas></div>
+        <div class="es-vs">
+          <span class="es-score"><span class="n">24</span><span class="l">Beat%</span></span>
+          <span class="es-mid"><span class="es-title">Neon Cortex</span><span class="es-artist">Bitwave Runner</span></span>
+          <span class="es-pill">❙❙ Descanso</span>
+        </div>
+        <div class="es-foot"><i class="gold"></i><i></i><i></i><i></i><i></i><i></i></div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<h2>C1 · Manga Ink <span class="netrex">Netrex</span> <span class="new">★ concepto</span></h2>
+<p class="h2-note">Blanco y negro con tinta: portada en escala de grises contrastada + screentone, doble filete de tinta "a mano", trazos de velocidad al hover, SPLASH de tinta que aparece en la esquina al hover · UN solo color de acento (en la app: el acento del usuario — aquí demo en rojo). Adulto, con carácter.</p>
+<div class="theme dark">
+  <div class="theme-label">Dark · tinta sobre papel claro</div>
+  <div class="row">
+    <a class="mi-card widget" href="#">
+      <span class="mi-speed"><i></i><i></i><i></i></span>
+      <span class="mi-splash">
+        <svg width="74" height="74" viewBox="0 0 74 74"><path fill="#e84855" d="M37 4c5 8 14 6 19 12s-1 13 4 19-6 12-12 15-12-3-19-2-13 4-18-2 2-13-1-19 3-13 8-17 13-4 19-6z"/><circle fill="#e84855" cx="66" cy="12" r="4"/><circle fill="#e84855" cx="8" cy="58" r="3"/></svg>
+      </span>
+      <div class="mi-head"><span class="mi-title">Neon Cortex</span><span class="mi-kana">VERTEX</span></div>
+      <div class="mi-body">
+        <div class="mi-cover"><canvas class="cover" data-mode="mi" width="26" height="26"></canvas></div>
+        <div class="mi-info">
+          <span class="mi-artist">Bitwave Runner</span>
+          <span class="mi-line"></span>
+          <div class="mi-times"><span>1:42</span><span class="mi-bar"><i style="width:62%"></i></span><span>2:51</span></div>
+          <span class="mi-status">▶ 再生中 — Playing</span>
+        </div>
+      </div>
+    </a>
+  </div>
+</div>
+<div class="theme light">
+  <div class="theme-label">Light</div>
+  <div class="row">
+    <a class="mi-card widget" href="#">
+      <span class="mi-speed"><i></i><i></i><i></i></span>
+      <span class="mi-splash">
+        <svg width="74" height="74" viewBox="0 0 74 74"><path fill="#2e6fe2" d="M37 4c5 8 14 6 19 12s-1 13 4 19-6 12-12 15-12-3-19-2-13 4-18-2 2-13-1-19 3-13 8-17 13-4 19-6z"/><circle fill="#2e6fe2" cx="66" cy="12" r="4"/><circle fill="#2e6fe2" cx="8" cy="58" r="3"/></svg>
+      </span>
+      <div class="mi-head"><span class="mi-title">Neon Cortex</span><span class="mi-kana">VERTEX</span></div>
+      <div class="mi-body">
+        <div class="mi-cover"><canvas class="cover" data-mode="mi" width="26" height="26"></canvas></div>
+        <div class="mi-info">
+          <span class="mi-artist">Bitwave Runner</span>
+          <span class="mi-line"></span>
+          <div class="mi-times"><span>0:38</span><span class="mi-bar"><i style="width:24%"></i></span><span>2:51</span></div>
+          <span class="mi-status paused">❙❙ 休 — Paused</span>
+        </div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<h2>C2 · Sticker Bomb <span class="netrex">Netrex</span> <span class="new">★ concepto</span></h2>
+<p class="h2-note">Collage de pegatinas: la portada como sticker GRANDE con borde blanco curvado, stickers pequeños alrededor (VERTEX, rayos, corazones) que se LEVANTAN al hover, estrella que explota sobre la esquina, fondo con patrón doodle · Divertido y expresivo.</p>
+<div class="theme dark">
+  <div class="theme-label">Dark</div>
+  <div class="row">
+    <a class="sb-card widget" href="#">
+      <span class="sb-mini m1">⚡ VERTEX</span>
+      <span class="sb-mini m2">♥</span>
+      <span class="sb-mini m3">★</span>
+      <span class="sb-mini m4">♫!</span>
+      <div class="sb-body">
+        <div class="sb-main">
+          <span class="sb-hover-star">★</span>
+          <div class="sb-cover"><canvas class="cover" data-mode="sb" width="24" height="24"></canvas></div>
+        </div>
+        <div class="sb-title-sticker">
+          <span class="sb-title">Neon Cortex</span>
+          <span class="sb-artist">Bitwave Runner</span>
+        </div>
+        <span class="sb-status">♪ On Repeat</span>
+        <div class="sb-progress"><i style="width:62%"></i></div>
+      </div>
+    </a>
+  </div>
+</div>
+<div class="theme light">
+  <div class="theme-label">Light</div>
+  <div class="row">
+    <a class="sb-card widget" href="#">
+      <span class="sb-mini m1">⚡ VERTEX</span>
+      <span class="sb-mini m2">♥</span>
+      <span class="sb-mini m3">★</span>
+      <span class="sb-mini m4">♫!</span>
+      <div class="sb-body">
+        <div class="sb-main">
+          <span class="sb-hover-star">★</span>
+          <div class="sb-cover"><canvas class="cover" data-mode="sb" width="24" height="24"></canvas></div>
+        </div>
+        <div class="sb-title-sticker">
+          <span class="sb-title">Neon Cortex</span>
+          <span class="sb-artist">Bitwave Runner</span>
+        </div>
+        <span class="sb-status paused">❙❙paused</span>
+        <div class="sb-progress"><i style="width:24%"></i></div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<h2>GAMING · Mini-editor "Estilos por juego" + perfil reactivo</h2>
+<p class="h2-note">Con Netrex: el usuario VINCULA un estilo a un juego (el detector de procesos ya existe). Cuando detecta el juego, la tarjeta de música/actividad del perfil adopta el estilo automáticamente. Cero arte oficial — solo estética VERTEX.</p>
+
+<div class="theme dark">
+  <div class="theme-label">Maqueta funcional — elige estilos en el select, cambia el juego detectado</div>
+  <div class="gb-wrap">
+    <div class="gb-editor">
+      <div class="gb-title">Estilos por juego</div>
+      <div class="gb-sub">Cuando detectes uno de estos juegos, tu tarjeta de música adopta el estilo vinculado automáticamente.</div>
+      <div class="gb-row">
+        <div class="gb-game"><div class="g">Shooter táctico 5v5</div><div class="s">Detectado por proceso · jugando ahora</div></div>
+        <span class="gb-arrow">→</span>
+        <span class="gb-style-chip"><span class="dot" style="background:#e84855"></span><select id="bind1" style="background:transparent;border:none;color:#e8e8ee;font:inherit;cursor:pointer"><option>Tactical Ops</option><option>Esport Arena</option><option>Ninguno</option></select></span>
+      </div>
+      <div class="gb-row">
+        <div class="gb-game"><div class="g">MOBA Arena</div><div class="s">Sin estilo vinculado</div></div>
+        <span class="gb-arrow">→</span>
+        <span class="gb-style-chip"><span class="dot" style="background:#6c6c78"></span><select id="bind2" style="background:transparent;border:none;color:#e8e8ee;font:inherit;cursor:pointer"><option selected>Ninguno</option><option>Esport Arena</option><option>Tactical Ops</option></select></span>
+      </div>
+      <div class="gb-row" style="opacity:.55">
+        <div class="gb-game"><div class="g">Blocky Craft</div><div class="s">Estilo en camino…</div></div>
+        <span class="gb-arrow">→</span>
+        <span class="gb-style-chip" style="cursor:default">Próximamente</span>
+      </div>
+      <button class="gb-add">+ Añadir juego (de tu actividad reciente)</button>
+      <p class="gb-note"><b>Cómo funciona:</b> la vinculación vive en tu perfil Netrex. El detector de procesos (ya existente) emite el juego activo → el widget de música cambia al estilo vinculado al instante, sin tocar tu estilo por defecto. Al cerrar el juego, vuelve el tuyo.</p>
+    </div>
+    <div class="gb-live">
+      <div class="gb-live-label"><span class="pulse"></span>Perfil · ahora mismo</div>
+      <div class="gb-detect">Detectado: <b id="det-game">Shooter táctico 5v5</b></div>
+      <div id="live-slot"><!-- widget live here --></div>
+      <label class="gb-switch"><span class="sw"></span> Auto-swap por juego activado</label>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── Placeholder covers (original canvas art) ──
+  function drawCover(cv, mode) {
+    const ctx = cv.getContext('2d');
+    const w = cv.width, h = cv.height;
+    let seed = 17;
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    if (mode === 'to') { // tactical map
+      ctx.fillStyle = '#090b0e'; ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = 'rgba(61,90,241,0.28)'; ctx.lineWidth = 0.5;
+      for (let y = 0; y < h; y += 3) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+      for (let x = 0; x < w; x += 3) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
+      ctx.strokeStyle = '#e84855'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(w / 2, h / 2, w * 0.16, 0, 7); ctx.stroke();
+      ctx.fillStyle = '#e84855';
+      ctx.fillRect(w / 2 - 0.5, h / 2 - 4, 1, 8); ctx.fillRect(w / 2 - 4, h / 2 - 0.5, 8, 1);
+      ctx.fillStyle = '#3d5af1';
+      for (let i = 0; i < 4; i++) ctx.fillRect(w * 0.14 + i * 3, h - 6, 2, 2);
+    } else if (mode === 'es') { // stadium final
+      const g = ctx.createLinearGradient(0, 0, 0, h);
+      g.addColorStop(0, '#101b3a'); g.addColorStop(1, '#05070f');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+      for (let i = 0; i < 5; i++) { // crowd lights
+        ctx.fillStyle = `rgba(255,201,60,${0.3 + rnd() * 0.4})`;
+        ctx.fillRect(rnd() * w, rnd() * h * 0.4, 1.5, 1.5);
+      }
+      // trophy silhouette center
+      ctx.fillStyle = '#ffc93c';
+      const cx = w / 2, cy = h * 0.52;
+      ctx.fillRect(cx - 5, cy - 8, 10, 8);
+      ctx.fillRect(cx - 2, cy, 4, 4);
+      ctx.fillRect(cx - 6, cy + 4, 12, 2);
+      ctx.strokeStyle = '#ffc93c'; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.arc(cx - 6, cy - 5, 3, Math.PI * 0.5, Math.PI * 1.5); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx + 6, cy - 5, 3, Math.PI * 1.5, Math.PI * 2.5); ctx.stroke();
+      ctx.fillStyle = '#2e6fff';
+      ctx.fillRect(0, h - 3, w, 3);
+    } else if (mode === 'mi') { // ink brush mountain
+      ctx.fillStyle = '#faf8f4'; ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = '#14141a';
+      ctx.beginPath(); ctx.moveTo(0, h); ctx.lineTo(w * 0.28, h * 0.3); ctx.lineTo(w * 0.44, h * 0.62); ctx.lineTo(w * 0.62, h * 0.22); ctx.lineTo(w, h * 0.7); ctx.lineTo(w, h); ctx.fill();
+      ctx.fillStyle = 'rgba(20,20,26,0.75)';
+      ctx.beginPath(); ctx.arc(w * 0.76, h * 0.2, w * 0.09, 0, 7); ctx.fill();
+      ctx.fillStyle = '#e84855';
+      ctx.fillRect(w * 0.08, h * 0.12, w * 0.1, h * 0.02);
+    } else if (mode === 'sb') { // sticker doodles
+      ctx.fillStyle = '#ffd23f'; ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = '#ff6ec7';
+      ctx.beginPath(); ctx.arc(w * 0.5, h * 0.5, w * 0.2, 0, 7); ctx.fill();
+      ctx.fillStyle = '#3f8cff';
+      ctx.fillRect(w * 0.15, h * 0.2, w * 0.12, h * 0.12);
+      ctx.fillStyle = '#2ee6a8';
+      ctx.beginPath();
+      const sx = w * 0.78, sy = h * 0.72, R = w * 0.13, r = w * 0.05;
+      for (let i = 0; i < 10; i++) { const rad = i % 2 ? r : R, a = (i / 10) * Math.PI * 2 - 1.57; ctx[i ? 'lineTo' : 'moveTo'](sx + Math.cos(a) * rad, sy + Math.sin(a) * rad); }
+      ctx.fill();
+      ctx.strokeStyle = '#14101f'; ctx.lineWidth = 2;
+      ctx.strokeRect(w * 0.08, h * 0.12, w * 0.12, h * 0.12);
+    } else if (mode === 'nc') {
+      ctx.fillStyle = '#0a0e24'; ctx.fillRect(0, 0, w, h);
+      for (let i = 0; i < 7; i++) {
+        const bw = 2 + Math.floor(rnd() * 3), bh = 6 + Math.floor(rnd() * 14);
+        const bx = Math.floor(rnd() * (w - bw)), by = h - bh;
+        ctx.fillStyle = '#141b3c'; ctx.fillRect(bx, by, bw, bh);
+        ctx.fillStyle = (i % 2) ? '#2ee6ff' : '#ff3ecd';
+        for (let wy = by + 1; wy < h - 1; wy += 3) for (let wx = bx; wx < bx + bw; wx += 2) if (rnd() > 0.55) ctx.fillRect(wx, wy, 1, 1);
+      }
+    } else {
+      // hr hologram
+      const g = ctx.createLinearGradient(0, 0, 0, h);
+      g.addColorStop(0, '#0b1c3a'); g.addColorStop(1, '#04060e');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = 'rgba(125,211,252,0.35)'; ctx.lineWidth = 0.5;
+      for (let y = 4; y < h; y += 4) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+      ctx.fillStyle = '#7dd3fc'; ctx.beginPath(); ctx.arc(w / 2, h / 2, w * 0.2, 0, 7); ctx.fill();
+    }
+  }
+  document.querySelectorAll('canvas.cover').forEach(cv => drawCover(cv, cv.dataset.mode));
+
+  // ── Live profile preview: swaps widget by game binding ──
+  const bankHTML = {
+    'Tactical Ops': `<a class="to-card widget" href="#"><span class="to-scanline"></span>
+      <div class="to-head"><span class="to-op">OP-07 // <b>MUSIC BRIEFING</b></span><span class="to-status">◉ LIVE</span></div>
+      <div class="to-body"><div class="to-brief"><canvas class="cover" data-mode="to" width="26" height="26"></canvas><span class="to-bl"></span><span class="to-br"></span></div>
+      <div class="to-map"></div>
+      <div class="to-info"><span class="to-title">Neon Cortex</span><span class="to-artist">Bitwave Runner</span>
+      <div class="to-meta"><span class="to-ticks"></span><span class="to-coords">62% // SP</span></div></div></div>
+      <div class="to-progress"><i class="on"></i><i class="on"></i><i class="on"></i><i class="half"></i><i></i><i></i></div><div class="to-diag"></div></a>`,
+    'Esport Arena': `<a class="es-card widget" href="#"><div class="es-lights"><i></i><i></i></div><div class="es-conf"><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="es-body"><div class="es-jumbo"><canvas class="cover" data-mode="es" width="32" height="18"></canvas></div>
+      <div class="es-vs"><span class="es-score"><span class="n">62</span><span class="l">Beat%</span></span>
+      <span class="es-mid"><span class="es-title">Neon Cortex</span><span class="es-artist">Bitwave Runner</span></span>
+      <span class="es-pill live">● En vivo</span></div>
+      <div class="es-foot"><i class="on"></i><i class="on"></i><i class="on"></i><i class="gold"></i><i></i><i></i></div></div></a>`,
+    'Holo Room': `<a class="hr-card widget" href="#"><div class="hr-body">
+      <div class="hr-holo"><canvas class="cover" data-mode="hr" width="24" height="24"></canvas></div>
+      <div class="hr-beam"></div><div class="hr-base"></div>
+      <div class="hr-dust"><i></i><i></i><i></i></div>
+      <div class="hr-info"><span class="hr-title">Neon Cortex</span><span class="hr-artist">Bitwave Runner</span><span class="hr-status">▶ Projecting</span></div>
+      <div class="hr-progress" style="width:80%"><i style="width:62%"></i></div></div></a>`,
+  };
+  const liveSlot = document.getElementById('live-slot');
+  function renderLive(styleId) {
+    liveSlot.innerHTML = bankHTML[styleId] || bankHTML['Holo Room'];
+    liveSlot.querySelectorAll('canvas.cover').forEach(cv => drawCover(cv, cv.dataset.mode));
+  }
+  renderLive('Tactical Ops');
+  document.getElementById('bind1').addEventListener('change', e => {
+    const v = e.target.value;
+    document.getElementById('det-game').textContent = v === 'Ninguno' ? 'Ningún estilo — usando tu predeterminado' : v;
+    renderLive(v === 'Ninguno' ? 'Holo Room' : v);
+  });
+</script>
+</body>
+</html>
