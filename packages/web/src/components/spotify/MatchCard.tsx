@@ -59,8 +59,19 @@ export function MatchCard({
 
   const hasModeLine = Boolean(mode || map);
 
-  // Live match timer from the activity's start timestamp.
-  const start = game.timestamps?.start ?? 0;
+  // HONESTY RULE: the process running only proves the game is open.
+  // A real match exists ONLY when the enriched payload says so:
+  //  - matchState === 'ingame' (lockfile/local API: real session), or
+  //  - a real match start timestamp distinct from the app launch, or
+  //  - real map/mode data arrived.
+  // Otherwise we are at best in a menu/lobby → "Jugando a <game>".
+  const matchState = game.state === 'ingame' || game.details === 'ingame' ? 'ingame'
+    : game.state === 'menu' || game.details === 'menu' ? 'menu'
+    : null;
+  const ingame = matchState === 'ingame';
+
+  // Live match timer ONLY during a real match (from the real match start).
+  const start = ingame ? game.timestamps?.start ?? 0 : 0;
   const [elapsed, setElapsed] = useState(() => (start ? Date.now() - start : 0));
   useEffect(() => {
     if (!start || prefersReduced) {
@@ -107,17 +118,19 @@ export function MatchCard({
               {map}
             </p>
           ) : (
-            <p className="match-card-mode">{t('matchcard_in_progress')}</p>
+            <p className="match-card-mode">
+              {ingame ? t('matchcard_in_progress') : t('matchcard_playing').replace('{game}', game.name)}
+            </p>
           )}
 
           <div className="match-card-score-row">
             {/* Score: only when real data exists (no source yet — never invented). */}
             <div className="match-card-timer">
               <span className="t">
-                {start && !prefersReduced && <span className="live-dot" aria-hidden />}
-                {start ? formatElapsed(elapsed) : t('matchcard_playing_now')}
+                {ingame && start && !prefersReduced && <span className="live-dot" aria-hidden />}
+                {ingame && start ? formatElapsed(elapsed) : ingame ? t('matchcard_in_progress') : t('matchcard_in_menu')}
               </span>
-              {!compact && <span className="cap">{t('matchcard_match_time')}</span>}
+              {ingame && !compact && <span className="cap">{t('matchcard_match_time')}</span>}
             </div>
           </div>
         </div>
