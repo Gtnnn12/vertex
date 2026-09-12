@@ -129,7 +129,7 @@ export function ProfileBoardTab({ user, origin, onBoardSaved }: ProfileBoardTabP
           )}
         </div>
       ) : (
-        <div className="board-grid grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2">
+        <div className="board-grid grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 min-[420px]:items-start">
           {shown.map((w) => {
             const def = WIDGET_REGISTRY[w.type];
             if (!def || w.visible === false) return null;
