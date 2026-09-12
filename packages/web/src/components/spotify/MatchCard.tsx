@@ -10,11 +10,13 @@ import type { Activity, ActivitySpotify } from '@backspace/shared';
  *  - CS2 → CS2 RADAR: circular operation radar sweeping on the right
  *    (sweep + blips), military-mono data block on the left with the HUGE
  *    CT—T score as protagonist, round number and live match clock.
- *    Only the data that actually arrived renders (matchData from the
- *    GSI-shaped pipeline / dev mock); bare process → lobby standby radar
- *    + "Jugando a Counter-Strike 2". Never invented.
+ *    UNIFIED SILHOUETTE: the game running → ALWAYS this same card; only the
+ *    state detail changes (in match: map/mode/score/clock; lobby: standby
+ *    radar + "En el juego"). Missing data is hidden cleanly, never invented.
  *  - VALORANT (and default) → coral card: game icon with breathing glow,
  *    big game name, mode/map from the Riot lockfile enrichment, live timer.
+ *    Same silhouette in lobby — icon + name + "En el juego" status line,
+ *    no timer/map.
  *
  * Spotify playing alongside → fine secondary line at the bottom of either.
  * Reduced motion: static radar, frozen clock, no entry animation.
@@ -122,15 +124,10 @@ function Cs2RadarCard({
               </span>
             </div>
           ) : (
+            // Lobby / agents: SAME card, one status line. The game name is
+            // already shown above — never repeat it, no invented detail.
             <div className="radar-status">
-              {inAgents ? t('matchcard_agent_select')
-                : ingame ? t('matchcard_in_progress') : (
-                <>
-                  {t('matchcard_playing').replace('{game}', game.name)}
-                  <span className="sep-dot"> · </span>
-                  {t('matchcard_in_menu')}
-                </>
-              )}
+              {inAgents ? t('matchcard_agent_select') : t('matchcard_in_game')}
             </div>
           )}
 
@@ -236,11 +233,18 @@ function DefaultMatchCard({
               {map}
             </p>
           ) : (
+            // Lobby / agents / data-less match: one honest status line,
+            // same position as the mode line — silhouette never changes.
             <p className="match-card-mode">
-              {ingame ? t('matchcard_in_progress') : t('matchcard_playing').replace('{game}', game.name)}
+              {ingame ? t('matchcard_in_progress')
+                : inAgents ? t('matchcard_agent_select')
+                : t('matchcard_in_game')}
             </p>
           )}
 
+          {/* Score + live timer: ONLY when real match data exists. In lobby
+              this row disappears entirely — the card above IS the state. */}
+          {(hasScore || (ingame && start)) && (
           <div className="match-card-score-row">
             {/* Score — ONLY when the real numbers arrived. */}
             {hasScore && (
@@ -253,14 +257,17 @@ function DefaultMatchCard({
                 )}
               </div>
             )}
-            <div className="match-card-timer">
-              <span className="t">
-                {ingame && start && !prefersReduced && <span className="live-dot" aria-hidden />}
-                {ingame && start ? formatElapsed(elapsed) : ingame ? t('matchcard_in_progress') : t('matchcard_in_menu')}
-              </span>
-              {ingame && !compact && !hasScore && <span className="cap">{t('matchcard_match_time')}</span>}
-            </div>
+            {ingame && start && (
+              <div className="match-card-timer">
+                <span className="t">
+                  {!prefersReduced && <span className="live-dot" aria-hidden />}
+                  {formatElapsed(elapsed)}
+                </span>
+                {!compact && !hasScore && <span className="cap">{t('matchcard_match_time')}</span>}
+              </div>
+            )}
           </div>
+          )}
         </div>
       </div>
 

@@ -89,7 +89,22 @@ function parseMockGames(): MockGameSpec[] {
   return raw
     .split(/[+,]/)
     .map((s) => s.trim().toLowerCase())
-    .map((key) => MOCK_GAME_SPECS[key])
+    // Optional "@lobby" suffix → menu state (e.g. VERTEX_MOCK_GAMES=cs2@lobby).
+    // Without it the spec keeps its default (in-match) state.
+    .map((key) => {
+      const lobby = key.endsWith('@lobby');
+      const base = lobby ? key.slice(0, -'@lobby'.length) : key;
+      const spec = MOCK_GAME_SPECS[base];
+      if (!spec) return null;
+      if (!lobby) return spec;
+      // Lobby variant: same game, menu state, NO invented match data.
+      return {
+        ...spec,
+        state: 'menu',
+        details: undefined,
+        matchData: undefined,
+      } as MockGameSpec;
+    })
     .filter((spec): spec is MockGameSpec => Boolean(spec));
 }
 
