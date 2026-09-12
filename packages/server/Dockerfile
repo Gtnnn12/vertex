@@ -7,16 +7,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
     && rm -rf /var/lib/apt/lists/*
 
 # Minimal manifest copies. patches/ is included so the lockfile's
-# patchedDependencies entry resolves, but the desktop importer (the only
-# consumer of uiohook-napi) is excluded from this filtered install —
-# so pnpm 10 must not fail on the "unused patch". Fix: only enable patch
-# application when the patch is actually consumed, via allowUnusedPatches.
+# patchedDependencies entry resolves; allowUnusedPatches in pnpm-workspace.yaml
+# stops pnpm 10 failing because the only patch consumer (desktop) is excluded
+# from this filtered install.
 COPY package.json pnpm-workspace.yaml .npmrc* patches patches/
 COPY packages/shared/package.json packages/shared/
 COPY packages/server/package.json packages/server/
 
 RUN corepack enable && corepack prepare pnpm@latest --activate \
-    && pnpm config set allow-unused-patches true --location project \
+    && printf 'allowUnusedPatches: true\n' >> pnpm-workspace.yaml \
     && pnpm install --frozen-lockfile=false --filter @vertex/server... --ignore-scripts
 
 # Build server + shared
