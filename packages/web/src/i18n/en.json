@@ -1514,5 +1514,7 @@
   "music_style_arcade_desc": "Pixel-art CRT with scanlines and neon glow — free base style.",
   "matchcard_in_progress": "Match in progress",
   "matchcard_match_time": "Match time",
-  "matchcard_playing_now": "In game"
+  "matchcard_playing_now": "In game",
+  "matchcard_playing": "Playing {game}",
+  "matchcard_in_menu": "In menu"
 }
