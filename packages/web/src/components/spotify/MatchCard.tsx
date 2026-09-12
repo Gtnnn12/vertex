@@ -6,17 +6,18 @@ import type { Activity, ActivitySpotify } from '@backspace/shared';
 /**
  * MATCH CARD — the "playing a game" state of the profile music widget.
  *
- * When the user's primary activity is a detected GAME, the widget renders
- * this card instead of the music box: game icon with breathing glow, big
- * game name, and ONLY the data that actually arrived:
- *  - Riot (VALORANT): 'ingame'/'menu' in `state`, "Mode · Map" in `details`.
- *  - CS2: real map/score/round via `matchData` (GSI-style local source);
- *    score row + round + map render only when those numbers exist.
- *  - Bare process detection → "Jugando a <game>" / "En menú". Nothing invented.
+ * Each game gets its OWN composition (no shared generic card):
+ *  - CS2 → CS2 RADAR: circular operation radar sweeping on the right
+ *    (sweep + blips), military-mono data block on the left with the HUGE
+ *    CT—T score as protagonist, round number and live match clock.
+ *    Only the data that actually arrived renders (matchData from the
+ *    GSI-shaped pipeline / dev mock); bare process → lobby standby radar
+ *    + "Jugando a Counter-Strike 2". Never invented.
+ *  - VALORANT (and default) → coral card: game icon with breathing glow,
+ *    big game name, mode/map from the Riot lockfile enrichment, live timer.
  *
- * Per-game accent: cs2 → arena orange, valorant → coral (VERTEX palettes).
- *
- * Reduced motion: no entry animation, static glow, frozen timer.
+ * Spotify playing alongside → fine secondary line at the bottom of either.
+ * Reduced motion: static radar, frozen clock, no entry animation.
  */
 
 function formatElapsed(ms: number): string {
@@ -30,35 +31,15 @@ function formatElapsed(ms: number): string {
 
 /** Per-game accent colours (VERTEX-original palettes). */
 const GAME_ACCENTS: Record<string, string> = {
-  cs2: '#de9b35',      // arena orange
+  cs2: '#e8963c',      // tactical orange
   valorant: '#ff4655', // coral
 };
 
-export function MatchCard({
-  game,
-  spotifyLine,
-  compact = false,
-}: {
-  /** The detected game activity (type 'playing' or 'streaming'). */
-  game: Activity;
-  /** Spotify snapshot playing at the same time, or null. */
-  spotifyLine?: ActivitySpotify | null;
-  /** Compact variant (popout). */
-  compact?: boolean;
-}) {
-  const { t } = useLanguage();
-  const prefersReduced = useReducedMotion();
-
+/** Shared hooks/values for both card variants. */
+function useMatchCardState(game: Activity, prefersReduced: boolean | null) {
   // HONESTY RULE: the process running only proves the game is open.
-  // Real match state comes from the enriched payload: the desktop pipeline
-  // puts 'ingame' | 'menu' in `state` (Riot lockfile local API) and packs the
-  // REAL mode/map as "Mode · Map" into `details`. Without that enrichment we
-  // only know the process runs → "Jugando a <game>", never a fake match.
   const rawState = game.state?.trim() ?? '';
-  const matchState = rawState === 'ingame' || rawState === 'menu'
-    ? rawState
-    : null;
-  const ingame = matchState === 'ingame';
+  const ingame = rawState === 'ingame';
 
   // Real match data (map, scores, round) when a local game API provides it.
   const matchData = game.matchData;
@@ -76,8 +57,6 @@ export function MatchCard({
     mode = rawDetails;
   }
 
-  const hasModeLine = Boolean(mode || map);
-
   // Live match timer ONLY during a real match (from the real match start).
   const start = ingame ? game.timestamps?.start ?? 0 : 0;
   const [elapsed, setElapsed] = useState(() => (start ? Date.now() - start : 0));
@@ -91,9 +70,125 @@ export function MatchCard({
     return () => clearInterval(id);
   }, [start, prefersReduced]);
 
-  // Game accent: per-game VERTEX palette; coral default.
-  const gameId = matchData?.gameId ?? '';
-  const accent = GAME_ACCENTS[gameId] ?? '#ff4655';
+  return { ingame, matchData, hasScore, mode, map, start, elapsed };
+}
+
+/* ── CS2 RADAR ─────────────────────────────────────────────────────────── */
+
+function Cs2RadarCard({
+  game,
+  spotifyLine,
+  compact,
+  prefersReduced,
+}: {
+  game: Activity;
+  spotifyLine?: ActivitySpotify | null;
+  compact: boolean;
+  prefersReduced: boolean | null;
+}) {
+  const { t } = useLanguage();
+  const { ingame, matchData, hasScore, mode, map, start, elapsed } = useMatchCardState(game, prefersReduced);
+
+  return (
+    <motion.div
+      initial={prefersReduced ? { opacity: 0 } : { opacity: 0, y: 8 }}
+      animate={prefersReduced ? { opacity: 1 } : { opacity: 1, y: 0 }}
+      transition={{ type: 'spring', stiffness: 260, damping: 24 }}
+      className={`match-card radar-card${compact ? ' is-compact' : ''}${ingame ? '' : ' standby'}`}
+      style={{ '--mc-accent': '#e8963c', '--mc-user-accent': 'var(--user-accent, #35e0ff)' } as React.CSSProperties}
+    >
+      <div className="radar-wrap">
+        <div className="radar-data">
+          <p className="radar-game" title={game.name}>{game.name}</p>
+
+          {/* Map — only when real (hidden in lobby: name already above). */}
+          {ingame && map && <p className="radar-map">{map}</p>}
+          {ingame && mode && <p className="radar-mode">{mode}</p>}
+
+          {/* Score — ONLY when the real numbers arrived. */}
+          {hasScore ? (
+            <div className="radar-score">
+              <span className="n ct">{matchData!.scoreYou}</span>
+              <span className="sep">—</span>
+              <span className="n tt">{matchData!.scoreThem}</span>
+              <span className="radar-score-side">
+                <span className="tags"><span className="tg ct">CT</span><span className="tg tt">T</span></span>
+                {typeof matchData!.round === 'number' && (
+                  <span className="radar-round">{t('matchcard_round').replace('{n}', String(matchData!.round))}</span>
+                )}
+              </span>
+            </div>
+          ) : (
+            <div className="radar-status">
+              {ingame ? t('matchcard_in_progress') : (
+                <>
+                  {t('matchcard_playing').replace('{game}', game.name)}
+                  <span className="sep-dot"> · </span>
+                  {t('matchcard_in_menu')}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Live clock — own hairline row, only during a real match. */}
+          {ingame && start ? (
+            <div className="radar-clockrow">
+              <span className="rlbl">{t('matchcard_match_time')}</span>
+              <span className="radar-clock">
+                <span className="t">
+                  {!prefersReduced && <span className="live-dot" aria-hidden />}
+                  {formatElapsed(elapsed)}
+                </span>
+              </span>
+            </div>
+          ) : null}
+        </div>
+
+        {/* THE RADAR — the identity of the card (standby when lobby). */}
+        <div className="radar-scope" aria-hidden>
+          <div className="radar-disc" />
+          <div className="radar-sweep" />
+          <span className="radar-blip b1" />
+          <span className="radar-blip b2" />
+          <span className="radar-blip b3" />
+        </div>
+      </div>
+
+      <span className="radar-stamp">CS2</span>
+
+      {/* party + Spotify fine line — real data only; party source pending. */}
+      {spotifyLine && (
+        <div className="match-card-song">
+          <span className="note" aria-hidden>♪</span>
+          <span className="name" title={`${spotifyLine.song} — ${spotifyLine.artist}`}>
+            {spotifyLine.song} — {spotifyLine.artist}
+          </span>
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+/* ── Default / VALORANT coral card ─────────────────────────────────────── */
+
+function DefaultMatchCard({
+  game,
+  spotifyLine,
+  compact,
+  prefersReduced,
+  accent,
+  gameId,
+}: {
+  game: Activity;
+  spotifyLine?: ActivitySpotify | null;
+  compact: boolean;
+  prefersReduced: boolean | null;
+  accent: string;
+  gameId: string;
+}) {
+  const { t } = useLanguage();
+  const { ingame, matchData, hasScore, mode, map, start, elapsed } = useMatchCardState(game, prefersReduced);
+  const hasModeLine = Boolean(mode || map);
 
   return (
     <motion.div
@@ -111,15 +206,7 @@ export function MatchCard({
           <svg viewBox="0 0 96 96">
             <rect width="96" height="96" rx="18" className="mc-icon-bg" />
             {gameId === 'cs2' ? (
-              // CS2 glyph: crosshair target — VERTEX original, no game logos.
-              <>
-                <circle cx="48" cy="48" r="26" fill="none" className="mc-icon-frame" strokeWidth="3" />
-                <circle cx="48" cy="48" r="10" className="mc-icon-fill" />
-                <rect x="45.5" y="12" width="5" height="16" className="mc-icon-core" />
-                <rect x="45.5" y="68" width="5" height="16" className="mc-icon-core" />
-                <rect x="12" y="45.5" width="16" height="5" className="mc-icon-core" />
-                <rect x="68" y="45.5" width="16" height="5" className="mc-icon-core" />
-              </>
+              <></>
             ) : (
               <>
                 <polygon points="48,14 78,48 48,82 18,48" fill="none" className="mc-icon-frame" strokeWidth="3" />
@@ -146,7 +233,7 @@ export function MatchCard({
           )}
 
           <div className="match-card-score-row">
-            {/* CS2 score + round — ONLY when the real numbers arrived. */}
+            {/* Score — ONLY when the real numbers arrived. */}
             {hasScore && (
               <div className="match-card-score" data-game={gameId}>
                 <span className="n you">{matchData!.scoreYou}</span>
@@ -178,5 +265,37 @@ export function MatchCard({
         </div>
       )}
     </motion.div>
+  );
+}
+
+export function MatchCard({
+  game,
+  spotifyLine,
+  compact = false,
+}: {
+  /** The detected game activity (type 'playing' or 'streaming'). */
+  game: Activity;
+  /** Spotify snapshot playing at the same time, or null. */
+  spotifyLine?: ActivitySpotify | null;
+  /** Compact variant (popout). */
+  compact?: boolean;
+}) {
+  const prefersReduced = useReducedMotion();
+  const gameId = game.matchData?.gameId ?? '';
+
+  // CS2 gets its own radar composition; every other game the coral card.
+  if (gameId === 'cs2') {
+    return <Cs2RadarCard game={game} spotifyLine={spotifyLine} compact={compact} prefersReduced={prefersReduced} />;
+  }
+  const accent = GAME_ACCENTS[gameId] ?? '#ff4655';
+  return (
+    <DefaultMatchCard
+      game={game}
+      spotifyLine={spotifyLine}
+      compact={compact}
+      prefersReduced={prefersReduced}
+      accent={accent}
+      gameId={gameId}
+    />
   );
 }

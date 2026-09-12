@@ -2119,6 +2119,268 @@ body::after {
 .light .match-card-score .sep,
 .theme-light .match-card-score .sep { color: rgb(18 22 28 / 0.3); }
 
+/* ══════════════════════════════════════════════════════════════════
+   CS2 RADAR — the CS2 variant of the Match Card (own composition).
+   Right: circular operation radar (sweep + blips) = the identity.
+   Left: military-mono data block, HUGE CT—T score as protagonist.
+   Reduced-motion: sweep and blips frozen (radar visible, static).
+   ══════════════════════════════════════════════════════════════════ */
+.match-card.radar-card {
+  --radar-tan: #c8b98a;
+  --radar-ct: #5b9bd5;
+  --radar-t: #d9b23c;
+}
+.radar-wrap {
+  position: relative;
+  display: flex;
+  min-height: 128px;
+}
+.radar-data {
+  position: relative;
+  z-index: 2;
+  width: 60%;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 13px 8px 12px 14px;
+  background: linear-gradient(120deg, rgba(255 255 255 / 0.03) 78%, transparent);
+}
+.radar-game {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--radar-tan);
+  opacity: 0.85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.radar-map {
+  font-family: Impact, 'Arial Black', sans-serif;
+  font-size: 24px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.15;
+  color: #ece8e1;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.radar-mode {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgb(236 232 225 / 0.55);
+  margin-top: 2px;
+}
+
+/* The score — protagonist. */
+.radar-score {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 10px;
+}
+.radar-score .n {
+  font-size: 42px;
+  font-weight: 700;
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.radar-score .n.ct { color: var(--radar-ct); text-shadow: 0 0 14px rgb(91 155 213 / 0.35); }
+.radar-score .n.tt { color: var(--radar-t); text-shadow: 0 0 14px rgb(217 178 60 / 0.3); }
+.radar-score .sep { font-size: 22px; color: rgb(236 232 225 / 0.4); font-weight: 300; }
+.radar-score-side { display: flex; flex-direction: column; gap: 3px; margin-left: 2px; }
+.radar-score-side .tags { display: flex; gap: 8px; }
+.radar-score-side .tg { font-size: 8px; font-weight: 700; letter-spacing: 0.12em; }
+.radar-score-side .tg.ct { color: var(--radar-ct); }
+.radar-score-side .tg.tt { color: var(--radar-t); }
+.radar-round {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--mc-accent);
+}
+
+/* Lobby / no-data status line (honest). */
+.radar-status {
+  margin-top: auto;
+  padding-top: 14px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgb(236 232 225 / 0.55);
+}
+.radar-status .sep-dot { color: rgb(236 232 225 / 0.3); }
+
+/* Live clock row. */
+.radar-clockrow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 9px;
+  padding-top: 7px;
+  border-top: 1px solid rgb(255 255 255 / 0.05);
+}
+.radar-clockrow .rlbl {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgb(236 232 225 / 0.35);
+}
+.radar-clock .t {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #ece8e1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── THE RADAR (right half, bleeding off the edge) ── */
+.radar-scope {
+  position: absolute;
+  right: -36px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 172px;
+  height: 172px;
+  pointer-events: none;
+}
+.radar-disc {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 1px solid rgb(255 255 255 / 0.07);
+  background:
+    radial-gradient(circle, transparent 0 30%, rgb(255 255 255 / 0.05) 30.5% 31%, transparent 31.5%),
+    radial-gradient(circle, transparent 0 55%, rgb(255 255 255 / 0.05) 55.5% 56%, transparent 56.5%),
+    radial-gradient(circle at center, rgb(255 255 255 / 0.04) 0%, transparent 72%);
+}
+.radar-disc::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background:
+    linear-gradient(rgb(255 255 255 / 0.06), rgb(255 255 255 / 0.06)) center / 1px 100% no-repeat,
+    linear-gradient(rgb(255 255 255 / 0.06), rgb(255 255 255 / 0.06)) center / 100% 1px no-repeat;
+}
+.radar-sweep {
+  position: absolute;
+  inset: 5px;
+  border-radius: 9999px;
+  background: conic-gradient(from 0deg, transparent 0deg, transparent 300deg, rgb(232 150 60 / 0.15) 355deg, rgb(232 150 60 / 0.4) 360deg);
+  animation: radar-sweep 5.5s linear infinite;
+}
+@keyframes radar-sweep { to { transform: rotate(360deg); } }
+.radar-blip {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 9999px;
+  background: var(--radar-tan);
+}
+.radar-blip.b1 { top: 28%; left: 34%; animation: radar-blip 5.5s ease-out infinite; }
+.radar-blip.b2 { top: 55%; left: 60%; width: 4px; height: 4px; background: var(--mc-accent); animation: radar-blip 5.5s ease-out 1.9s infinite; }
+.radar-blip.b3 { top: 66%; left: 28%; width: 4px; height: 4px; animation: radar-blip 5.5s ease-out 3.6s infinite; }
+@keyframes radar-blip { 0% { opacity: 0; } 6% { opacity: 1; } 55% { opacity: 0.6; } 100% { opacity: 0; } }
+
+/* Corner stamp — the game icon demoted to a seal. */
+.radar-stamp {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  z-index: 3;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 7.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--mc-accent);
+  border: 1px solid var(--mc-accent);
+  padding: 2px 6px;
+  opacity: 0.85;
+  background: rgb(10 12 15 / 0.8);
+}
+
+/* Lobby standby: radar dimmed, no sweep motion, no blips pop. */
+.match-card.radar-card.standby .radar-sweep { animation: none; opacity: 0.25; }
+.match-card.radar-card.standby .radar-blip { animation: none; opacity: 0.18; }
+
+/* Compact variant. */
+.match-card.radar-card.is-compact .radar-wrap { min-height: 96px; }
+.match-card.radar-card.is-compact .radar-data { padding: 9px 6px 9px 11px; width: 62%; }
+.match-card.radar-card.is-compact .radar-game { font-size: 7.5px; }
+.match-card.radar-card.is-compact .radar-map { font-size: 15px; }
+.match-card.radar-card.is-compact .radar-mode { font-size: 8px; }
+.match-card.radar-card.is-compact .radar-score { padding-top: 7px; gap: 7px; }
+.match-card.radar-card.is-compact .radar-score .n { font-size: 26px; }
+.match-card.radar-card.is-compact .radar-score .sep { font-size: 13px; }
+.match-card.radar-card.is-compact .radar-score-side .tg { font-size: 6.5px; }
+.match-card.radar-card.is-compact .radar-round { font-size: 7px; }
+.match-card.radar-card.is-compact .radar-clock .t { font-size: 11px; }
+.match-card.radar-card.is-compact .radar-clockrow { margin-top: 6px; padding-top: 5px; }
+.match-card.radar-card.is-compact .radar-scope { width: 110px; height: 110px; right: -24px; }
+.match-card.radar-card.is-compact .radar-stamp { font-size: 6px; padding: 1px 4px; }
+.match-card.radar-card.is-compact .radar-status { font-size: 8.5px; padding-top: 9px; }
+
+/* Light theme. */
+.light .radar-data,
+.theme-light .radar-data { background: linear-gradient(120deg, rgb(0 0 0 / 0.03) 78%, transparent); }
+.light .radar-map,
+.theme-light .radar-map { color: #12161c; }
+.light .radar-mode,
+.theme-light .radar-mode { color: rgb(18 22 28 / 0.55); }
+.light .radar-status,
+.theme-light .radar-status { color: rgb(18 22 28 / 0.55); }
+.light .radar-status .sep-dot,
+.theme-light .radar-status .sep-dot { color: rgb(18 22 28 / 0.3); }
+.light .radar-clock .t,
+.theme-light .radar-clock .t { color: #12161c; }
+.light .radar-clockrow,
+.theme-light .radar-clockrow { border-top-color: rgb(0 0 0 / 0.08); }
+.light .radar-clockrow .rlbl,
+.theme-light .radar-clockrow .rlbl { color: rgb(18 22 28 / 0.4); }
+.light .radar-disc,
+.theme-light .radar-disc {
+  border-color: rgb(0 0 0 / 0.1);
+  background:
+    radial-gradient(circle, transparent 0 30%, rgb(0 0 0 / 0.06) 30.5% 31%, transparent 31.5%),
+    radial-gradient(circle, transparent 0 55%, rgb(0 0 0 / 0.06) 55.5% 56%, transparent 56.5%),
+    radial-gradient(circle at center, rgb(0 0 0 / 0.05) 0%, transparent 72%);
+}
+.light .radar-disc::before,
+.theme-light .radar-disc::before {
+  background:
+    linear-gradient(rgb(0 0 0 / 0.07), rgb(0 0 0 / 0.07)) center / 1px 100% no-repeat,
+    linear-gradient(rgb(0 0 0 / 0.07), rgb(0 0 0 / 0.07)) center / 100% 1px no-repeat;
+}
+.light .radar-sweep,
+.theme-light .radar-sweep {
+  background: conic-gradient(from 0deg, transparent 0deg, transparent 300deg, rgb(185 127 46 / 0.18) 355deg, rgb(185 127 46 / 0.42) 360deg);
+}
+.light .radar-stamp,
+.theme-light .radar-stamp { background: rgb(242 239 233 / 0.8); }
+
+@media (prefers-reduced-motion: reduce) {
+  .radar-sweep { animation: none; opacity: 0.3; }
+  .radar-blip { animation: none; opacity: 0.4; }
+  .match-card.radar-card.standby .radar-blip { opacity: 0.18; }
+}
+
 /* Spotify fine secondary line. */
 .match-card-song {
   position: relative;
