@@ -34,7 +34,11 @@ export function isValidAssetUrl(url: string | null | undefined): boolean {
  * granted server-side; the client can never mint it.
  */
 function computeNetrexEntitlement(row: typeof schema.users.$inferSelect): boolean {
-  const granted = row.netrexEnabled === 1 && (row.netrexExpiresAt == null || row.netrexExpiresAt > Date.now());
+  // Same fallback chain as GET /api/netrex/entitlement: purchased plan wins,
+  // legacy admin-grant expiry backs it up. A grant without expiry (permanent)
+  // never lapses.
+  const until = row.netrexUntil ?? row.netrexExpiresAt ?? null;
+  const granted = row.netrexEnabled === 1 && (until === null || until > Date.now());
   const purchased = row.netrexUntil != null && row.netrexUntil > Date.now();
   return granted || purchased;
 }
