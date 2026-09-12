@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VERTEX — Ronda 6 · VALORANT VIBES + flujo estilo por juego</title>
+<style>
+  /* ══════════════════════════════════════════════════════════════════
+     VERTEX — VALORANT VIBES (Netrex) · estilo temático por juego.
+     FASE A: arte (3 tamaños, dark+light, con/sin partida detectada).
+     FASE B: maqueta de la lógica auto-swap + mini-selector.
+     Solo arte. Nada integrado. Cero arte/logo/personajes de Riot:
+     solo formas, HUD y paleta propia VERTEX.
+     Animaciones: solo transform/opacity. prefers-reduced-motion: off.
+     ══════════════════════════════════════════════════════════════════ */
+  :root{
+    --ink:#0c0d10; --panel:#121419; --panel2:#171a21;
+    --line:#262b36; --mut:#8b93a7; --dim:#5b6376;
+    --coral:#ff4655; --coral-soft:#ff465533; --navy:#0f1923; --navy2:#1c2a38;
+    --bone:#ece8e1; --bone-dim:#b8b2a6;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--ink); color:var(--bone);
+    font-family:'Segoe UI',system-ui,sans-serif;
+    padding:34px 26px 90px; min-height:100vh;
+  }
+  .wrap{max-width:860px; margin:0 auto;}
+  h1{font-size:26px; letter-spacing:.5px; margin-bottom:6px;}
+  h1 .star{color:var(--coral);}
+  .sub{color:var(--mut); font-size:14px; margin-bottom:8px; line-height:1.5;}
+  .rule{height:1px; background:linear-gradient(90deg,var(--coral),transparent); margin:22px 0;}
+  h2{
+    font-size:17px; margin:34px 0 4px; letter-spacing:2.5px;
+    text-transform:uppercase; color:var(--bone);
+  }
+  h2 .tag{font-size:10px; letter-spacing:1.5px; vertical-align:middle; margin-left:10px;}
+  .desc{color:var(--mut); font-size:13px; line-height:1.55; margin-bottom:16px; max-width:640px;}
+  .frame{
+    border:1px solid var(--line); border-radius:12px; padding:20px;
+    background:var(--panel); margin-bottom:18px;
+  }
+  .frame .cap{font-size:10.5px; letter-spacing:2.2px; text-transform:uppercase; color:var(--dim); margin-bottom:12px;}
+  .frame.light-frame{background:#e9e7e2; border-color:#d5d2ca;}
+  .frame.light-frame .cap{color:#8a8577;}
+  .badge{
+    display:inline-block; font-size:9.5px; font-weight:700; letter-spacing:1.6px;
+    padding:3px 9px; border-radius:4px; text-transform:uppercase; vertical-align:middle;
+  }
+  .badge.netrex{background:var(--coral); color:#fff;}
+  .badge.free{background:#2f7d4f; color:#eafff2;}
+  .badge.concept{background:transparent; color:#ffd24a; border:1px solid #ffd24a55; margin-left:8px;}
+  .row{display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start;}
+
+  /* ══════════════════════════════════════════════════════════════════
+     VALORANT VIBES — la tarjeta
+     Paleta: coral #ff4655 + navy #0f1923 + bone #ece8e1 sobre carbón.
+     Silueta: pantalla de operación con brackets HUD.
+     ══════════════════════════════════════════════════════════════════ */
+  .vv{
+    --vvc:#ff4655; --vvnavy:#0f1923; --vvnavy2:#16222e; --vvbone:#ece8e1;
+    --vvdark:#0a0e13;
+    position:relative; overflow:hidden; border-radius:6px;
+    background:linear-gradient(155deg, var(--vvnavy) 0%, var(--vvdark) 70%);
+    color:var(--vvbone); text-decoration:none; display:block;
+    font-family:Consolas,'Courier New',monospace;
+  }
+  /* diagonales agudas de fondo */
+  .vv::before{
+    content:''; position:absolute; inset:0; pointer-events:none; opacity:.5;
+    background:
+      linear-gradient(115deg, transparent 0 12%, #ff465514 12% calc(12% + 2px), transparent calc(12% + 2px) 30%, #4e9df012 30% calc(30% + 2px), transparent calc(30% + 2px)),
+      linear-gradient(115deg, transparent 0 55%, #ff465512 55% calc(55% + 2px), transparent calc(55% + 2px) 78%, #4e9df010 78% calc(78% + 2px), transparent calc(78% + 2px));
+  }
+  /* retícula sutil global */
+  .vv::after{
+    content:''; position:absolute; inset:0; pointer-events:none;
+    background:repeating-linear-gradient(0deg,#ffffff05 0 1px,transparent 1px 14px),
+               repeating-linear-gradient(90deg,#ffffff05 0 1px,transparent 1px 14px);
+  }
+  .vv *{position:relative; z-index:2;}
+
+  /* barra superior de operación */
+  .vv-top{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:9px 12px 0; font-size:9.5px; letter-spacing:2px; color:var(--bone-dim);
+  }
+  .vv-top .op{color:var(--vvbone);}
+  .vv-top .op b{color:var(--vvc); font-weight:700;}
+  .vv-live{display:flex; align-items:center; gap:6px; color:var(--vvc); letter-spacing:1.5px;}
+  .vv-live .dot{width:6px; height:6px; background:var(--vvc); display:inline-block;}
+  .vv-live.idle{color:var(--bone-dim);}
+  .vv-live.idle .dot{background:var(--bone-dim); animation:none;}
+  .vv-live .dot{animation:vv-blink 1.4s steps(1) infinite;}
+  @keyframes vv-blink{50%{opacity:.15;}}
+
+  /* cuerpo: pantalla de operación */
+  .vv-body{display:flex; gap:14px; padding:12px; align-items:stretch;}
+  .vv-screen{
+    position:relative; flex-shrink:0; width:34%; max-width:150px; aspect-ratio:1;
+    background:var(--vvnavy2); overflow:hidden;
+    border:1px solid #2b3947;
+  }
+  .vv-screen .cover{width:100%; height:100%; object-fit:cover; display:block; filter:saturate(.82) contrast(1.06);}
+  /* retícula sobre la portada */
+  .vv-screen::before{
+    content:''; position:absolute; inset:0; z-index:2; pointer-events:none;
+    background:
+      linear-gradient(#ff465588,#ff465588) center/1px 22% no-repeat,
+      linear-gradient(#ff465588,#ff465588) center/22% 1px no-repeat,
+      radial-gradient(circle at center, transparent 34%, #ff46552e 34.5% 35%, transparent 36%);
+  }
+  /* brackets HUD en las esquinas de la pantalla */
+  .vv-screen::after{
+    content:''; position:absolute; inset:-1px; z-index:3; pointer-events:none;
+    background:
+      linear-gradient(var(--vvc),var(--vvc)) top left/14px 2px,
+      linear-gradient(var(--vvc),var(--vvc)) top left/2px 14px,
+      linear-gradient(var(--vvc),var(--vvc)) top right/14px 2px,
+      linear-gradient(var(--vvc),var(--vvc)) top right/2px 14px,
+      linear-gradient(var(--vvc),var(--vvc)) bottom left/14px 2px,
+      linear-gradient(var(--vvc),var(--vvc)) bottom left/2px 14px,
+      linear-gradient(var(--vvbone),var(--vvbone)) bottom right/14px 2px,
+      linear-gradient(var(--vvbone),var(--vvbone)) bottom right/2px 14px;
+    background-repeat:no-repeat;
+  }
+  /* línea de escaneo: una pasada al aparecer */
+  .vv-scan{
+    position:absolute; left:0; right:0; top:-12%; height:12%; z-index:4; pointer-events:none;
+    background:linear-gradient(180deg, transparent, #ff465526 55%, #ff465555 92%, transparent);
+    animation:vv-scan 1.6s ease-out .15s 1 both;
+  }
+  @keyframes vv-scan{from{transform:translateY(-40%); opacity:1;} to{transform:translateY(880%); opacity:0;}}
+
+  .vv-info{flex:1; min-width:0; display:flex; flex-direction:column; justify-content:center; gap:7px;}
+  .vv-kicker{font-size:9px; letter-spacing:2.6px; color:var(--bone-dim);}
+  .vv-kicker b{color:var(--vvc);}
+  .vv-title{
+    font-size:19px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase;
+    color:var(--vvbone); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    text-shadow:2px 2px 0 #ff465540; /* stencil offset */
+  }
+  .vv-artist{
+    font-size:11px; letter-spacing:2.2px; text-transform:uppercase; color:var(--bone-dim);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .vv-artist::before{content:'— '; color:var(--vvc);}
+  /* tag EN PARTIDA */
+  .vv-ingame{
+    align-self:flex-start; margin-top:2px;
+    font-size:9px; font-weight:700; letter-spacing:1.8px;
+    color:var(--vvbone); background:var(--vvc); padding:3px 8px;
+    clip-path:polygon(0 0,100% 0,calc(100% - 7px) 100%,0 100%);
+    animation:vv-tag-in .35s ease-out both;
+  }
+  .vv-ingame.off{background:transparent; color:var(--dim); border:1px dashed #39424f; animation:none; clip-path:none;}
+  @keyframes vv-tag-in{from{transform:translateX(-8px); opacity:0;} to{transform:none; opacity:1;}}
+
+  /* progreso segmentado HUD */
+  .vv-bottom{padding:0 12px 12px;}
+  .vv-meta{display:flex; justify-content:space-between; font-size:9px; letter-spacing:1.8px; color:var(--bone-dim); margin-bottom:6px;}
+  .vv-meta .pct b{color:var(--vvc);}
+  .vv-bar{height:5px; background:#1a212b; overflow:hidden;}
+  .vv-bar i{
+    display:block; height:100%; background:repeating-linear-gradient(90deg, var(--vvc) 0 10px, transparent 10px 13px);
+    transition:width .4s ease;
+  }
+  .vv-bar i::after{content:'';}
+  /* ticks HUD sobre la barra */
+  .vv-ticks{
+    display:flex; justify-content:space-between; margin-top:3px; height:4px;
+    background:repeating-linear-gradient(90deg, #39424f 0 1px, transparent 1px 10%);
+  }
+
+  /* esquinas bracket del marco completo */
+  .vv-corner{position:absolute; width:16px; height:16px; z-index:3; pointer-events:none; opacity:.9;}
+  .vv-corner.tl{top:6px; left:6px; border-top:2px solid var(--vvc); border-left:2px solid var(--vvc);}
+  .vv-corner.br{bottom:6px; right:6px; border-bottom:2px solid var(--vvc); border-right:2px solid var(--vvc);}
+
+  /* tamaños */
+  .vv.mini{border-radius:5px;}
+  .vv.mini .vv-top{padding:6px 9px 0; font-size:8px;}
+  .vv.mini .vv-body{padding:8px; gap:9px;}
+  .vv.mini .vv-screen{max-width:64px;}
+  .vv.mini .vv-title{font-size:11px; letter-spacing:.8px;}
+  .vv.mini .vv-artist{font-size:8.5px;}
+  .vv.mini .vv-ingame{font-size:7.5px; padding:2px 6px;}
+  .vv.mini .vv-bottom{padding:0 9px 9px;}
+  .vv.mini .vv-kicker{display:none;}
+  .vv.mini .vv-corner{width:10px; height:10px;}
+  .vv.big .vv-title{font-size:26px;}
+  .vv.big .vv-body{padding:16px; gap:18px;}
+  .vv.big .vv-screen{max-width:210px;}
+  .vv.big .vv-artist{font-size:12.5px;}
+  .vv.big .vv-top{padding:12px 16px 0;}
+
+  /* ── variante LIGHT ── */
+  .vv.lt{
+    --vvnavy:#f2efe9; --vvnavy2:#e4e0d7; --vvdark:#ece8e1; --vvbone:#12161c;
+    background:linear-gradient(155deg,#f4f1eb,#e6e2d9);
+    border:1px solid #cfcabd;
+  }
+  .vv.lt::before{opacity:.8;}
+  .vv.lt::after{background:repeating-linear-gradient(0deg,#00000007 0 1px,transparent 1px 14px),repeating-linear-gradient(90deg,#00000007 0 1px,transparent 1px 14px);}
+  .vv.lt .vv-artist, .vv.lt .vv-kicker{color:#6d675c;}
+  .vv.lt .vv-title{text-shadow:2px 2px 0 #ff46552e;}
+  .vv.lt .vv-screen{background:#dcd7cc; border-color:#b9b2a3;}
+  .vv.lt .vv-bar{background:#d4cfc4;}
+  .vv.lt .vv-ticks{background:repeating-linear-gradient(90deg,#b3ac9d 0 1px,transparent 1px 10%);}
+  .vv.lt .vv-live.idle{color:#8a8478;}
+  .vv.lt .vv-ingame.off{color:#8a8478; border-color:#b9b2a3;}
+
+  /* portada placeholder (canvas pintado por JS) */
+  .cover{background:#233;}
+
+  /* ══════════════════════════════════════════════════════════════════
+     FASE B — maqueta de la lógica
+     ══════════════════════════════════════════════════════════════════ */
+  .mock{
+    border:1px solid var(--line); border-radius:12px; background:var(--panel);
+    padding:22px; margin-bottom:18px;
+  }
+  .mock h3{font-size:15px; margin-bottom:4px;}
+  .mock .hint{color:var(--mut); font-size:12.5px; margin-bottom:16px; line-height:1.5;}
+  .sim-row{
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    padding:12px 14px; border:1px dashed #333b49; border-radius:8px; margin-bottom:16px;
+    background:#0e1117;
+  }
+  .sim-row label{font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--bone-dim);}
+  .sim-btn{
+    font:inherit; font-size:12px; font-weight:700; letter-spacing:1.2px; cursor:pointer;
+    background:var(--navy2); color:var(--bone); border:1px solid #33455a;
+    padding:8px 14px; border-radius:6px; transition:transform .15s ease, opacity .15s ease;
+  }
+  .sim-btn:hover{transform:translateY(-1px);}
+  .sim-btn.on{background:var(--coral); border-color:var(--coral); color:#fff;}
+  .sim-status{font-size:11px; letter-spacing:1.5px; color:var(--dim);}
+  .sim-status b{color:var(--vvc);}
+  .detected{color:var(--vvc);}
+
+  .glist{display:flex; flex-direction:column; gap:8px; margin-bottom:16px;}
+  .gitem{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:11px 14px; border:1px solid var(--line); border-radius:8px; background:var(--panel2);
+    transition:opacity .2s ease;
+  }
+  .gitem .gname{font-size:13px; font-weight:600;}
+  .gitem .gsub{font-size:11px; color:var(--dim); margin-top:2px;}
+  .gitem select{
+    font:inherit; font-size:12px; background:var(--navy); color:var(--bone);
+    border:1px solid #33455a; border-radius:6px; padding:6px 10px; cursor:pointer;
+  }
+  .gitem.locked{opacity:.45;}
+  .gitem .bound{font-size:10px; letter-spacing:1.5px; color:var(--vvc); text-transform:uppercase;}
+
+  .stage{
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    padding:16px; border-radius:8px; background:#0e1117; border:1px solid var(--line);
+  }
+  .stage .arrow{font-size:20px; color:var(--dim);}
+  .stage .lbl{font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--dim); margin-bottom:8px; text-align:center;}
+  .swap-note{font-size:12px; color:var(--mut); margin-top:14px; line-height:1.55;}
+  .swap-note b{color:var(--bone);}
+
+  .swap-anim{transition:opacity .45s ease, transform .45s ease;}
+  .swap-anim.out{opacity:0; transform:translateY(-6px) scale(.985);}
+
+  footer{color:var(--dim); font-size:11.5px; letter-spacing:1px; margin-top:30px; text-align:center;}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none !important; transition:none !important;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>VERTEX — Ronda 6 <span class="star">★</span></h1>
+  <p class="sub">FASE A: arte de <b>VALORANT VIBES</b> (Netrex) — estética inspirada en shooters tácticos, cero arte/logo/personajes de Riot. FASE B: maqueta de la lógica de estilo automático por juego. Solo arte · nada integrado.</p>
+  <div class="rule"></div>
+
+  <!-- ═══════════ FASE A ═══════════ -->
+  <h2>Fase A · Valorant Vibes <span class="tag"><span class="badge netrex">Netrex</span><span class="badge concept">★ concepto</span></span></h2>
+  <p class="desc">Paleta coral <b>#ff4655</b> + azul marino <b>#0f1923</b> + blanco hueso <b>#ece8e1</b> sobre carbón. La portada es una "pantalla de operación" con brackets HUD, retícula y línea de escaneo de una pasada. Título = callsign stencil; artista = subtítulo militar. Cuando se detecta la partida: tag <b>EN PARTIDA — VALORANT</b> y estado ● LIVE; sin partida: tag punteado "FUERA DE SERVICIO" y estado en reposo.</p>
+
+  <div class="row">
+    <div style="flex:1; min-width:280px;">
+      <div class="frame"><div class="cap">Dark · EN PARTIDA detectada</div>
+        <a class="vv widget" href="#">
+          <span class="vv-corner tl"></span><span class="vv-corner br"></span>
+          <span class="vv-scan"></span>
+          <div class="vv-top">
+            <span class="op">OP-<b>07</b> // MUSIC BRIEFING</span>
+            <span class="vv-live"><span class="dot"></span>LIVE</span>
+          </div>
+          <div class="vv-body">
+            <div class="vv-screen"><img class="cover vv-canvas" width="150" height="150" alt=""></div>
+            <div class="vv-info">
+              <div class="vv-kicker">BRIEFING <b>//</b> ACTIVA</div>
+              <div class="vv-title">Neon Cortex</div>
+              <div class="vv-artist">Bitwave Runner</div>
+              <span class="vv-ingame">EN PARTIDA — VALORANT</span>
+            </div>
+          </div>
+          <div class="vv-bottom">
+            <div class="vv-meta"><span>1:42</span><span class="pct"><b>62%</b> // SP</span><span>2:51</span></div>
+            <div class="vv-bar"><i style="width:62%"></i></div>
+            <div class="vv-ticks"></div>
+          </div>
+        </a>
+      </div>
+    </div>
+    <div style="flex:1; min-width:280px;">
+      <div class="frame"><div class="cap">Dark · sin partida (reposo)</div>
+        <a class="vv widget" href="#">
+          <span class="vv-corner tl"></span><span class="vv-corner br"></span>
+          <div class="vv-top">
+            <span class="op">OP-<b>07</b> // MUSIC BRIEFING</span>
+            <span class="vv-live idle"><span class="dot"></span>IDLE</span>
+          </div>
+          <div class="vv-body">
+            <div class="vv-screen"><img class="cover vv-canvas" width="150" height="150" alt=""></div>
+            <div class="vv-info">
+              <div class="vv-kicker">BRIEFING <b>//</b> EN ESPERA</div>
+              <div class="vv-title">Neon Cortex</div>
+              <div class="vv-artist">Bitwave Runner</div>
+              <span class="vv-ingame off">FUERA DE SERVICIO</span>
+            </div>
+          </div>
+          <div class="vv-bottom">
+            <div class="vv-meta"><span>1:42</span><span class="pct"><b>38%</b> // HOLD</span><span>2:51</span></div>
+            <div class="vv-bar"><i style="width:38%"></i></div>
+            <div class="vv-ticks"></div>
+          </div>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div style="flex:1; min-width:280px;">
+      <div class="frame light-frame"><div class="cap">Light · EN PARTIDA detectada</div>
+        <a class="vv lt widget" href="#">
+          <span class="vv-corner tl"></span><span class="vv-corner br"></span>
+          <span class="vv-scan"></span>
+          <div class="vv-top">
+            <span class="op">OP-<b>07</b> // MUSIC BRIEFING</span>
+            <span class="vv-live"><span class="dot"></span>LIVE</span>
+          </div>
+          <div class="vv-body">
+            <div class="vv-screen"><img class="cover vv-canvas" width="150" height="150" alt=""></div>
+            <div class="vv-info">
+              <div class="vv-kicker">BRIEFING <b>//</b> ACTIVA</div>
+              <div class="vv-title">Neon Cortex</div>
+              <div class="vv-artist">Bitwave Runner</div>
+              <span class="vv-ingame">EN PARTIDA — VALORANT</span>
+            </div>
+          </div>
+          <div class="vv-bottom">
+            <div class="vv-meta"><span>1:42</span><span class="pct"><b>62%</b> // SP</span><span>2:51</span></div>
+            <div class="vv-bar"><i style="width:62%"></i></div>
+            <div class="vv-ticks"></div>
+          </div>
+        </a>
+      </div>
+    </div>
+    <div style="flex:1; min-width:280px;">
+      <div class="frame light-frame"><div class="cap">Light · sin partida (reposo)</div>
+        <a class="vv lt widget" href="#">
+          <span class="vv-corner tl"></span><span class="vv-corner br"></span>
+          <div class="vv-top">
+            <span class="op">OP-<b>07</b> // MUSIC BRIEFING</span>
+            <span class="vv-live idle"><span class="dot"></span>IDLE</span>
+          </div>
+          <div class="vv-body">
+            <div class="vv-screen"><img class="cover vv-canvas" width="150" height="150" alt=""></div>
+            <div class="vv-info">
+              <div class="vv-kicker">BRIEFING <b>//</b> EN ESPERA</div>
+              <div class="vv-title">Neon Cortex</div>
+              <div class="vv-artist">Bitwave Runner</div>
+              <span class="vv-ingame off">FUERA DE SERVICIO</span>
+            </div>
+          </div>
+          <div class="vv-bottom">
+            <div class="vv-meta"><span>1:42</span><span class="pct"><b>38%</b> // HOLD</span><span>2:51</span></div>
+            <div class="vv-bar"><i style="width:38%"></i></div>
+            <div class="vv-ticks"></div>
+          </div>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div style="flex:0 0 200px;">
+      <div class="frame"><div class="cap">Mini — Hub</div>
+        <a class="vv mini" href="#">
+          <div class="vv-top">
+            <span class="op">OP-<b>07</b></span>
+            <span class="vv-live"><span class="dot"></span>LIVE</span>
+          </div>
+          <div class="vv-body">
+            <div class="vv-screen"><img class="cover vv-canvas" width="64" height="64" alt=""></div>
+            <div class="vv-info">
+              <div class="vv-title">Neon Cortex</div>
+              <div class="vv-artist">Bitwave Runner</div>
+              <span class="vv-ingame">EN PARTIDA</span>
+            </div>
+          </div>
+          <div class="vv-bottom">
+            <div class="vv-bar"><i style="width:62%"></i></div>
+          </div>
+        </a>
+      </div>
+    </div>
+    <div style="flex:1; min-width:300px;">
+      <div class="frame"><div class="cap">Tarjeta grande</div>
+        <a class="vv big" href="#">
+          <span class="vv-corner tl"></span><span class="vv-corner br"></span>
+          <span class="vv-scan"></span>
+          <div class="vv-top">
+            <span class="op">OP-<b>07</b> // MUSIC BRIEFING</span>
+            <span class="vv-live"><span class="dot"></span>LIVE</span>
+          </div>
+          <div class="vv-body">
+            <div class="vv-screen"><img class="cover vv-canvas" width="210" height="210" alt=""></div>
+            <div class="vv-info">
+              <div class="vv-kicker">BRIEFING <b>//</b> ACTIVA</div>
+              <div class="vv-title">Neon Cortex</div>
+              <div class="vv-artist">Bitwave Runner</div>
+              <span class="vv-ingame">EN PARTIDA — VALORANT</span>
+            </div>
+          </div>
+          <div class="vv-bottom">
+            <div class="vv-meta"><span>1:42</span><span class="pct"><b>62%</b> // SP</span><span>2:51</span></div>
+            <div class="vv-bar"><i style="width:62%"></i></div>
+            <div class="vv-ticks"></div>
+          </div>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="rule"></div>
+
+  <!-- ═══════════ FASE B ═══════════ -->
+  <h2>Fase B · Maqueta de la lógica — estilo por juego</h2>
+  <p class="desc">Flujo: con Netrex activo, vinculas un estilo temático a un juego. El detector de procesos (ya existente) emite "juego activo" → tu tarjeta de música/actividad cambia <b>al instante</b> al estilo vinculado. Cierras el juego → vuelve tu estilo por defecto. Tu estilo elegido (p. ej. Kawaii Dream) nunca se toca.</p>
+
+  <div class="mock">
+    <h3>Simulación</h3>
+    <p class="hint">Pulsa el botón para simular que el detector ve (o deja de ver) Valorant abierto.</p>
+    <div class="sim-row">
+      <label>Detector de procesos</label>
+      <button class="sim-btn" id="simBtn">▶ Simular: jugando Valorant</button>
+      <span class="sim-status" id="simStatus">Detectado: <b>— nada —</b></span>
+    </div>
+
+    <h3 style="margin-bottom:4px;">Estilos por juego</h3>
+    <p class="hint">Vinculación guardada en tu perfil Netrex. 1 estilo = 1 juego.</p>
+    <div class="glist">
+      <div class="gitem">
+        <div><div class="gname">Valorant</div><div class="gsub">Detectado por procesos · jugando ahora</div></div>
+        <span class="bound" id="valBound">→ Valorant Vibes</span>
+      </div>
+      <div class="gitem">
+        <div><div class="gname">League of Legends</div><div class="gsub">Sin asignar</div></div>
+        <select id="lolSel"><option>Sin asignar</option><option disabled>Valorant Vibes (ya en uso)</option><option disabled>Kawaii Dream</option></select>
+      </div>
+      <div class="gitem">
+        <div><div class="gname">CS2</div><div class="gsub">Sin asignar</div></div>
+        <select id="cs2Sel"><option>Sin asignar</option><option disabled>Valorant Vibes (ya en uso)</option><option disabled>Kawaii Dream</option></select>
+      </div>
+      <div class="gitem locked">
+        <div><div class="gname">Minecraft</div><div class="gsub">Estilo en camino…</div></div>
+        <span class="bound" style="color:var(--dim);">Próximamente</span>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div style="flex:1; min-width:260px;">
+        <div class="lbl">Tu estilo por defecto (Kawaii Dream)</div>
+        <div id="cardDefault"></div>
+      </div>
+      <div class="arrow">⇄</div>
+      <div style="flex:1; min-width:260px;">
+        <div class="lbl" id="stageLbl">Ahora mismo en tu perfil</div>
+        <div class="swap-anim" id="cardNow"></div>
+      </div>
+    </div>
+    <p class="swap-note"><b>Cómo funciona:</b> al detectarse Valorant, el widget consulta tu vinculación (Valorant → Valorant Vibes) y renderiza el estilo temático con el flag <b>EN PARTIDA</b>. Al cerrar el juego, reaparece tu estilo por defecto (Kawaii Dream) — tu elección de estilo nunca cambia. Si un juego no tiene estilo asignado, el widget simplemente se queda en tu estilo por defecto.</p>
+  </div>
+
+  <footer>VERTEX · ronda 6 — solo arte y maqueta · nada integrado · cero arte de Riot</footer>
+</div>
+
+<script>
+  // ── portadas placeholder originales (canvas) ──
+  function paintCover(seed){
+    const c = document.createElement('canvas'); c.width = c.height = 120;
+    const x = c.getContext('2d');
+    const base = seed === 'light' ? ['#ece8e1','#d8d2c4','#b9b2a3','#ff4655','#0f1923']
+                                   : ['#0f1923','#1c2a38','#2b3947','#ff4655','#ece8e1'];
+    x.fillStyle = base[0]; x.fillRect(0,0,120,120);
+    let s = seed === 'light' ? 7 : 1;
+    const rnd = () => (s = (s*16807)%2147483647) / 2147483647;
+    for(let i=0;i<46;i++){
+      x.fillStyle = base[1+Math.floor(rnd()*4)];
+      const w = 8+Math.floor(rnd()*34);
+      x.fillRect(Math.floor(rnd()*10)*12, Math.floor(rnd()*10)*12, w, w);
+    }
+    x.fillStyle = seed === 'light' ? '#0f1923' : '#ece8e1';
+    x.beginPath(); x.moveTo(60,18); x.lineTo(96,96); x.lineTo(24,96); x.closePath();
+    x.globalAlpha=.9; x.fill(); x.globalAlpha=1;
+    return c.toDataURL();
+  }
+  document.querySelectorAll('.vv-canvas').forEach((img,i)=>{
+    img.src = paintCover(i%2 ? 'dark':'light');
+  });
+
+  // ── FASE B: mini-renders de las dos tarjetas del stage ──
+  const kawaiiHTML = `
+    <div style="position:relative;overflow:hidden;border-radius:16px;padding:16px;
+      background:linear-gradient(160deg,#ffe3ef,#e8ddff 60%,#dcf7ea);border:1px solid #ffc9de;">
+      <div style="font-size:14px;font-weight:700;color:#c2557e;">Neon Cortex ♡</div>
+      <div style="font-size:11px;color:#9a6b8f;margin-top:2px;">Bitwave Runner</div>
+      <div style="margin-top:10px;height:6px;border-radius:3px;background:#ffffffaa;">
+        <div style="width:62%;height:100%;border-radius:3px;background:linear-gradient(90deg,#ff9ec4,#c9a6ff);"></div>
+      </div>
+      <div style="position:absolute;top:10px;right:12px;font-size:16px;">♡</div>
+      <div style="position:absolute;bottom:10px;right:14px;font-size:13px;">✦</div>
+    </div>`;
+  const valorantHTML = (ingame) => `
+    <div class="vv" style="font-size:inherit;">
+      <span class="vv-corner tl"></span><span class="vv-corner br"></span>
+      ${ingame ? '<span class="vv-scan"></span>' : ''}
+      <div class="vv-top">
+        <span class="op">OP-<b>07</b> // MUSIC BRIEFING</span>
+        <span class="vv-live ${ingame?'':'idle'}"><span class="dot"></span>${ingame?'LIVE':'IDLE'}</span>
+      </div>
+      <div class="vv-body">
+        <div class="vv-screen"><img class="cover vv-canvas" width="150" height="150" alt=""></div>
+        <div class="vv-info">
+          <div class="vv-kicker">BRIEFING <b>//</b> ${ingame?'ACTIVA':'EN ESPERA'}</div>
+          <div class="vv-title">Neon Cortex</div>
+          <div class="vv-artist">Bitwave Runner</div>
+          <span class="vv-ingame ${ingame?'':'off'}">${ingame?'EN PARTIDA — VALORANT':'FUERA DE SERVICIO'}</span>
+        </div>
+      </div>
+      <div class="vv-bottom">
+        <div class="vv-meta"><span>1:42</span><span class="pct"><b>${ingame?'62':'38'}%</b> // ${ingame?'SP':'HOLD'}</span><span>2:51</span></div>
+        <div class="vv-bar"><i style="width:${ingame?62:38}%"></i></div>
+        <div class="vv-ticks"></div>
+      </div>
+    </div>`;
+
+  document.getElementById('cardDefault').innerHTML = kawaiiHTML;
+  const cardNow = document.getElementById('cardNow');
+  const stageLbl = document.getElementById('stageLbl');
+  const simBtn = document.getElementById('simBtn');
+  const simStatus = document.getElementById('simStatus');
+  const valBound = document.getElementById('valBound');
+  let playing = false;
+
+  function render(now){
+    cardNow.innerHTML = now ? valorantHTML(true) : kawaiiHTML;
+    // re-pintar portadas del stage
+    cardNow.querySelectorAll('.vv-canvas').forEach((img,i)=>{ img.src = paintCover('dark'); });
+    stageLbl.textContent = now ? 'Ahora mismo en tu perfil (auto-swap)' : 'Ahora mismo en tu perfil';
+    simStatus.innerHTML = 'Detectado: ' + (now ? '<b class="detected">VALORANT ● corriendo</b>' : '<b>— nada —</b>');
+    simBtn.textContent = now ? '■ Simular: cerrar Valorant' : '▶ Simular: jugando Valorant';
+    simBtn.classList.toggle('on', now);
+    valBound.textContent = '→ Valorant Vibes' + (now ? ' ● activo' : '');
+  }
+  render(false);
+
+  simBtn.addEventListener('click', () => {
+    playing = !playing;
+    cardNow.classList.add('out');
+    setTimeout(() => { render(playing); cardNow.classList.remove('out'); }, 380);
+  });
+</script>
+</body>
+</html>

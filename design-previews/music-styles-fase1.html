@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VERTEX — Rediseño estilos caja musical · FASE 1 (solo arte)</title>
+<style>
+  /* ══════════════════════════════════════════════════════════════════
+     VERTEX music-card redesign — ART PREVIEWS ONLY (Fase 1).
+     Standalone. No app code touched. Two approved styles, 3 sizes,
+     dark + light. Animation: transform/opacity only, reduced-motion
+     respected. Portada, canción y artista SIEMPRE visibles.
+     ══════════════════════════════════════════════════════════════════ */
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+    background: #0b0b0f;
+    color: #e8e8ee;
+    padding: 32px 24px 64px;
+  }
+  h1 { font-size: 20px; letter-spacing: -0.01em; margin-bottom: 4px; }
+  .sub { color: #8a8a97; font-size: 12.5px; margin-bottom: 28px; }
+  h2 {
+    font-size: 13px; text-transform: uppercase; letter-spacing: 0.18em;
+    color: #9a9aa8; margin: 40px 0 6px; font-weight: 700;
+  }
+  .h2-note { color: #6c6c78; font-size: 12px; margin-bottom: 16px; }
+
+  .theme {
+    border: 1px solid rgb(255 255 255 / 0.07);
+    border-radius: 16px; padding: 20px; margin-top: 14px;
+  }
+  .theme.dark  { background: #101014; }
+  .theme.light { background: #eceef2; color: #17171c; }
+  .theme.light .sub { color: #5d5d6a; }
+  .theme-label {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.2em; color: #7a7a88; margin-bottom: 16px;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-start; }
+  .cell { display: flex; flex-direction: column; gap: 8px; }
+  .cell > small { color: #7a7a88; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; }
+
+  /* Cover placeholder — a pixel-checker data URI so art reads without assets */
+  .cover {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+    image-rendering: pixelated;
+  }
+
+  /* ══════════════════════════════════════════════════════════════════
+     1) PIXEL CORE — consola retro 8-bit
+        Silueta: consola con marco biselado y "cartucho" superior.
+        Material: LCD Game Boy (paleta verde/amarillo), scanlines CRT,
+        tipografía pixel. SÓLIDA — nada de gradientes decorativos.
+     ══════════════════════════════════════════════════════════════════ */
+  .px-card {
+    --px-bg: #0f380f;        /* Game Boy darkest  */
+    --px-mid: #306230;       /* dark green        */
+    --px-lite: #8bac0f;      /* light green       */
+    --px-hi:  #9bbc0f;       /* pale yellow-green */
+    position: relative;
+    display: block; overflow: hidden;
+    border-radius: 4px;
+    background: var(--px-hi);
+    border: 3px solid var(--px-bg);
+    box-shadow:
+      inset 0 0 0 3px var(--px-mid),
+      4px 4px 0 0 var(--px-bg);           /* hard offset shadow: console depth */
+    padding: 10px;
+    text-decoration: none;
+    image-rendering: pixelated;
+  }
+  /* Cartridge slot on top — the console silhouette */
+  .px-slot {
+    height: 6px; margin-bottom: 8px;
+    background: repeating-linear-gradient(90deg,
+      var(--px-bg) 0 6px, transparent 6px 10px);
+  }
+  /* LCD screen area holding cover + text */
+  .px-screen {
+    position: relative;
+    background: var(--px-lite);
+    border: 3px solid var(--px-bg);
+    padding: 8px;
+    display: flex; gap: 8px; align-items: stretch;
+  }
+  .px-cover {
+    width: 30%; min-width: 34px; flex-shrink: 0;
+    border: 2px solid var(--px-bg);
+    overflow: hidden; background: var(--px-mid);
+  }
+  .px-cover .cover { filter: saturate(0) contrast(1.15) brightness(1.05); }
+  .px-cover::after {           /* LCD grid over the cover */
+    content: ''; position: absolute; inset: 0;
+    background:
+      repeating-linear-gradient(0deg, rgb(15 56 15 / 0.18) 0 1px, transparent 1px 3px),
+      repeating-linear-gradient(90deg, rgb(15 56 15 / 0.18) 0 1px, transparent 1px 3px);
+    pointer-events: none;
+  }
+  .px-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .px-title {
+    font-family: 'Courier New', monospace;
+    font-weight: 700; font-size: 13px; letter-spacing: 0.02em;
+    color: var(--px-bg); text-transform: uppercase;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .px-artist {
+    font-family: 'Courier New', monospace;
+    font-size: 11px; color: var(--px-mid);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .px-status {
+    margin-top: auto;
+    display: inline-block; width: fit-content;
+    font-family: 'Courier New', monospace; font-weight: 700;
+    font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--px-lite); background: var(--px-bg);
+    padding: 2px 6px;
+  }
+  .px-status.paused { color: var(--px-hi); background: var(--px-mid); }
+  /* CRT scanlines over the whole screen + blinking play cursor */
+  .px-screen::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(0deg,
+      rgb(15 56 15 / 0.10) 0 1px, transparent 1px 3px);
+  }
+  .px-cursor {
+    display: inline-block; width: 7px; height: 9px; margin-right: 5px;
+    background: var(--px-bg); vertical-align: -1px;
+    animation: px-blink 1s steps(1) infinite;
+  }
+  @keyframes px-blink { 50% { opacity: 0; } }
+
+  /* Big size: console gets a D-pad + A/B buttons row */
+  .px-controls {
+    margin-top: 10px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .px-dpad {
+    width: 34px; height: 34px; position: relative;
+  }
+  .px-dpad::before {
+    content: ''; position: absolute; inset: 12px 0;
+    background: var(--px-bg); box-shadow: 0 0 0 2px var(--px-mid);
+  }
+  .px-dpad::after {
+    content: ''; position: absolute; inset: 0 12px;
+    background: var(--px-bg); box-shadow: 0 0 0 2px var(--px-mid);
+  }
+  .px-ab { display: flex; gap: 8px; transform: rotate(-18deg); }
+  .px-btn {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--px-mid); border: 3px solid var(--px-bg);
+    color: var(--px-hi); font-family: 'Courier New', monospace;
+    font-size: 8px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .px-progress {
+    margin-top: 10px; height: 8px;
+    border: 2px solid var(--px-bg); background: var(--px-lite);
+  }
+  .px-progress i {
+    display: block; height: 100%; background: var(--px-mid);
+    /* stepped fill: no smooth gradient — pixel steps */
+  }
+  .px-progress i::after {
+    content: ''; display: block; height: 100%;
+    background: repeating-linear-gradient(90deg, var(--px-bg) 0 4px, transparent 4px 8px);
+    width: var(--px-pct, 62%);
+  }
+
+  /* ══════════════════════════════════════════════════════════════════
+     2) COMIC DASH — panel de cómic
+        Silueta: viñeta con borde de tinta grueso y ligera rotación.
+        Material: papel cómic (offset), trama halftone, líneas de
+        velocidad, onomatopeya original "PLAY!". Paleta rojo/amarillo/azul.
+     ══════════════════════════════════════════════════════════════════ */
+  .cm-card {
+    --cm-ink: #101014;
+    --cm-red: #e23b2e;
+    --cm-yellow: #ffc93c;
+    --cm-blue: #2e6fe2;
+    --cm-paper: #f6f1e3;
+    position: relative;
+    display: block; overflow: visible;
+    border: 3.5px solid var(--cm-ink);
+    border-radius: 10px 14px 10px 16px;
+    background: var(--cm-paper);
+    padding: 12px 12px 12px 26px;
+    text-decoration: none;
+    transform: rotate(-0.8deg);
+    box-shadow: 5px 6px 0 0 var(--cm-ink);
+    transition: transform .2s ease-out, box-shadow .2s ease-out;
+  }
+  .cm-card:hover { transform: rotate(0deg) translate(-1px, -2px); box-shadow: 7px 9px 0 0 var(--cm-ink); }
+  /* Speed lines — left rail */
+  .cm-card::before {
+    content: ''; position: absolute; left: 6px; top: 10px; bottom: 10px; width: 12px;
+    background: repeating-linear-gradient(0deg,
+      var(--cm-ink) 0 2px, transparent 2px 7px);
+    opacity: .8;
+  }
+  /* Halftone dot texture on the paper */
+  .cm-card::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+    background: radial-gradient(rgb(16 16 20 / 0.07) 1px, transparent 1.4px);
+    background-size: 6px 6px;
+  }
+  .cm-head {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+    border-bottom: 3px solid var(--cm-ink); padding-bottom: 6px;
+  }
+  .cm-badge {
+    font-weight: 900; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+    background: var(--cm-blue); color: #fff;
+    border: 2.5px solid var(--cm-ink);
+    padding: 2px 7px; transform: rotate(-2deg);
+  }
+  .cm-live {
+    margin-left: auto;
+    font-weight: 900; font-size: 10px; letter-spacing: .1em;
+    color: #fff; background: var(--cm-red);
+    border: 2.5px solid var(--cm-ink); padding: 2px 8px; transform: rotate(2deg);
+  }
+  .cm-live.paused { background: var(--cm-yellow); color: var(--cm-ink); }
+  .cm-body { display: flex; gap: 12px; align-items: stretch; }
+  .cm-cover {
+    width: 34%; flex-shrink: 0; border: 3px solid var(--cm-ink);
+    overflow: hidden; background: var(--cm-yellow);
+  }
+  .cm-cover .cover { filter: saturate(1.3) contrast(1.06); }
+  .cm-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .cm-title {
+    font-size: 16px; font-weight: 900; line-height: 1.15; color: var(--cm-ink);
+    letter-spacing: -0.01em;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .cm-artist {
+    margin-top: 2px; font-size: 12px; font-weight: 700; color: var(--cm-blue);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  /* Original onomatopoeia — VERTEX, no copyrighted characters */
+  .cm-omg {
+    margin-top: auto; align-self: flex-start;
+    font-weight: 900; font-size: 20px; line-height: 1;
+    letter-spacing: 0.02em; color: var(--cm-ink);
+    background: var(--cm-yellow);
+    border: 3px solid var(--cm-ink); border-radius: 6px 12px 8px 10px;
+    padding: 3px 10px;
+    transform: rotate(-3deg);
+    text-shadow: 2px 2px 0 var(--cm-red);
+    animation: cm-pop 2.4s ease-out infinite;
+  }
+  .cm-omg.paused { animation: none; text-shadow: 2px 2px 0 var(--cm-blue); }
+  @keyframes cm-pop {
+    0%, 88%, 100% { transform: rotate(-3deg) scale(1); }
+    92% { transform: rotate(-3deg) scale(1.12); }
+    96% { transform: rotate(-3deg) scale(1); }
+  }
+  .cm-times {
+    margin-top: 10px; display: flex; align-items: center; gap: 8px;
+    font-weight: 700; font-size: 10.5px; color: var(--cm-ink);
+  }
+  .cm-bar {
+    flex: 1; height: 10px; border: 2.5px solid var(--cm-ink); background: #fff;
+  }
+  .cm-bar i {
+    display: block; height: 100%; background: repeating-linear-gradient(115deg,
+      var(--cm-red) 0 8px, var(--cm-yellow) 8px 16px);
+  }
+
+  /* Size modifiers: mini (hub) / widget (profile) / big */
+  .mini   { width: 250px; }
+  .widget { width: 340px; }
+  .big    { width: 420px; }
+  .mini .px-title, .mini .cm-title { font-size: 11.5px; }
+  .mini .cm-title { -webkit-line-clamp: 1; }
+  .mini .cm-omg { font-size: 14px; }
+  .big  .px-title { font-size: 16px; }
+  .big  .cm-title { font-size: 19px; }
+  .big  .cm-omg { font-size: 26px; }
+
+  .cm-light-fix .cm-cover .cover { filter: saturate(1.15) contrast(1.04); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .px-cursor, .cm-omg { animation: none !important; }
+    .cm-card, .cm-card:hover { transform: rotate(-0.8deg); transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<h1>VERTEX — Rediseño estilos de caja musical</h1>
+<p class="sub">FASE 1 · solo arte · 2 estilos × 3 tamaños × dark + light · portada, canción y artista siempre visibles · nada de personajes con copyright</p>
+
+<h2>1 · PIXEL CORE — consola retro 8-bit</h2>
+<p class="h2-note">Silueta: consola con ranura de cartucho + D-pad/A-B en grande · Material: LCD Game Boy con scanlines CRT · Paleta verde/amarillo · Portada pixelada (image-rendering: pixelated)</p>
+
+<div class="theme dark">
+  <div class="theme-label">Dark</div>
+  <div class="row">
+    <div class="cell"><small>Mini · Hub</small>
+      <a class="px-card mini" href="#">
+        <div class="px-slot"></div>
+        <div class="px-screen">
+          <div class="px-cover"><canvas class="cover" width="16" height="16"></canvas></div>
+          <div class="px-info">
+            <span class="px-title"><i class="px-cursor"></i>Neon Cortex</span>
+            <span class="px-artist">Bitwave Runner</span>
+            <span class="px-status">▶ Now</span>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="cell"><small>Widget · Perfil</small>
+      <a class="px-card widget" href="#">
+        <div class="px-slot"></div>
+        <div class="px-screen">
+          <div class="px-cover"><canvas class="cover" width="16" height="16"></canvas></div>
+          <div class="px-info">
+            <span class="px-title"><i class="px-cursor"></i>Neon Cortex</span>
+            <span class="px-artist">Bitwave Runner</span>
+            <span class="px-status">▶ Now Playing</span>
+          </div>
+        </div>
+        <div class="px-progress"><i style="--px-pct: 62%"></i></div>
+      </a>
+    </div>
+    <div class="cell"><small>Tarjeta grande</small>
+      <a class="px-card big" href="#">
+        <div class="px-slot"></div>
+        <div class="px-screen">
+          <div class="px-cover"><canvas class="cover" width="16" height="16"></canvas></div>
+          <div class="px-info">
+            <span class="px-title"><i class="px-cursor"></i>Neon Cortex</span>
+            <span class="px-artist">Bitwave Runner</span>
+            <span class="px-status">▶ Now Playing</span>
+          </div>
+        </div>
+        <div class="px-progress"><i style="--px-pct: 62%"></i></div>
+        <div class="px-controls">
+          <div class="px-dpad"></div>
+          <div class="px-ab"><span class="px-btn">B</span><span class="px-btn">A</span></div>
+        </div>
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="theme light">
+  <div class="theme-label">Light</div>
+  <div class="row">
+    <div class="cell"><small>Mini · Hub</small>
+      <a class="px-card mini" href="#">
+        <div class="px-slot"></div>
+        <div class="px-screen">
+          <div class="px-cover"><canvas class="cover" width="16" height="16"></canvas></div>
+          <div class="px-info">
+            <span class="px-title"><i class="px-cursor"></i>Neon Cortex</span>
+            <span class="px-artist">Bitwave Runner</span>
+            <span class="px-status paused">❙❙ Paused</span>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="cell"><small>Widget · Perfil</small>
+      <a class="px-card widget" href="#">
+        <div class="px-slot"></div>
+        <div class="px-screen">
+          <div class="px-cover"><canvas class="cover" width="16" height="16"></canvas></div>
+          <div class="px-info">
+            <span class="px-title"><i class="px-cursor"></i>Neon Cortex</span>
+            <span class="px-artist">Bitwave Runner</span>
+            <span class="px-status paused">❙❙ Paused</span>
+          </div>
+        </div>
+        <div class="px-progress"><i style="--px-pct: 24%"></i></div>
+      </a>
+    </div>
+    <div class="cell"><small>Tarjeta grande</small>
+      <a class="px-card big" href="#">
+        <div class="px-slot"></div>
+        <div class="px-screen">
+          <div class="px-cover"><canvas class="cover" width="16" height="16"></canvas></div>
+          <div class="px-info">
+            <span class="px-title"><i class="px-cursor"></i>Neon Cortex</span>
+            <span class="px-artist">Bitwave Runner</span>
+            <span class="px-status paused">❙❙ Paused</span>
+          </div>
+        </div>
+        <div class="px-progress"><i style="--px-pct: 24%"></i></div>
+        <div class="px-controls">
+          <div class="px-dpad"></div>
+          <div class="px-ab"><span class="px-btn">B</span><span class="px-btn">A</span></div>
+        </div>
+      </a>
+    </div>
+  </div>
+</div>
+
+<h2>2 · COMIC DASH — viñeta de cómic</h2>
+<p class="h2-note">Silueta: viñeta con marco de tinta grueso + rotación leve · Material: papel offset con halftone, líneas de velocidad, onomatopeya original "PLAY!" · Paleta rojo/amarillo/azul · 100% VERTEX, sin personajes con copyright</p>
+
+<div class="theme dark">
+  <div class="theme-label">Dark (papel cálido sobre fondo oscuro)</div>
+  <div class="row">
+    <div class="cell"><small>Mini · Hub</small>
+      <a class="cm-card mini" href="#">
+        <div class="cm-head"><span class="cm-badge">♪ Track</span><span class="cm-live">● Live</span></div>
+        <div class="cm-body">
+          <div class="cm-cover"><canvas class="cover" width="24" height="24"></canvas></div>
+          <div class="cm-info">
+            <span class="cm-title">Neon Cortex</span>
+            <span class="cm-artist">Bitwave Runner</span>
+            <span class="cm-omg">PLAY!</span>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="cell"><small>Widget · Perfil</small>
+      <a class="cm-card widget" href="#">
+        <div class="cm-head"><span class="cm-badge">♪ Track</span><span class="cm-live">● Live</span></div>
+        <div class="cm-body">
+          <div class="cm-cover"><canvas class="cover" width="24" height="24"></canvas></div>
+          <div class="cm-info">
+            <span class="cm-title">Neon Cortex</span>
+            <span class="cm-artist">Bitwave Runner</span>
+            <span class="cm-omg">PLAY!</span>
+          </div>
+        </div>
+        <div class="cm-times"><span>1:42</span><span class="cm-bar"><i style="width: 62%"></i></span><span>2:51</span></div>
+      </a>
+    </div>
+    <div class="cell"><small>Tarjeta grande</small>
+      <a class="cm-card big" href="#">
+        <div class="cm-head"><span class="cm-badge">♪ Track</span><span class="cm-live">● Live</span></div>
+        <div class="cm-body">
+          <div class="cm-cover"><canvas class="cover" width="24" height="24"></canvas></div>
+          <div class="cm-info">
+            <span class="cm-title">Neon Cortex</span>
+            <span class="cm-artist">Bitwave Runner</span>
+            <span class="cm-omg">PLAY!</span>
+          </div>
+        </div>
+        <div class="cm-times"><span>1:42</span><span class="cm-bar"><i style="width: 62%"></i></span><span>2:51</span></div>
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="theme light cm-light-fix">
+  <div class="theme-label">Light</div>
+  <div class="row">
+    <div class="cell"><small>Mini · Hub</small>
+      <a class="cm-card mini" href="#">
+        <div class="cm-head"><span class="cm-badge">♪ Track</span><span class="cm-live paused">❙❙ Idle</span></div>
+        <div class="cm-body">
+          <div class="cm-cover"><canvas class="cover" width="24" height="24"></canvas></div>
+          <div class="cm-info">
+            <span class="cm-title">Neon Cortex</span>
+            <span class="cm-artist">Bitwave Runner</span>
+            <span class="cm-omg paused">NEXT!</span>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="cell"><small>Widget · Perfil</small>
+      <a class="cm-card widget" href="#">
+        <div class="cm-head"><span class="cm-badge">♪ Track</span><span class="cm-live paused">❙❙ Idle</span></div>
+        <div class="cm-body">
+          <div class="cm-cover"><canvas class="cover" width="24" height="24"></canvas></div>
+          <div class="cm-info">
+            <span class="cm-title">Neon Cortex</span>
+            <span class="cm-artist">Bitwave Runner</span>
+            <span class="cm-omg paused">NEXT!</span>
+          </div>
+        </div>
+        <div class="cm-times"><span>0:38</span><span class="cm-bar"><i style="width: 24%"></i></span><span>2:51</span></div>
+      </a>
+    </div>
+    <div class="cell"><small>Tarjeta grande</small>
+      <a class="cm-card big" href="#">
+        <div class="cm-head"><span class="cm-badge">♪ Track</span><span class="cm-live paused">❙❙ Idle</span></div>
+        <div class="cm-body">
+          <div class="cm-cover"><canvas class="cover" width="24" height="24"></canvas></div>
+          <div class="cm-info">
+            <span class="cm-title">Neon Cortex</span>
+            <span class="cm-artist">Bitwave Runner</span>
+            <span class="cm-omg paused">NEXT!</span>
+          </div>
+        </div>
+        <div class="cm-times"><span>0:38</span><span class="cm-bar"><i style="width: 24%"></i></span><span>2:51</span></div>
+      </a>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Deterministic pixel-art + comic cover placeholders (original, no assets)
+  function drawCover(cv, mode) {
+    const ctx = cv.getContext('2d');
+    const w = cv.width, h = cv.height;
+    if (mode === 'px') {
+      // Game Boy palette checker-burst
+      const pal = ['#0f380f', '#306230', '#8bac0f', '#9bbc0f'];
+      let seed = 7;
+      const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        ctx.fillStyle = pal[Math.floor(rnd() * 4)];
+        ctx.fillRect(x, y, 1, 1);
+      }
+      // pixel "note" glyph
+      ctx.fillStyle = '#0f380f';
+      ctx.fillRect(6, 4, 2, 6); ctx.fillRect(8, 3, 3, 2); ctx.fillRect(4, 9, 3, 2);
+    } else {
+      // Comic burst: rays red/yellow/blue on paper
+      const pal = ['#e23b2e', '#ffc93c', '#2e6fe2', '#f6f1e3'];
+      const cx = w / 2, cy = h / 2;
+      ctx.fillStyle = '#f6f1e3'; ctx.fillRect(0, 0, w, h);
+      for (let a = 0; a < 24; a++) {
+        ctx.fillStyle = pal[a % 3];
+        ctx.beginPath(); ctx.moveTo(cx, cy);
+        const r = (a / 24) * Math.PI * 2;
+        ctx.lineTo(cx + Math.cos(r) * w, cy + Math.sin(r) * w);
+        ctx.lineTo(cx + Math.cos(r + Math.PI / 24) * w, cy + Math.sin(r + Math.PI / 24) * w);
+        ctx.fill();
+      }
+      ctx.fillStyle = '#101014';
+      ctx.beginPath(); ctx.arc(cx, cy, w * 0.16, 0, 7); ctx.fill();
+      ctx.fillStyle = '#ffc93c';
+      ctx.fillRect(cx - w * 0.05, cy - h * 0.1, w * 0.03, h * 0.14);
+      ctx.fillRect(cx + w * 0.02, cy - h * 0.1, w * 0.03, h * 0.14);
+    }
+  }
+  document.querySelectorAll('.theme').forEach((theme, ti) => {
+    const mode = ti < 2 ? 'px' : 'cm';
+    theme.querySelectorAll('canvas.cover').forEach(cv => drawCover(cv, mode));
+  });
+</script>
+</body>
+</html>

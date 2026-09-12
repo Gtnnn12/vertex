@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VERTEX — MATCH CARD · tarjeta de partida (art only)</title>
+<style>
+  /* ══════════════════════════════════════════════════════════════════
+     VERTEX — MATCH CARD (Netrex) · rediseño total del estilo Valorant.
+     Cuando juegas, el widget NO es caja musical: es tarjeta de partida
+     (claridad tipo "Jugando VALORANT" de Discord, estética VERTEX).
+     Estados: datos completos · solo timer · no jugando (caja musical).
+     Solo transform/opacity · reduced-motion · cero logos de Riot.
+     ══════════════════════════════════════════════════════════════════ */
+  :root{
+    --ink:#0c0d10; --panel:#121419; --line:#262b36; --mut:#8b93a7; --dim:#5b6376;
+    --coral:#ff4655; --navy:#0f1923; --navy2:#16222e; --bone:#ece8e1; --bone-dim:#b8b2a6;
+    --accent:#35e0ff; /* demo: será el acento del usuario en equipo/labels */
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:var(--ink); color:var(--bone); font-family:'Segoe UI',system-ui,sans-serif; padding:34px 26px 90px;}
+  .wrap{max-width:860px; margin:0 auto;}
+  h1{font-size:26px; margin-bottom:6px;} h1 .star{color:var(--coral);}
+  .sub{color:var(--mut); font-size:14px; line-height:1.5; margin-bottom:8px; max-width:700px;}
+  .rule{height:1px; background:linear-gradient(90deg,var(--coral),transparent); margin:22px 0;}
+  h2{font-size:17px; margin:32px 0 4px; letter-spacing:2.5px; text-transform:uppercase;}
+  .desc{color:var(--mut); font-size:13px; line-height:1.55; margin-bottom:16px; max-width:680px;}
+  .frame{border:1px solid var(--line); border-radius:12px; padding:20px; background:var(--panel); margin-bottom:18px;}
+  .frame .cap{font-size:10.5px; letter-spacing:2.2px; text-transform:uppercase; color:var(--dim); margin-bottom:12px;}
+  .frame.light-frame{background:#e9e7e2; border-color:#d5d2ca;}
+  .frame.light-frame .cap{color:#8a8577;}
+  .row{display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start;}
+  .badge{display:inline-block; font-size:9.5px; font-weight:700; letter-spacing:1.6px; padding:3px 9px; border-radius:4px; text-transform:uppercase; vertical-align:middle;}
+  .badge.netrex{background:var(--coral); color:#fff;}
+  .badge.concept{background:transparent; color:#ffd24a; border:1px solid #ffd24a55; margin-left:8px;}
+
+  /* ═══════════ MATCH CARD — la tarjeta de partida ═══════════ */
+  .mc{
+    --mcc:#ff4655;            /* acento del juego */
+    --mcacc:var(--accent);    /* acento del usuario */
+    --mcpanel:#0a0e13; --mcpanel2:#10161d; --mcline:#232c38;
+    position:relative; overflow:hidden; border-radius:8px;
+    background:var(--mcpanel); color:var(--bone); display:block; text-decoration:none;
+  }
+  .mc::before{ /* glow del acento por detrás, respira lento */
+    content:''; position:absolute; inset:-30px; pointer-events:none;
+    background:radial-gradient(circle at 14% 40%, var(--mcc) 0, transparent 42%);
+    opacity:.14; animation:mc-breathe 5.5s ease-in-out infinite;
+  }
+  @keyframes mc-breathe{0%,100%{opacity:.10;} 50%{opacity:.20;}}
+  .mc > *{position:relative; z-index:2;}
+
+  .mc-body{display:flex; gap:14px; padding:14px; align-items:center;}
+
+  /* IZQUIERDA — icono grande del juego (artículo VERTEX, cero logos) */
+  .mc-icon{
+    position:relative; flex-shrink:0; width:26%; max-width:96px; aspect-ratio:1;
+    border-radius:14px; background:var(--mcpanel2);
+    border:1px solid var(--mcline); overflow:hidden;
+  }
+  .mc-icon svg{width:100%; height:100%; display:block;}
+  .mc-icon::after{content:''; position:absolute; inset:0; border-radius:14px; pointer-events:none;
+    box-shadow:0 0 18px 2px color-mix(in srgb, var(--mcc) 35%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--mcc) 25%, transparent);
+    animation:mc-glow-b 5.5s ease-in-out infinite;}
+  @keyframes mc-glow-b{0%,100%{opacity:.55;} 50%{opacity:1;}}
+
+  /* CENTRO */
+  .mc-main{flex:1; min-width:0;}
+  .mc-game{font-size:22px; font-weight:800; letter-spacing:2px; color:var(--bone);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .mc-mode{margin-top:3px; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--bone-dim);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .mc-mode b{color:var(--mcacc); font-weight:700;}
+  .mc-score-row{display:flex; align-items:baseline; gap:12px; margin-top:10px;}
+  .mc-score{display:flex; align-items:baseline; gap:8px; font-family:Consolas,'Courier New',monospace;}
+  .mc-score .n{font-size:30px; font-weight:700; line-height:1;}
+  .mc-score .n.you{color:var(--mcacc); text-shadow:0 0 12px color-mix(in srgb, var(--mcacc) 45%, transparent);}
+  .mc-score .n.them{color:var(--bone-dim);}
+  .mc-score .sep{font-size:18px; color:var(--dim);}
+  .mc-score .lbls{display:flex; gap:8px; margin-left:2px;}
+  .mc-score .lbl{font-size:8.5px; letter-spacing:1.8px; color:var(--dim); text-transform:uppercase;}
+  .mc-score .lbl.you{color:var(--mcacc);}
+  /* flip sutil al cambiar el marcador */
+  .mc-score .n.flip{animation:mc-flip .45s ease both;}
+  @keyframes mc-flip{0%{transform:rotateX(0);} 40%{transform:rotateX(90deg); opacity:.4;} 100%{transform:rotateX(0); opacity:1;}}
+  .mc-timer{margin-left:auto; text-align:right; font-family:Consolas,'Courier New',monospace;}
+  .mc-timer .t{font-size:17px; font-weight:700; color:var(--bone); letter-spacing:1px;}
+  .mc-timer .cap{font-size:8.5px; letter-spacing:1.8px; color:var(--dim); text-transform:uppercase; margin-top:2px;}
+  .mc-timer .t .live-dot{display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--mcc); margin-right:6px;
+    animation:mc-blink 1.6s steps(1) infinite;}
+  @keyframes mc-blink{50%{opacity:.2;}}
+
+  /* ABAJO — fila party */
+  .mc-party{display:flex; align-items:center; gap:10px; padding:9px 14px; border-top:1px solid var(--mcline); background:#0b1016;}
+  .mc-avs{display:flex;}
+  .mc-av{width:24px; height:24px; border-radius:50%; border:2px solid var(--mcpanel);
+    margin-left:-7px; position:relative; overflow:hidden; background:var(--navy2);}
+  .mc-av:first-child{margin-left:0;}
+  .mc-av.you{box-shadow:0 0 0 2px var(--mcacc); z-index:3;}
+  .mc-av img{width:100%; height:100%; object-fit:cover;}
+  .mc-av.empty{background:repeating-linear-gradient(45deg,#1a212b 0 4px,#141a22 4px 8px);}
+  .mc-party .cap{font-size:9.5px; letter-spacing:1.8px; text-transform:uppercase; color:var(--bone-dim);}
+  .mc-party .cap b{color:var(--bone);}
+
+  /* Spotify en línea fina secundaria */
+  .mc-song{display:flex; align-items:center; gap:8px; padding:7px 14px; border-top:1px solid var(--mcline);
+    font-size:11px; color:var(--bone-dim); letter-spacing:.4px; white-space:nowrap; overflow:hidden;}
+  .mc-song .note{color:var(--mcacc); flex-shrink:0; font-size:12px;}
+  .mc-song .name{overflow:hidden; text-overflow:ellipsis;}
+  .mc-song .eq{display:flex; gap:2px; margin-left:auto; flex-shrink:0; align-items:flex-end; height:10px;}
+  .mc-song .eq i{width:2px; background:var(--mcacc); animation:mc-eq 1s ease-in-out infinite;}
+  .mc-song .eq i:nth-child(1){height:5px; animation-delay:0s;}
+  .mc-song .eq i:nth-child(2){height:9px; animation-delay:.25s;}
+  .mc-song .eq i:nth-child(3){height:6px; animation-delay:.5s;}
+  @keyframes mc-eq{0%,100%{transform:scaleY(.5);} 50%{transform:scaleY(1);}}
+
+  /* tamaños */
+  .mc.mini .mc-game{font-size:13px;}
+  .mc.mini .mc-mode{font-size:8.5px; letter-spacing:1.2px;}
+  .mc.mini .mc-score .n{font-size:18px;}
+  .mc.mini .mc-score .sep{font-size:12px;}
+  .mc.mini .mc-score .lbls{display:none;}
+  .mc.mini .mc-timer .t{font-size:12px;}
+  .mc.mini .mc-timer .cap{display:none;}
+  .mc.mini .mc-body{padding:10px; gap:10px;}
+  .mc.mini .mc-icon{max-width:48px; border-radius:10px;}
+  .mc.mini .mc-icon::after{box-shadow:0 0 10px 1px color-mix(in srgb, var(--mcc) 35%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--mcc) 25%, transparent);}
+  .mc.mini .mc-party{padding:6px 10px;}
+  .mc.mini .mc-av{width:17px; height:17px;}
+  .mc.mini .mc-song{padding:5px 10px; font-size:9px;}
+  .mc.mini .mc-score-row{margin-top:6px; gap:8px;}
+  .mc.big .mc-game{font-size:30px;}
+  .mc.big .mc-score .n{font-size:40px;}
+  .mc.big .mc-score .sep{font-size:24px;}
+  .mc.big .mc-timer .t{font-size:22px;}
+  .mc.big .mc-body{padding:18px; gap:18px;}
+  .mc.big .mc-icon{max-width:120px;}
+  .mc.big .mc-mode{font-size:12.5px;}
+  .mc.big .mc-score-row{flex-wrap:wrap; row-gap:8px;}
+  .mc.big .mc-timer{flex-basis:100%; margin-left:0; text-align:left; display:flex; align-items:baseline; gap:10px;}
+  .mc.big .mc-timer .cap{margin-top:0;}
+
+  /* variante light */
+  .mc.lt{--mcpanel:#f2efe9; --mcpanel2:#e4e0d7; --mcline:#d3cec2; --bone:#12161c; --bone-dim:#6d675c;
+    border:1px solid #cfcabd;}
+  .mc.lt .mc-party{background:#ece8e0;}
+  .mc.lt .mc-score .n.them{color:#8a8478;}
+  .mc.lt .mc-av.empty{background:repeating-linear-gradient(45deg,#d8d2c4 0 4px,#cbc5b6 4px 8px);}
+  .mc.lt .mc-song{color:#6d675c;}
+
+  /* ── estado NO JUGANDO: vuelve la caja musical (Kawaii demo) ── */
+  .idle-hint{font-size:9.5px; letter-spacing:2px; text-transform:uppercase; color:var(--dim); margin-bottom:8px; text-align:center;}
+
+  /* avatars placeholder */
+  .avc{border-radius:50%; display:block;}
+
+  footer{color:var(--dim); font-size:11.5px; letter-spacing:1px; margin-top:30px; text-align:center;}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none !important; transition:none !important;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>VERTEX — MATCH CARD <span class="star">★</span></h1>
+  <p class="sub">Rediseño total del estilo Valorant-themed. Cuando juegas, el widget del perfil no es una caja musical: es una <b>tarjeta de partida</b> — icono del juego, nombre, modo·mapa, marcador, timer en vivo y tu party. La canción pasa a una línea fina secundaria. Claridad tipo "Jugando…" pero con estética VERTEX propia (cero logos de Riot). Solo arte · nada integrado.</p>
+  <div class="rule"></div>
+
+  <h2>Estados <span style="margin-left:8px;"><span class="badge netrex">Netrex</span><span class="badge concept">★ concepto</span></span></h2>
+  <p class="desc">Estados con <b>datos completos</b> (modo, mapa, marcador, party) y <b>solo timer</b> ("Partida en curso" — nunca se inventan datos). El marcador hace un <b>flip sutil</b> al cambiar; el glow del icono <b>respira lento</b>; el timer corre en vivo. Paleta carbón + hueso + coral, adaptándose al <b>acento del usuario</b> (demo: cian en tu equipo).</p>
+
+  <div class="row">
+    <div style="flex:1; min-width:300px;">
+      <div class="frame"><div class="cap">Dark · datos completos · timer en vivo</div>
+        <div class="mc widget" data-timer="1247">
+          <div class="mc-body">
+            <div class="mc-icon">
+              <svg viewBox="0 0 96 96">
+                <!-- artículo VERTEX "shooter táctico" — diseño propio, cero logos -->
+                <rect width="96" height="96" fill="#10161d"/>
+                <polygon points="48,14 78,48 48,82 18,48" fill="none" stroke="#ff4655" stroke-width="3"/>
+                <polygon points="48,30 66,48 48,66 30,48" fill="#ff4655"/>
+                <polygon points="48,40 56,48 48,56 40,48" fill="#ece8e1"/>
+                <rect x="20" y="14" width="10" height="3" fill="#ff4655" opacity=".8"/>
+                <rect x="66" y="79" width="10" height="3" fill="#ff4655" opacity=".8"/>
+              </svg>
+            </div>
+            <div class="mc-main">
+              <div class="mc-game">VALORANT</div>
+              <div class="mc-mode"><b>Swiftplay</b> · Split</div>
+              <div class="mc-score-row">
+                <div class="mc-score" data-score>
+                  <span class="lbls"><span class="lbl you">Tu equipo</span><span class="lbl">Rival</span></span>
+                  <span class="n you" data-you>3</span><span class="sep">—</span><span class="n them" data-them>2</span>
+                </div>
+                <div class="mc-timer"><div class="t"><span class="live-dot"></span><span class="tt">20:47</span></div><div class="cap">Tiempo de partida</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="mc-party">
+            <div class="mc-avs">
+              <span class="mc-av you"><img class="avc" alt=""></span>
+              <span class="mc-av"><img class="avc" alt=""></span>
+              <span class="mc-av empty"></span><span class="mc-av empty"></span><span class="mc-av empty"></span>
+            </div>
+            <span class="cap"><b>2 de 5</b> en tu party</span>
+          </div>
+          <div class="mc-song"><span class="note">♪</span><span class="name">Neon Cortex — Bitwave Runner</span><span class="eq"><i></i><i></i><i></i></span></div>
+        </div>
+      </div>
+    </div>
+    <div style="flex:1; min-width:300px;">
+      <div class="frame"><div class="cap">Dark · solo timer (sin mapa/marcador disponibles)</div>
+        <div class="mc widget" data-timer="412">
+          <div class="mc-body">
+            <div class="mc-icon">
+              <svg viewBox="0 0 96 96">
+                <rect width="96" height="96" fill="#10161d"/>
+                <polygon points="48,14 78,48 48,82 18,48" fill="none" stroke="#ff4655" stroke-width="3"/>
+                <polygon points="48,30 66,48 48,66 30,48" fill="#ff4655"/>
+                <polygon points="48,40 56,48 48,56 40,48" fill="#ece8e1"/>
+                <rect x="20" y="14" width="10" height="3" fill="#ff4655" opacity=".8"/>
+                <rect x="66" y="79" width="10" height="3" fill="#ff4655" opacity=".8"/>
+              </svg>
+            </div>
+            <div class="mc-main">
+              <div class="mc-game">VALORANT</div>
+              <div class="mc-mode">Partida en curso</div>
+              <div class="mc-score-row">
+                <div class="mc-score"><span class="n you" style="font-size:16px; letter-spacing:2px;">EN JUEGO</span></div>
+                <div class="mc-timer"><div class="t"><span class="live-dot"></span><span class="tt">06:52</span></div><div class="cap">Tiempo de partida</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="mc-party">
+            <div class="mc-avs">
+              <span class="mc-av you"><img class="avc" alt=""></span>
+              <span class="mc-av empty"></span><span class="mc-av empty"></span><span class="mc-av empty"></span><span class="mc-av empty"></span>
+            </div>
+            <span class="cap"><b>Solo tú</b> de tu party en este juego</span>
+          </div>
+          <div class="mc-song"><span class="note">♪</span><span class="name">Neon Cortex — Bitwave Runner</span><span class="eq"><i></i><i></i><i></i></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div style="flex:1; min-width:300px;">
+      <div class="frame light-frame"><div class="cap">Light · datos completos</div>
+        <div class="mc lt widget" data-timer="1980">
+          <div class="mc-body">
+            <div class="mc-icon">
+              <svg viewBox="0 0 96 96">
+                <rect width="96" height="96" fill="#e4e0d7"/>
+                <polygon points="48,14 78,48 48,82 18,48" fill="none" stroke="#ff4655" stroke-width="3"/>
+                <polygon points="48,30 66,48 48,66 30,48" fill="#ff4655"/>
+                <polygon points="48,40 56,48 48,56 40,48" fill="#12161c"/>
+                <rect x="20" y="14" width="10" height="3" fill="#ff4655" opacity=".8"/>
+                <rect x="66" y="79" width="10" height="3" fill="#ff4655" opacity=".8"/>
+              </svg>
+            </div>
+            <div class="mc-main">
+              <div class="mc-game">VALORANT</div>
+              <div class="mc-mode"><b>Competitivo</b> · Ascent</div>
+              <div class="mc-score-row">
+                <div class="mc-score">
+                  <span class="lbls"><span class="lbl you">Tu equipo</span><span class="lbl">Rival</span></span>
+                  <span class="n you">11</span><span class="sep">—</span><span class="n them">9</span>
+                </div>
+                <div class="mc-timer"><div class="t"><span class="live-dot"></span><span class="tt">33:00</span></div><div class="cap">Tiempo de partida</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="mc-party">
+            <div class="mc-avs">
+              <span class="mc-av you"><img class="avc" alt=""></span>
+              <span class="mc-av"><img class="avc" alt=""></span>
+              <span class="mc-av"><img class="avc" alt=""></span>
+              <span class="mc-av empty"></span><span class="mc-av empty"></span>
+            </div>
+            <span class="cap"><b>3 de 5</b> en tu party</span>
+          </div>
+          <div class="mc-song"><span class="note">♪</span><span class="name">Neon Cortex — Bitwave Runner</span><span class="eq"><i></i><i></i><i></i></span></div>
+        </div>
+      </div>
+    </div>
+    <div style="flex:1; min-width:300px;">
+      <div class="frame light-frame"><div class="cap">Light · solo timer</div>
+        <div class="mc lt widget" data-timer="95">
+          <div class="mc-body">
+            <div class="mc-icon">
+              <svg viewBox="0 0 96 96">
+                <rect width="96" height="96" fill="#e4e0d7"/>
+                <polygon points="48,14 78,48 48,82 18,48" fill="none" stroke="#ff4655" stroke-width="3"/>
+                <polygon points="48,30 66,48 48,66 30,48" fill="#ff4655"/>
+                <polygon points="48,40 56,48 48,56 40,48" fill="#12161c"/>
+                <rect x="20" y="14" width="10" height="3" fill="#ff4655" opacity=".8"/>
+                <rect x="66" y="79" width="10" height="3" fill="#ff4655" opacity=".8"/>
+              </svg>
+            </div>
+            <div class="mc-main">
+              <div class="mc-game">VALORANT</div>
+              <div class="mc-mode">Partida en curso</div>
+              <div class="mc-score-row">
+                <div class="mc-score"><span class="n you" style="font-size:16px; letter-spacing:2px;">EN JUEGO</span></div>
+                <div class="mc-timer"><div class="t"><span class="live-dot"></span><span class="tt">01:35</span></div><div class="cap">Tiempo de partida</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="mc-party">
+            <div class="mc-avs">
+              <span class="mc-av you"><img class="avc" alt=""></span>
+              <span class="mc-av empty"></span><span class="mc-av empty"></span><span class="mc-av empty"></span><span class="mc-av empty"></span>
+            </div>
+            <span class="cap"><b>Solo tú</b> de tu party en este juego</span>
+          </div>
+          <div class="mc-song"><span class="note">♪</span><span class="name">Neon Cortex — Bitwave Runner</span><span class="eq"><i></i><i></i><i></i></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2>Tamaños</h2>
+  <div class="row">
+    <div style="flex:0 0 230px;">
+      <div class="frame"><div class="cap">Mini — Hub</div>
+        <div class="mc mini" data-timer="733">
+          <div class="mc-body">
+            <div class="mc-icon">
+              <svg viewBox="0 0 96 96">
+                <rect width="96" height="96" fill="#10161d"/>
+                <polygon points="48,14 78,48 48,82 18,48" fill="none" stroke="#ff4655" stroke-width="3"/>
+                <polygon points="48,30 66,48 48,66 30,48" fill="#ff4655"/>
+                <polygon points="48,40 56,48 48,56 40,48" fill="#ece8e1"/>
+              </svg>
+            </div>
+            <div class="mc-main">
+              <div class="mc-game">VALORANT</div>
+              <div class="mc-mode"><b>Swiftplay</b> · Split</div>
+              <div class="mc-score-row">
+                <div class="mc-score"><span class="n you">3</span><span class="sep">—</span><span class="n them">2</span></div>
+                <div class="mc-timer"><div class="t"><span class="live-dot"></span><span class="tt">12:13</span></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="mc-party">
+            <div class="mc-avs">
+              <span class="mc-av you"><img class="avc" alt=""></span>
+              <span class="mc-av"><img class="avc" alt=""></span>
+              <span class="mc-av empty"></span>
+            </div>
+            <span class="cap"><b>2/5</b> party</span>
+          </div>
+          <div class="mc-song"><span class="note">♪</span><span class="name">Neon Cortex — Bitwave Runner</span></div>
+        </div>
+      </div>
+    </div>
+    <div style="flex:1; min-width:300px;">
+      <div class="frame"><div class="cap">Tarjeta grande</div>
+        <div class="mc big" data-timer="3271">
+          <div class="mc-body">
+            <div class="mc-icon">
+              <svg viewBox="0 0 96 96">
+                <rect width="96" height="96" fill="#10161d"/>
+                <polygon points="48,14 78,48 48,82 18,48" fill="none" stroke="#ff4655" stroke-width="3"/>
+                <polygon points="48,30 66,48 48,66 30,48" fill="#ff4655"/>
+                <polygon points="48,40 56,48 48,56 40,48" fill="#ece8e1"/>
+                <rect x="20" y="14" width="10" height="3" fill="#ff4655" opacity=".8"/>
+                <rect x="66" y="79" width="10" height="3" fill="#ff4655" opacity=".8"/>
+              </svg>
+            </div>
+            <div class="mc-main">
+              <div class="mc-game">VALORANT</div>
+              <div class="mc-mode"><b>Swiftplay</b> · Split</div>
+              <div class="mc-score-row">
+                <div class="mc-score">
+                  <span class="lbls"><span class="lbl you">Tu equipo</span><span class="lbl">Rival</span></span>
+                  <span class="n you" data-you>8</span><span class="sep">—</span><span class="n them" data-them>6</span>
+                </div>
+                <div class="mc-timer"><div class="t"><span class="live-dot"></span><span class="tt">54:31</span></div><div class="cap">Tiempo de partida</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="mc-party">
+            <div class="mc-avs">
+              <span class="mc-av you"><img class="avc" alt=""></span>
+              <span class="mc-av"><img class="avc" alt=""></span>
+              <span class="mc-av"><img class="avc" alt=""></span>
+              <span class="mc-av"><img class="avc" alt=""></span>
+              <span class="mc-av empty"></span>
+            </div>
+            <span class="cap"><b>4 de 5</b> en tu party</span>
+          </div>
+          <div class="mc-song"><span class="note">♪</span><span class="name">Neon Cortex — Bitwave Runner</span><span class="eq"><i></i><i></i><i></i></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2>NO jugando — vuelve la caja musical</h2>
+  <p class="desc">Sin partida detectada, el widget del perfil es tu caja musical normal (demo: Kawaii Dream — el estilo por defecto del usuario). MATCH CARD solo existe mientras el juego corre. En la app, la transición será un crossfade corto.</p>
+  <div class="row">
+    <div style="flex:1; min-width:280px;">
+      <div class="frame"><div class="idle-hint">estado · no jugando</div>
+        <div style="position:relative; overflow:hidden; border-radius:16px; padding:16px;
+          background:linear-gradient(160deg,#ffe3ef,#e8ddff 60%,#dcf7ea); border:1px solid #ffc9de;">
+          <div style="font-size:14px; font-weight:700; color:#c2557e;">Neon Cortex ♡</div>
+          <div style="font-size:11px; color:#9a6b8f; margin-top:2px;">Bitwave Runner</div>
+          <div style="margin-top:10px; height:6px; border-radius:3px; background:#ffffffaa;">
+            <div style="width:62%; height:100%; border-radius:3px; background:linear-gradient(90deg,#ff9ec4,#c9a6ff);"></div>
+          </div>
+          <div style="position:absolute; top:10px; right:12px; font-size:16px;">♡</div>
+          <div style="position:absolute; bottom:10px; right:14px; font-size:13px;">✦</div>
+        </div>
+      </div>
+    </div>
+    <div style="flex:1; min-width:280px;">
+      <div class="frame"><div class="idle-hint">la canción sigue visible en partida (línea fina)</div>
+        <div class="mc" data-timer="0" style="pointer-events:none;">
+          <div class="mc-song" style="border-top:none;"><span class="note">♪</span><span class="name">Neon Cortex — Bitwave Runner</span><span class="eq"><i></i><i></i><i></i></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>VERTEX · MATCH CARD — solo arte · nada integrado · cero logos de Riot · datos honestos: sin mapa/marcador = "Partida en curso" + timer</footer>
+</div>
+
+<script>
+  // avatares placeholder originales (canvas)
+  function avatar(hue){
+    const c=document.createElement('canvas'); c.width=c.height=48;
+    const x=c.getContext('2d');
+    x.fillStyle=`hsl(${hue},38%,30%)`; x.fillRect(0,0,48,48);
+    x.fillStyle=`hsl(${hue},55%,62%)`;
+    x.beginPath(); x.arc(24,19,10,0,7); x.fill();
+    x.beginPath(); x.ellipse(24,42,14,10,0,0,7); x.fill();
+    return c.toDataURL();
+  }
+  document.querySelectorAll('.mc-av img').forEach((img,i)=>{ img.src = avatar((i*80+10)%360); });
+
+  // timers en vivo (corren de verdad)
+  document.querySelectorAll('.mc[data-timer]').forEach(card=>{
+    let s = parseInt(card.dataset.timer,10) || 0;
+    const tt = card.querySelector('.tt');
+    if(!tt || s===0) return;
+    const fmt = v => String(Math.floor(v/60)).padStart(2,'0')+':'+String(v%60).padStart(2,'0');
+    tt.textContent = fmt(s);
+    setInterval(()=>{ s++; tt.textContent = fmt(s); }, 1000);
+  });
+
+  // demo del flip del marcador: el equipo visitante anota cada ~8s (solo en la tarjeta grande)
+  const bigScore = document.querySelector('.mc.big [data-you]');
+  const bigThem = document.querySelector('.mc.big [data-them]');
+  let alt = 0;
+  setInterval(()=>{
+    alt++;
+    const el = alt % 2 ? bigScore : bigThem;
+    el.textContent = parseInt(el.textContent,10) + 1;
+    el.classList.remove('flip'); void el.offsetWidth; el.classList.add('flip');
+  }, 8000);
+</script>
+</body>
+</html>
