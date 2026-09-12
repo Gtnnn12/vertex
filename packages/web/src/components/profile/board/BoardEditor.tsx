@@ -387,36 +387,11 @@ function FieldEditor({ type, config, onChange }: FieldEditorProps) {
       );
     }
     case 'badges': {
-      const selected = Array.isArray(config.badges) ? (config.badges as string[]) : [];
-      const OPTIONS: Array<{ id: string; labelKey: string }> = [
-        { id: 'owner', labelKey: 'staff_badge_owner' },
-        { id: 'administrator', labelKey: 'staff_badge_administrator' },
-        { id: 'developer', labelKey: 'staff_badge_developer' },
-        { id: 'moderator', labelKey: 'staff_badge_moderator' },
-        { id: 'netrex', labelKey: 'badge_netrex_tooltip' },
-      ];
-      const toggle = (id: string) => {
-        const next = selected.includes(id) ? selected.filter((b) => b !== id) : [...selected, id].slice(0, L.maxBadges);
-        set({ badges: next });
-      };
+      // SECURITY: staff badges are NOT selectable — the widget auto-populates
+      // with the badges the user actually owns (rendered by BadgesValue from
+      // the auth store; the server also filters fakes on save).
       return (
-        <div className="flex flex-wrap gap-1.5">
-          {OPTIONS.map((o) => (
-            <button
-              key={o.id}
-              type="button"
-              onClick={() => toggle(o.id)}
-              aria-pressed={selected.includes(o.id)}
-              className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-primary/40 ${
-                selected.includes(o.id)
-                  ? 'border-accent-primary/60 bg-accent-primary/15 text-txt-primary'
-                  : 'border-white/[0.09] text-txt-tertiary hover:bg-white/[0.06]'
-              }`}
-            >
-              {t(o.labelKey)}
-            </button>
-          ))}
-        </div>
+        <p className="text-[11px] leading-snug text-txt-tertiary">{t('board_field_badges_auto')}</p>
       );
     }
     case 'goal':
