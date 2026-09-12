@@ -36,6 +36,8 @@ export interface User {
   musicWidgetStyle?: MusicWidgetStyle;
   /** Profile board (Tablero) widgets — visible to everyone; editing is Netrex-gated server-side. */
   profileBoard?: BoardWidget[];
+  /** Personal profile tint (hex) — colors the profile panel, banner glow and borders. */
+  profileAccent?: string | null;
 }
 
 /**
@@ -696,6 +698,8 @@ export interface UpdateUserRequest {
   showActivity?: boolean;
   /** Requested music-card style. Server validates the Netrex entitlement; on failure it saves 'vinyl' and responds 200. */
   musicWidgetStyle?: string;
+  /** Personal profile tint. Server validates the hex format; empty string clears it. */
+  profileAccent?: string;
 }
 
 export interface UpdateBoardResponse {

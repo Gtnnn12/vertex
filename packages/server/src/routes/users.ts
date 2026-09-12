@@ -364,7 +364,7 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.patch<{ Body: UpdateUserRequest }>('/api/users/@me', { preHandler: authenticate }, async (request, reply) => {
-    const { displayName, avatar, banner, accentColor, avatarColor, bio, customStatus, status, replicatedInstances, homeUserId, profileUpdatedAt, discoverable, showActivity, musicWidgetStyle } = request.body;
+    const { displayName, avatar, banner, accentColor, avatarColor, bio, customStatus, status, replicatedInstances, homeUserId, profileUpdatedAt, discoverable, showActivity, musicWidgetStyle, profileAccent } = request.body;
     const db = getDb();
 
     const updateData: Record<string, string | null | undefined> = {};
@@ -612,6 +612,19 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
         ? (musicWidgetStyle as MusicWidgetStyle)
         : 'vinyl';
       updateData.musicWidgetStyle = MUSIC_WIDGET_FREE_STYLES.includes(style) || entitlement ? style : 'vinyl';
+    }
+
+    if (profileAccent !== undefined) {
+      // Personal profile tint. Valid hex required; empty string clears it.
+      if (profileAccent && typeof profileAccent === 'string' && profileAccent.trim().length > 0) {
+        const hex = profileAccent.trim();
+        if (!/^#[0-9a-fA-F]{6}$/.test(hex)) {
+          return reply.code(400).send({ error: 'Profile accent must be a valid hex color (e.g. #ff0000)', statusCode: 400 });
+        }
+        updateData.profileAccent = hex;
+      } else {
+        updateData.profileAccent = null;
+      }
     }
 
     if (Object.keys(updateData).length === 0) {

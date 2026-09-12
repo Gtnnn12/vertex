@@ -37,6 +37,8 @@ export const users = sqliteTable('users', {
   musicWidgetStyle: text('music_widget_style'),
   /** Profile board (Tablero): JSON array of BoardWidget — Netrex-gated on save. */
   profileBoard: text('profile_board'),
+  /** Personal profile tint (hex) — colors panel, banner glow and borders. */
+  profileAccent: text('profile_accent'),
   staffRole: text('staff_role'),
   lastSeenAt: integer('last_seen_at'),  bannedUntil: integer('banned_until'),
   banReason: text('ban_reason'),

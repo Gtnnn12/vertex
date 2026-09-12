@@ -115,6 +115,7 @@ export function UserProfileModal() {
   const [mutualSpaces, setMutualSpaces] = useState<MutualSpace[]>([]);
   const [loadingMutuals, setLoadingMutuals] = useState(false);
   const [friendActionLoading, setFriendActionLoading] = useState(false);
+  const [profileAccent, setProfileAccent] = useState<string | null>(null);
 
   // “Listening now” — one shared block for every profile surface, with the
   // exact lookup the activity panel uses (same store, same key). Must be
@@ -137,6 +138,7 @@ export function UserProfileModal() {
       const targetApi = getApiForOrigin(origin);
       const u = await targetApi.users.get(id);
       setUser(u);
+      setProfileAccent(u.profileAccent ?? null);
       useSpaceStore.getState().upsertUserView(u, origin);
     } catch {
       // User not found
@@ -165,6 +167,7 @@ export function UserProfileModal() {
       // Use the passed user directly (avoids 404 for federated users on local API)
       if (passedUser) {
         setUser(passedUser);
+        setProfileAccent(passedUser.profileAccent ?? null);
       } else {
         loadUser(userId, origin);
       }
@@ -179,6 +182,7 @@ export function UserProfileModal() {
       setUserOrigin('');
       setMutualFriends([]);
       setMutualSpaces([]);
+      setProfileAccent(null);
     }
   }, [isOpen]);
 
@@ -301,12 +305,41 @@ export function UserProfileModal() {
     navigate(`/channels/${spaceId}`);
   };
 
+  // Persist the personal profile tint (self profile only). Optimistic: apply
+  // locally first, roll back on failure with a toast.
+  const handleProfileAccentChange = useCallback(async (hex: string | null) => {
+    const prev = profileAccent;
+    setProfileAccent(hex);
+    try {
+      await api.users.update({ profileAccent: hex ?? '' });
+    } catch (err) {
+      setProfileAccent(prev);
+      addToast((err as Error).message || 'Could not save profile color', 'warning');
+    }
+  }, [profileAccent, addToast]);
+
   const tabs: { key: Tab; label: string; count?: number }[] = [
     { key: 'about', label: 'About' },
-    { key: 'board', label: boardTabLabel },
     { key: 'friends', label: 'Mutual Friends', count: mutualFriends.length },
     { key: 'spaces', label: 'Mutual Spaces', count: mutualSpaces.length },
   ];
+
+  // Personal tint drives panel background wash, banner glow and hairline borders.
+  const accent = profileAccent;
+  const tintStyle = accent
+    ? ({
+        '--profile-accent': accent,
+        background: `linear-gradient(180deg, ${accent}1f 0%, transparent 60%)`,
+        boxShadow: accent
+          ? `0 0 0 1px ${accent}33, 0 24px 80px -24px ${accent}44`
+          : undefined,
+      } as React.CSSProperties)
+    : undefined;
+  const bannerGlowStyle = accent
+    ? ({ boxShadow: `inset 0 -40px 60px -30px ${accent}55` } as React.CSSProperties)
+    : undefined;
+
+  const isSelfViewing = isSelfProfile;
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center animate-fade-in">
@@ -315,7 +348,8 @@ export function UserProfileModal() {
         ref={fx.ref}
         onMouseMove={fx.onMouseMove}
         onMouseLeave={fx.onMouseLeave}
-        className="profile-fx fx-animatable profile-stagger relative max-w-lg w-full mx-4 max-h-[calc(100vh-2rem)] flex flex-col glass-modal rounded-[14px] animate-slide-up overflow-hidden"
+        style={tintStyle}
+        className="profile-fx fx-animatable profile-stagger relative w-full mx-4 max-h-[calc(100vh-2rem)] flex flex-col glass-modal rounded-[14px] animate-slide-up overflow-hidden md:max-w-4xl"
       >
         {/* Cursor glow layer */}
         <span className="profile-fx-glow" aria-hidden />
@@ -324,10 +358,12 @@ export function UserProfileModal() {
         <div data-stagger="1" className="h-[110px] flex-shrink-0 relative overflow-hidden">
           <div
             className="profile-fx-banner"
-            style={bannerSrc
-              ? { backgroundImage: `url(${bannerSrc})` }
-              : { background: bannerFallback }
-            }
+            style={{
+              ...(bannerSrc
+                ? { backgroundImage: `url(${bannerSrc})` }
+                : { background: bannerFallback }),
+              ...bannerGlowStyle,
+            }}
           />
           <div className="profile-fx-banner-overlay" aria-hidden />
           {/* Close button */}
@@ -382,6 +418,11 @@ export function UserProfileModal() {
           </div>
         </div>
 
+        {/* Two-column body: profile (left) + Board (right). Board collapses
+            below the profile on narrow viewports. */}
+        <div className="flex flex-col md:flex-row flex-1 min-h-0">
+        {/* ── Left column — profile ── */}
+        <div className="flex flex-col min-h-0 md:w-[55%] md:border-r md:border-white/[0.06]">
         {/* Tab bar — sliding accent indicator */}
         <div data-stagger="3" className="px-5 flex-shrink-0 border-b border-white/[0.06]">
           <div ref={tabsWrapRef} className="flex gap-1 relative">
@@ -449,16 +490,6 @@ export function UserProfileModal() {
               </div>
 
             </div>
-          )}
-
-          {activeTab === 'board' && (
-            <ProfileBoardTab
-              user={user}
-              origin={userOrigin}
-              onBoardSaved={(widgets) => {
-                setUser((prev) => (prev ? { ...prev, profileBoard: widgets } : prev));
-              }}
-            />
           )}
 
           {activeTab === 'friends' && (
@@ -583,6 +614,7 @@ export function UserProfileModal() {
             </div>
           )}
         </div>
+        {/* /left column tab content */}
 
         {/* Action buttons — luminous hover */}
         <div data-stagger="5" className="flex-shrink-0 px-5 py-3 border-t border-white/[0.06] flex gap-2">
@@ -627,6 +659,65 @@ export function UserProfileModal() {
             </button>
           )}
         </div>
+        {/* /action buttons */}
+        </div>
+        {/* /left column */}
+
+        {/* ── Right column — the Board (own scroll; collapses below on mobile) ── */}
+        <div
+          data-stagger="6"
+          className="flex flex-col min-h-0 md:w-[45%] border-t md:border-t-0 md:border-l border-white/[0.06] max-h-[50vh] md:max-h-none"
+        >
+          <div className="flex items-center justify-between px-4 py-2.5 flex-shrink-0 border-b border-white/[0.06]">
+            <span className="text-[11px] uppercase tracking-wide font-semibold text-txt-tertiary">
+              {boardTabLabel}
+            </span>
+            {isSelfViewing && (
+              <div className="flex items-center gap-2">
+                {/* Personal profile tint — color picker + soft-dark preset */}
+                <label
+                  className="flex items-center gap-1.5 cursor-pointer"
+                  title="Profile color"
+                >
+                  <input
+                    type="color"
+                    value={accent ?? '#7c6cff'}
+                    onChange={(e) => void handleProfileAccentChange(e.target.value)}
+                    className="w-5 h-5 rounded cursor-pointer bg-transparent border border-white/[0.15] p-0.5"
+                    aria-label="Profile color"
+                  />
+                  <span className="text-[11px] text-txt-tertiary hidden sm:inline">Color</span>
+                </label>
+                <button
+                  onClick={() => void handleProfileAccentChange('#2a2438')}
+                  className="w-5 h-5 rounded border border-white/[0.15] bg-gradient-to-b from-[#3a3352] to-[#1c1828]"
+                  title="Soft dark"
+                  aria-label="Soft dark preset"
+                />
+                {accent && (
+                  <button
+                    onClick={() => void handleProfileAccentChange(null)}
+                    className="text-[11px] text-txt-tertiary hover:text-txt-secondary"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="flex-1 overflow-y-auto scrollbar-thin min-h-0">
+            <ProfileBoardTab
+              user={user}
+              origin={userOrigin}
+              onBoardSaved={(widgets) => {
+                setUser((prev) => (prev ? { ...prev, profileBoard: widgets } : prev));
+              }}
+            />
+          </div>
+        </div>
+        {/* /right column */}
+        </div>
+        {/* /two-column body */}
       </div>
 
     </div>
