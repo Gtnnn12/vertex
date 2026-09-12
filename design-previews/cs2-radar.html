@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VERTEX — CS2 RADAR · tarjeta de partida (art only)</title>
+<style>
+  /* ══════════════════════════════════════════════════════════════════
+     VERTEX — CS2 RADAR · rediseño visual completo de la Match Card CS2.
+     Identidad propia: RADAR circular girando (mitad derecha) + bloque
+     de datos militar mono (mitad izquierda) con marcador protagonista.
+     Estados: en partida / lobby (radar standby) / no jugando (widget).
+     Solo transform/opacity · reduced-motion = radar estático.
+     Cero logos de Valve — todo VERTEX original.
+     ══════════════════════════════════════════════════════════════════ */
+  :root{
+    --ink:#0c0d10; --panel:#121419; --line:#262b36; --mut:#8b93a7; --dim:#5b6376;
+    --tan:#c8b98a;        /* arena desaturada */
+    --orange:#e8963c;     /* naranja táctico */
+    --orange-dim:#e8963c33;
+    --ct:#5b9bd5;         /* CT azul */
+    --t:#d9b23c;          /* T amarillo */
+    --bone:#ece8e1; --bone-dim:#b8b2a6;
+    --accent:#35e0ff;     /* acento usuario demo */
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:var(--ink); color:var(--bone); font-family:'Segoe UI',system-ui,sans-serif; padding:34px 26px 90px;}
+  .wrap{max-width:860px; margin:0 auto;}
+  h1{font-size:26px; margin-bottom:6px;} h1 .star{color:var(--orange);}
+  .sub{color:var(--mut); font-size:14px; line-height:1.5; margin-bottom:8px; max-width:700px;}
+  .rule{height:1px; background:linear-gradient(90deg,var(--orange),transparent); margin:22px 0;}
+  h2{font-size:17px; margin:32px 0 4px; letter-spacing:2.5px; text-transform:uppercase;}
+  .desc{color:var(--mut); font-size:13px; line-height:1.55; margin-bottom:16px; max-width:680px;}
+  .frame{border:1px solid var(--line); border-radius:12px; padding:20px; background:var(--panel); margin-bottom:18px;}
+  .frame .cap{font-size:10.5px; letter-spacing:2.2px; text-transform:uppercase; color:var(--dim); margin-bottom:12px;}
+  .frame.light-frame{background:#e9e7e2; border-color:#d5d2ca;}
+  .frame.light-frame .cap{color:#8a8577;}
+  .row{display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start;}
+  .badge{display:inline-block; font-size:9.5px; font-weight:700; letter-spacing:1.6px; padding:3px 9px; border-radius:4px; text-transform:uppercase; vertical-align:middle;}
+  .badge.netrex{background:var(--orange); color:#151005;}
+  .badge.redesign{background:transparent; color:#ffd24a; border:1px solid #ffd24a55; margin-left:8px;}
+
+  /* ═══════════ CS2 RADAR — la tarjeta ═══════════ */
+  .rx{
+    --rx-acc:var(--orange); --rx-tan:var(--tan);
+    --rx-bg:#0d0f12; --rx-panel:#12151a; --rx-line:#252b33;
+    position:relative; display:block; overflow:hidden; border-radius:8px;
+    background:var(--rx-bg); color:var(--bone); text-decoration:none;
+    font-family:Consolas,'Courier New',monospace;
+  }
+  .rx::before{ /* hairline de acento arriba */
+    content:''; position:absolute; top:0; left:0; right:0; height:2px; z-index:6;
+    background:linear-gradient(90deg, var(--rx-acc), transparent 70%);
+  }
+
+  .rx-wrap{position:relative; display:flex; min-height:150px;}
+  /* ── IZQUIERDA: bloque de datos ── */
+  .rx-data{
+    position:relative; z-index:4; width:58%; flex-shrink:0;
+    background:linear-gradient(120deg, var(--rx-panel) 82%, transparent);
+    padding:16px 18px 14px; display:flex; flex-direction:column;
+  }
+  .rx-game{
+    font-family:Impact,'Arial Black',sans-serif; font-size:11px; letter-spacing:3px;
+    color:var(--rx-tan); text-transform:uppercase; opacity:.85;
+  }
+  .rx-map{
+    font-family:Impact,'Arial Black',sans-serif; font-size:26px; letter-spacing:2px;
+    color:var(--bone); text-transform:uppercase; line-height:1.15; margin-top:2px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .rx-mode{font-size:10px; letter-spacing:2.2px; text-transform:uppercase; color:var(--bone-dim); margin-top:2px;}
+  /* marcador protagonista absoluto */
+  .rx-score{display:flex; align-items:baseline; gap:12px; margin-top:auto; padding-top:12px;}
+  .rx-score .n{
+    font-size:52px; font-weight:700; line-height:.9; letter-spacing:-1px;
+    font-variant-numeric:tabular-nums;
+  }
+  .rx-score .n.ct{color:var(--ct); text-shadow:0 0 16px #5b9bd54d;}
+  .rx-score .n.tt{color:var(--t); text-shadow:0 0 16px #d9b23c4d;}
+  .rx-score .sep{font-size:26px; color:var(--bone-dim); font-weight:300;}
+  .rx-score .flip{animation:rx-flip .45s ease both;}
+  @keyframes rx-flip{0%{transform:rotateX(0);} 40%{transform:rotateX(90deg); opacity:.3;} 100%{transform:rotateX(0); opacity:1;}}
+  .rx-score-side{display:flex; flex-direction:column; gap:3px; margin-left:4px;}
+  .rx-score-side .tags{display:flex; gap:10px;}
+  .rx-score-side .tg{font-size:9px; font-weight:700; letter-spacing:1.5px;}
+  .rx-score-side .tg.ct{color:var(--ct);}
+  .rx-score-side .tg.tt{color:var(--t);}
+  .rx-round{font-size:10px; letter-spacing:2.2px; text-transform:uppercase; color:var(--rx-acc);}
+  /* reloj: fila propia bajo el marcador, siempre junto a él */
+  .rx-clockrow{
+    display:flex; align-items:baseline; justify-content:space-between;
+    margin-top:10px; padding-top:8px; border-top:1px solid #ffffff0d;
+  }
+  .rx-clockrow .rlbl{font-size:8.5px; letter-spacing:1.8px; text-transform:uppercase; color:var(--dim);}
+  .rx-clock{margin-left:auto; text-align:right;}
+  .rx-clock .t{
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:17px; font-weight:700; letter-spacing:1px; color:var(--bone);
+    font-variant-numeric:tabular-nums;
+  }
+  .rx-clock .t .live-dot{width:6px; height:6px; border-radius:50%; background:var(--rx-acc);
+    animation:rx-blink 1.6s steps(1) infinite;}
+  @keyframes rx-blink{50%{opacity:.15;}}
+  .rx-clock .cap{display:none;}
+  /* lobby: sin marcador ni mapa duplicado */
+  .rx.standby .rx-map{display:none;}
+  .rx.standby .rx-clockrow{display:none;}
+  .rx.standby .rx-map{font-size:20px;}
+  .rx-status-lobby{margin-top:auto; padding-top:14px; font-size:12px; letter-spacing:2px; text-transform:uppercase; color:var(--bone-dim);}
+  .rx-status-lobby b{color:var(--bone);}
+
+  /* ── DERECHA: el RADAR (identidad de la card) ── */
+  .rx-radar{
+    position:absolute; right:-46px; top:50%; transform:translateY(-50%);
+    width:210px; height:210px; z-index:1;
+  }
+  .rx-radar .scope{
+    position:absolute; inset:0; border-radius:50%;
+    border:1px solid #2a313b;
+    background:
+      radial-gradient(circle, transparent 0 30%, #1a1f2740 30.5% 31%, transparent 31.5%),
+      radial-gradient(circle, transparent 0 55%, #1a1f2740 55.5% 56%, transparent 56.5%),
+      radial-gradient(circle at center, #151a21 0%, #0d0f12 70%);
+  }
+  /* cruz del radar */
+  .rx-radar .scope::before{
+    content:''; position:absolute; inset:0; border-radius:50%;
+    background:
+      linear-gradient(#ffffff10,#ffffff10) center/1px 100% no-repeat,
+      linear-gradient(#ffffff10,#ffffff10) center/100% 1px no-repeat;
+  }
+  /* barrido: cono girando lento */
+  .rx-radar .sweep{
+    position:absolute; inset:6px; border-radius:50%;
+    background:conic-gradient(from 0deg, #e8963c00 0deg, #e8963c00 300deg, #e8963c26 355deg, #e8963c66 360deg);
+    animation:rx-sweep 5.5s linear infinite;
+  }
+  @keyframes rx-sweep{to{transform:rotate(360deg);}}
+  /* blips que aparecen y se desvanecen */
+  .rx-radar .blip{position:absolute; width:5px; height:5px; border-radius:50%; background:var(--rx-tan);}
+  .rx-radar .blip.b1{top:28%; left:34%; animation:rx-blip 5.5s ease-out infinite;}
+  .rx-radar .blip.b2{top:55%; left:60%; width:4px; height:4px; background:var(--rx-acc); animation:rx-blip 5.5s ease-out 1.9s infinite;}
+  .rx-radar .blip.b3{top:66%; left:28%; width:4px; height:4px; animation:rx-blip 5.5s ease-out 3.6s infinite;}
+  @keyframes rx-blip{0%{opacity:0;} 6%{opacity:1;} 55%{opacity:.6;} 100%{opacity:0;}}
+  /* standby: radar apagado (sin barrido, blips fijos tenues) */
+  .rx.standby .rx-radar .sweep{animation:none; opacity:.25;}
+  .rx.standby .rx-radar .blip{animation:none; opacity:.18;}
+
+  /* sello del juego en la esquina (no protagonista) */
+  .rx-stamp{
+    position:absolute; top:8px; right:10px; z-index:5;
+    font-size:8px; font-weight:700; letter-spacing:1.8px; text-transform:uppercase;
+    color:var(--rx-acc); border:1px solid var(--rx-acc); padding:2px 6px;
+    opacity:.85; background:#0d0f12cc;
+  }
+
+  /* ── línea fina inferior: party + spotify ── */
+  .rx-foot{
+    position:relative; z-index:4; display:flex; align-items:center; gap:10px;
+    padding:7px 16px; border-top:1px solid var(--rx-line); background:#0a0c0f;
+  }
+  .rx-avs{display:flex;}
+  .rx-av{width:20px; height:20px; border-radius:50%; border:2px solid #0a0c0f; margin-left:-6px; overflow:hidden; background:#1a212b;}
+  .rx-av:first-child{margin-left:0;}
+  .rx-av.you{box-shadow:0 0 0 1.5px var(--accent);}
+  .rx-av.empty{background:repeating-linear-gradient(45deg,#1a212b 0 3px,#141a22 3px 6px);}
+  .rx-foot .pcap{font-size:9px; letter-spacing:1.6px; text-transform:uppercase; color:var(--bone-dim);}
+  .rx-foot .pcap b{color:var(--bone);}
+  .rx-foot .song{display:flex; align-items:center; gap:6px; margin-left:auto; font-size:10.5px; color:var(--bone-dim); white-space:nowrap; overflow:hidden; max-width:55%;}
+  .rx-foot .song .note{color:var(--rx-acc);}
+  .rx-foot .song .nm{overflow:hidden; text-overflow:ellipsis;}
+
+  /* tamaños */
+  .rx.mini .rx-wrap{min-height:108px;}
+  .rx.mini .rx-data{padding:10px 12px; width:62%;}
+  .rx.mini .rx-game{font-size:8px; letter-spacing:2px;}
+  .rx.mini .rx-map{font-size:15px;}
+  .rx.mini .rx-mode{font-size:8px;}
+  .rx.mini .rx-score .n{font-size:30px;}
+  .rx.mini .rx-score .sep{font-size:15px;}
+  .rx.mini .rx-score-side .tg{font-size:7px;}
+  .rx.mini .rx-round{font-size:7.5px;}
+  .rx.mini .rx-clock .t{font-size:12px;}
+  .rx.mini .rx-clockrow{margin-top:6px; padding-top:5px;}
+  .rx.mini .rx-radar{width:130px; height:130px; right:-30px;}
+  .rx.mini .rx-stamp{font-size:6.5px; padding:1px 4px;}
+  .rx.mini .rx-foot{padding:5px 12px;}
+  .rx.mini .rx-av{width:15px; height:15px;}
+  .rx.mini .rx-foot .song{font-size:8.5px;}
+  .rx.big .rx-wrap{min-height:210px;}
+  .rx.big .rx-data{padding:22px 26px 18px;}
+  .rx.big .rx-game{font-size:13px;}
+  .rx.big .rx-map{font-size:34px;}
+  .rx.big .rx-score .n{font-size:58px;}
+  .rx.big .rx-score .sep{font-size:28px;}
+  .rx.big .rx-clock .t{font-size:20px;}
+  .rx.big .rx-radar{width:280px; height:280px; right:-60px;}
+  .rx.big .rx-foot{padding:9px 22px;}
+
+  /* light */
+  .rx.lt{--rx-bg:#f2efe9; --rx-panel:#ece8e0; --rx-line:#d3cec2; --bone:#12161c; --bone-dim:#6d675c;
+    border:1px solid #cfcabd;}
+  .rx.lt .rx-radar .scope{background:radial-gradient(circle at center, #e2ddd2 0%, #f0ece4 70%); border-color:#c4bdae;}
+  .rx.lt .rx-radar .scope::before{background:linear-gradient(#00000012,#00000012) center/1px 100% no-repeat, linear-gradient(#00000012,#00000012) center/100% 1px no-repeat;}
+  .rx.lt .rx-radar .sweep{background:conic-gradient(from 0deg, #b97f2e00 0deg, #b97f2e00 300deg, #b97f2e2e 355deg, #b97f2e59 360deg);}
+  .rx.lt .rx-foot{background:#ece8e0; border-top-color:#d3cec2;}
+  .rx.lt .rx-stamp{background:#f2efe9cc;}
+  .rx.lt .rx-av{border-color:#ece8e0; background:#d8d2c4;}
+  .rx.lt .rx-av.empty{background:repeating-linear-gradient(45deg,#d8d2c4 0 3px,#cbc5b6 3px 6px);}
+
+  /* estado NO jugando → widget normal (demo Kawaii) */
+  .idle-card{
+    position:relative; overflow:hidden; border-radius:16px; padding:16px;
+    background:linear-gradient(160deg,#ffe3ef,#e8ddff 60%,#dcf7ea); border:1px solid #ffc9de;
+  }
+  .idle-card .t1{font-size:14px; font-weight:700; color:#c2557e;}
+  .idle-card .t2{font-size:11px; color:#9a6b8f; margin-top:2px;}
+  .idle-card .bar{margin-top:10px; height:6px; border-radius:3px; background:#ffffffaa;}
+  .idle-card .bar i{display:block; width:62%; height:100%; border-radius:3px; background:linear-gradient(90deg,#ff9ec4,#c9a6ff);}
+  .idle-card .hearts{position:absolute; top:10px; right:12px; font-size:16px;}
+
+  footer{color:var(--dim); font-size:11.5px; letter-spacing:1px; margin-top:30px; text-align:center;}
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none !important; transition:none !important;}
+    .rx.standby .rx-radar .blip{opacity:.18;}
+    .rx-radar .blip{opacity:.4;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>VERTEX — CS2 RADAR <span class="star">★</span></h1>
+  <p class="sub">Rediseño visual completo de la CS2 Match Card. Identidad propia: <b>radar de operación</b> girando (mitad derecha) + bloque de datos militar mono con el <b>marcador enorme</b> como protagonista. Composición 58/42, sello del juego en esquina. Solo arte · nada integrado · cero logos de Valve.</p>
+  <div class="rule"></div>
+
+  <h2>Estados <span style="margin-left:8px;"><span class="badge netrex">Netrex</span><span class="badge redesign">★ rediseño</span></span></h2>
+  <p class="desc"><b>En partida</b>: radar activo (barrido + blips) + marcador CT—T + ronda + reloj vivo. <b>Lobby</b>: radar en standby, sin marcador, "Jugando a Counter-Strike 2". <b>No jugando</b>: widget normal. Datos nunca inventados: mapa/marcador/ronda solo si llegan reales.</p>
+
+  <div class="row">
+    <div style="flex:1; min-width:300px;">
+      <div class="frame"><div class="cap">Dark · EN PARTIDA (mock: Dust II 8—6, ronda 14)</div>
+        <div class="rx widget" data-clock="847">
+          <div class="rx-wrap">
+            <div class="rx-data">
+              <div class="rx-game">Counter-Strike 2</div>
+              <div class="rx-map">Dust II</div>
+              <div class="rx-mode">Competitivo</div>
+              <div class="rx-score">
+                <span class="n ct" data-score="ct">8</span>
+                <span class="sep">—</span>
+                <span class="n tt" data-score="t">6</span>
+                <span class="rx-score-side">
+                  <span class="tags"><span class="tg ct">CT</span><span class="tg tt">T</span></span>
+                  <span class="rx-round">Ronda 14</span>
+                </span>
+              </div>
+              <div class="rx-clockrow"><span class="rlbl">Reloj de partida</span><span class="rx-clock"><span class="t"><span class="live-dot"></span><span class="clk">14:07</span></span></span></div>
+            </div>
+            <div class="rx-radar" aria-hidden>
+              <div class="scope"></div>
+              <div class="sweep"></div>
+              <span class="blip b1"></span><span class="blip b2"></span><span class="blip b3"></span>
+            </div>
+          </div>
+          <div class="rx-stamp">CS2</div>
+          <div class="rx-foot">
+            <span class="rx-avs">
+              <span class="rx-av you"><img class="av" alt=""></span>
+              <span class="rx-av"><img class="av" alt=""></span>
+              <span class="rx-av empty"></span><span class="rx-av empty"></span>
+            </span>
+            <span class="pcap"><b>2/5</b> party</span>
+            <span class="song"><span class="note">♪</span><span class="nm">Neon Cortex — Bitwave Runner</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="flex:1; min-width:300px;">
+      <div class="frame"><div class="cap">Dark · LOBBY (solo proceso, radar standby)</div>
+        <div class="rx widget standby">
+          <div class="rx-wrap">
+            <div class="rx-data">
+              <div class="rx-game">Counter-Strike 2</div>
+              <div class="rx-map">Counter-Strike 2</div>
+              <div class="rx-status-lobby">Jugando a <b>Counter-Strike 2</b> · en menú</div>
+            </div>
+            <div class="rx-radar" aria-hidden>
+              <div class="scope"></div>
+              <div class="sweep"></div>
+              <span class="blip b1"></span><span class="blip b2"></span><span class="blip b3"></span>
+            </div>
+          </div>
+          <div class="rx-stamp">CS2</div>
+          <div class="rx-foot">
+            <span class="rx-avs">
+              <span class="rx-av you"><img class="av" alt=""></span>
+              <span class="rx-av empty"></span><span class="rx-av empty"></span>
+            </span>
+            <span class="pcap">solo tú</span>
+            <span class="song"><span class="note">♪</span><span class="nm">Neon Cortex — Bitwave Runner</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div style="flex:1; min-width:300px;">
+      <div class="frame light-frame"><div class="cap">Light · EN PARTIDA</div>
+        <div class="rx lt widget" data-clock="1203">
+          <div class="rx-wrap">
+            <div class="rx-data">
+              <div class="rx-game">Counter-Strike 2</div>
+              <div class="rx-map">Dust II</div>
+              <div class="rx-mode">Competitivo</div>
+              <div class="rx-score">
+                <span class="n ct" data-score="ct">11</span>
+                <span class="sep">—</span>
+                <span class="n tt" data-score="t">9</span>
+                <span class="rx-score-side">
+                  <span class="tags"><span class="tg ct">CT</span><span class="tg tt">T</span></span>
+                  <span class="rx-round">Ronda 21</span>
+                </span>
+              </div>
+              <div class="rx-clockrow"><span class="rlbl">Reloj de partida</span><span class="rx-clock"><span class="t"><span class="live-dot"></span><span class="clk">20:03</span></span></span></div>
+            </div>
+            <div class="rx-radar" aria-hidden>
+              <div class="scope"></div>
+              <div class="sweep"></div>
+              <span class="blip b1"></span><span class="blip b2"></span><span class="blip b3"></span>
+            </div>
+          </div>
+          <div class="rx-stamp">CS2</div>
+          <div class="rx-foot">
+            <span class="rx-avs">
+              <span class="rx-av you"><img class="av" alt=""></span>
+              <span class="rx-av"><img class="av" alt=""></span>
+              <span class="rx-av"><img class="av" alt=""></span>
+              <span class="rx-av empty"></span>
+            </span>
+            <span class="pcap"><b>3/5</b> party</span>
+            <span class="song"><span class="note">♪</span><span class="nm">Neon Cortex — Bitwave Runner</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="flex:1; min-width:300px;">
+      <div class="frame light-frame"><div class="cap">Light · LOBBY</div>
+        <div class="rx lt widget standby">
+          <div class="rx-wrap">
+            <div class="rx-data">
+              <div class="rx-game">Counter-Strike 2</div>
+              <div class="rx-map">Counter-Strike 2</div>
+              <div class="rx-status-lobby">Jugando a <b>Counter-Strike 2</b> · en menú</div>
+            </div>
+            <div class="rx-radar" aria-hidden>
+              <div class="scope"></div>
+              <div class="sweep"></div>
+              <span class="blip b1"></span><span class="blip b2"></span><span class="blip b3"></span>
+            </div>
+          </div>
+          <div class="rx-stamp">CS2</div>
+          <div class="rx-foot">
+            <span class="rx-avs">
+              <span class="rx-av you"><img class="av" alt=""></span>
+              <span class="rx-av empty"></span><span class="rx-av empty"></span>
+            </span>
+            <span class="pcap">solo tú</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2>Tamaños</h2>
+  <div class="row">
+    <div style="flex:0 0 240px;">
+      <div class="frame"><div class="cap">Mini — Hub</div>
+        <div class="rx mini" data-clock="509">
+          <div class="rx-wrap">
+            <div class="rx-data">
+              <div class="rx-game">Counter-Strike 2</div>
+              <div class="rx-map">Dust II</div>
+              <div class="rx-score">
+                <span class="n ct" data-score="ct">8</span><span class="sep">—</span><span class="n tt" data-score="t">6</span>
+                <span class="rx-score-side"><span class="rx-round">R14</span></span>
+              </div>
+              <div class="rx-clockrow"><span class="rlbl">Reloj</span><span class="rx-clock"><span class="t"><span class="live-dot"></span><span class="clk">08:29</span></span></span></div>
+            </div>
+            <div class="rx-radar" aria-hidden><div class="scope"></div><div class="sweep"></div>
+              <span class="blip b1"></span><span class="blip b2"></span></div>
+          </div>
+          <div class="rx-stamp">CS2</div>
+          <div class="rx-foot">
+            <span class="rx-avs"><span class="rx-av you"><img class="av" alt=""></span><span class="rx-av"><img class="av" alt=""></span><span class="rx-av empty"></span></span>
+            <span class="pcap"><b>2/5</b></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="flex:1; min-width:300px;">
+      <div class="frame"><div class="cap">Tarjeta grande</div>
+        <div class="rx big" data-clock="1991">
+          <div class="rx-wrap">
+            <div class="rx-data">
+              <div class="rx-game">Counter-Strike 2</div>
+              <div class="rx-map">Dust II</div>
+              <div class="rx-mode">Competitivo</div>
+              <div class="rx-score">
+                <span class="n ct" data-score="ct">8</span>
+                <span class="sep">—</span>
+                <span class="n tt" data-score="t">6</span>
+                <span class="rx-score-side">
+                  <span class="tags"><span class="tg ct">CT</span><span class="tg tt">T</span></span>
+                  <span class="rx-round">Ronda 14</span>
+                </span>
+              </div>
+              <div class="rx-clockrow"><span class="rlbl">Reloj de partida</span><span class="rx-clock"><span class="t"><span class="live-dot"></span><span class="clk">33:11</span></span></span></div>
+            </div>
+            <div class="rx-radar" aria-hidden><div class="scope"></div><div class="sweep"></div>
+              <span class="blip b1"></span><span class="blip b2"></span><span class="blip b3"></span></div>
+          </div>
+          <div class="rx-stamp">CS2</div>
+          <div class="rx-foot">
+            <span class="rx-avs"><span class="rx-av you"><img class="av" alt=""></span><span class="rx-av"><img class="av" alt=""></span><span class="rx-av"><img class="av" alt=""></span><span class="rx-av"><img class="av" alt=""></span><span class="rx-av empty"></span></span>
+            <span class="pcap"><b>4/5</b> party</span>
+            <span class="song"><span class="note">♪</span><span class="nm">Neon Cortex — Bitwave Runner</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2>NO jugando — widget normal</h2>
+  <p class="desc">Sin CS2 detectado, el widget del perfil es la caja musical del estilo elegido (demo Kawaii). La Radar Card solo existe mientras el juego corre.</p>
+  <div class="row">
+    <div style="flex:1; min-width:280px;">
+      <div class="frame"><div class="cap">estado · no jugando</div>
+        <div class="idle-card">
+          <div class="t1">Neon Cortex ♡</div>
+          <div class="t2">Bitwave Runner</div>
+          <div class="bar"><i></i></div>
+          <div class="hearts">♡</div>
+        </div>
+      </div>
+    </div>
+    <div style="flex:1; min-width:280px;">
+      <div class="frame"><div class="cap">notas del diseño</div>
+        <p class="desc" style="margin-bottom:0;">
+        · Radar: cono naranja en barrido 5.5s, blips que nacen y mueren con el paso.<br>
+        · Marcador: flip sutil al cambiar (pruébalo: los números de la tarjeta grande anotan solos cada 8s en esta demo).<br>
+        · CT azul / T amarillo — códigos de color del juego, sin logos.<br>
+        · Reduced-motion: barrido y blips congelados, radar visible pero estático.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <footer>VERTEX · CS2 RADAR — solo arte · nada integrado · cero logos de Valve · datos nunca inventados</footer>
+</div>
+
+<script>
+  // avatares placeholder originales (canvas)
+  function avatar(hue){
+    const c=document.createElement('canvas'); c.width=c.height=48;
+    const x=c.getContext('2d');
+    x.fillStyle=`hsl(${hue},38%,30%)`; x.fillRect(0,0,48,48);
+    x.fillStyle=`hsl(${hue},55%,62%)`;
+    x.beginPath(); x.arc(24,19,10,0,7); x.fill();
+    x.beginPath(); x.ellipse(24,42,14,10,0,0,7); x.fill();
+    return c.toDataURL();
+  }
+  document.querySelectorAll('.rx-av img').forEach((img,i)=>{ img.src=avatar((i*70+20)%360); });
+
+  // relojes en vivo
+  document.querySelectorAll('.rx[data-clock]').forEach(card=>{
+    let s = parseInt(card.dataset.clock,10) || 0;
+    const tt = card.querySelector('.clk'); if(!tt) return;
+    const fmt = v => String(Math.floor(v/60)).padStart(2,'0')+':'+String(v%60).padStart(2,'0');
+    tt.textContent = fmt(s);
+    setInterval(()=>{ s++; tt.textContent = fmt(s); }, 1000);
+  });
+
+  // demo del flip del marcador: en la tarjeta grande anotan cada 8s
+  const big = document.querySelector('.rx.big');
+  if (big){
+    let alt = 0;
+    setInterval(()=>{
+      alt++;
+      const el = big.querySelector(alt % 2 ? '[data-score=ct]' : '[data-score=t]');
+      el.textContent = parseInt(el.textContent,10)+1;
+      el.classList.remove('flip'); void el.offsetWidth; el.classList.add('flip');
+    }, 8000);
+  }
+</script>
+</body>
+</html>
