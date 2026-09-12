@@ -116,6 +116,18 @@ function getMockActivities(): Activity[] | null {
 
 // ─── Module state ───────────────────────────────────────────────────────────
 
+/** Shared real-game scan: first dictionary match in the running process set. */
+function matchRealGame(runningProcesses: Set<string>): GameEntry | null {
+  for (const entry of gameEntries) {
+    for (const proc of entry.processes) {
+      if (runningProcesses.has(proc.toLowerCase())) {
+        return entry;
+      }
+    }
+  }
+  return null;
+}
+
 let processMap: Map<string, GameEntry> = new Map();
 let gameEntries: GameEntry[] = [];
 let currentGameId: string | null = null;
@@ -539,25 +551,10 @@ function parseProcessList(stdout: string): Set<string> {
 function poll(): void {
   if (isPolling) return; // Previous poll still in-flight
 
-  // ── DEV MOCK MODE (VERTEX_MOCK_GAMES) ──
-  // Injects the simulated activities INSTEAD of real process scanning, so
-  // the whole pipeline (main → renderer → WS → server → other clients)
-  // sees exactly what a real game would produce. Off unless the env var is
-  // explicitly set.
-  const mocks = getMockActivities();
-  if (mocks && mocks.length > 0) {
-    isPolling = true;
-    const nextKey = JSON.stringify(mocks);
-    if (nextKey !== activityKey) {
-      activityKey = nextKey;
-      currentGameId = mocks[0] ? `mock:${mocks[0].name}` : null;
-      currentActivity = mocks[0] ?? null;
-      onChangeCallback?.(currentActivity);
-    }
-    setTimeout(() => { isPolling = false; }, POLL_INTERVAL_MS);
-    return;
-  }
-
+  // ── REAL SCAN (always first) ──
+  // The dev mock (VERTEX_MOCK_GAMES) NEVER overrides a real game: the normal
+  // scan decides what's real, and the mock only fills the gap when no real
+  // game was found (handled inside the callback's else-branch).
   isPolling = true;
 
   const { executable, args } = getProcessCommand();
@@ -577,16 +574,7 @@ function poll(): void {
     const runningProcesses = parseProcessList(stdout);
 
     // Find first matching game (dictionary order = priority)
-    let matchedEntry: GameEntry | null = null;
-    for (const entry of gameEntries) {
-      for (const proc of entry.processes) {
-        if (runningProcesses.has(proc.toLowerCase())) {
-          matchedEntry = entry;
-          break;
-        }
-      }
-      if (matchedEntry) break;
-    }
+    const matchedEntry = matchRealGame(runningProcesses);
 
     if (matchedEntry) {
       const isSpotify = matchedEntry.id === 'spotify';
@@ -668,6 +656,22 @@ function poll(): void {
       }
       // Same non-Riot game still running — no change, skip IPC
     } else {
+      // No real game detected.
+      // ── DEV MOCK fallback (VERTEX_MOCK_GAMES) ──
+      // Only fills the gap: a real game (handled above) ALWAYS wins over the
+      // mock. Requires explicit dev env — parseMockGames returns [] without it.
+      const mocks = getMockActivities();
+      if (mocks && mocks.length > 0) {
+        const nextKey = JSON.stringify(mocks);
+        if (nextKey !== activityKey) {
+          activityKey = nextKey;
+          currentGameId = mocks[0] ? `mock:${mocks[0].name}` : null;
+          currentActivity = mocks[0] ?? null;
+          riotInfo = null;
+          onChangeCallback?.(currentActivity);
+        }
+        return;
+      }
       if (currentGameId !== null) {
         // Game exited
         currentGameId = null;
