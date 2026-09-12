@@ -11,8 +11,11 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Install workspace deps (server + its @backspace/shared dependency)
+# Install workspace deps (server + its @backspace/shared dependency).
+# patches/ must be present: root package.json declares patchedDependencies
+# and pnpm fails with ENOENT if the patch file is missing.
 COPY package.json pnpm-workspace.yaml .npmrc* ./
+COPY patches patches
 COPY packages/shared/package.json packages/shared/
 COPY packages/server/package.json packages/server/
 
