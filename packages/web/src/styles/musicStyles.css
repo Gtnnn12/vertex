@@ -578,6 +578,87 @@
   filter: blur(22px) saturate(1.6) brightness(1.08);
 }
 
+/* ── 9. KAWAII DREAM — pastel cloud frame, floating charms ───────────────── */
+.music-kawaii {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+.music-kawaii-cloud {
+  position: relative;
+  width: 72%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  padding: 7%;
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255,255,255,0.95), rgba(249,168,212,0.55) 55%, rgba(244,114,182,0.35) 100%);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.65),
+    0 0 18px rgba(249,168,212,0.55),
+    0 6px 18px -8px rgba(236,72,153,0.5);
+  animation: kawaii-breathe 4.5s ease-in-out infinite;
+}
+/* Lace scallop trim — repeating radial arcs around the frame. */
+.music-kawaii-cloud::after {
+  content: '';
+  position: absolute;
+  inset: -6%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 50%, transparent 58%, rgba(255,255,255,0.5) 60%, transparent 63%);
+  background-size: 14% 14%;
+  opacity: 0.7;
+  pointer-events: none;
+}
+.music-kawaii-cover {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.8), 0 2px 8px rgba(236,72,153,0.35);
+}
+@keyframes kawaii-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.035); }
+}
+.music-kawaii.is-playing .music-kawaii-cloud { animation-duration: 3s; }
+
+/* Floating charms — slow, tender drift. */
+.music-kawaii-heart,
+.music-kawaii-star {
+  position: absolute;
+  color: rgba(249,168,212,0.9);
+  text-shadow: 0 0 6px rgba(249,168,212,0.8);
+  pointer-events: none;
+  animation: kawaii-float 6s ease-in-out infinite;
+}
+.music-kawaii-heart { font-size: 15px; }
+.music-kawaii-star { font-size: 11px; color: rgba(255,255,255,0.95); animation-duration: 7.5s; }
+.music-kawaii-heart.h1 { top: 6%; left: 10%; }
+.music-kawaii-heart.h2 { bottom: 9%; right: 12%; font-size: 11px; animation-delay: -3s; }
+.music-kawaii-star.s1 { top: 12%; right: 14%; animation-delay: -1.8s; }
+.music-kawaii-star.s2 { bottom: 12%; left: 16%; }
+@keyframes kawaii-float {
+  0%, 100% { transform: translateY(0) scale(1); opacity: 0.75; }
+  50% { transform: translateY(-4px) scale(1.12); opacity: 1; }
+}
+
+/* Light theme: keep pastel readable on light panels. */
+.light .music-kawaii-cloud,
+.theme-light .music-kawaii-cloud {
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255,255,255,1), rgba(251,207,232,0.75) 55%, rgba(249,168,212,0.55) 100%);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.9),
+    0 0 16px rgba(249,168,212,0.65),
+    0 6px 16px -8px rgba(236,72,153,0.4);
+}
+.light .music-kawaii-heart,
+.theme-light .music-kawaii-heart { color: rgba(236,72,153,0.85); text-shadow: 0 0 5px rgba(251,207,232,0.9); }
+.light .music-kawaii-star,
+.theme-light .music-kawaii-star { color: rgba(190,24,93,0.7); text-shadow: none; }
+
 /* ── Reduced motion: every style collapses to a static frame ─────────────── */
 @media (prefers-reduced-motion: reduce) {
   .music-cassette-reel,
@@ -589,7 +670,10 @@
   .music-boombox-led,
   .music-arcade,
   .music-arcade-heart,
-  .music-arcade-scanlines::after {
+  .music-arcade-scanlines::after,
+  .music-kawaii-cloud,
+  .music-kawaii-heart,
+  .music-kawaii-star {
     animation: none !important;
   }
   .music-spectrum-bar { transition: none !important; }

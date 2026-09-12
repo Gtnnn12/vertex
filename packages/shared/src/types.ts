@@ -55,6 +55,7 @@ export const MUSIC_WIDGET_STYLES = [
   'boombox',
   'glass-prism',
   'arcade',
+  'kawaii-dream',
 ] as const;
 export type MusicWidgetStyle = (typeof MUSIC_WIDGET_STYLES)[number];
 

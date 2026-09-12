@@ -7,7 +7,7 @@ import {
 } from './musicStyles';
 
 describe('musicStyles registry', () => {
-  it('exposes all eight catalogue styles', () => {
+  it('exposes all nine catalogue styles', () => {
     expect(MUSIC_STYLES.map((s) => s.id)).toEqual([
       'vinyl',
       'cassette',
@@ -17,6 +17,7 @@ describe('musicStyles registry', () => {
       'boombox',
       'glass-prism',
       'arcade',
+      'kawaii-dream',
     ]);
   });
 

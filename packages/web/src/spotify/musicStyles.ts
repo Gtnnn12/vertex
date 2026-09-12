@@ -35,6 +35,7 @@ const STYLE_LIST: Omit<MusicStyleEntry, 'requiresNetrex'>[] = [
   { id: 'boombox', nameKey: 'music_style_boombox_name', descKey: 'music_style_boombox_desc', premiumFx: true, accent: '#34d399' },
   { id: 'glass-prism', nameKey: 'music_style_prism_name', descKey: 'music_style_prism_desc', premiumFx: true, accent: '#93c5fd' },
   { id: 'arcade', nameKey: 'music_style_arcade_name', descKey: 'music_style_arcade_desc', premiumFx: true, accent: '#fb7185' },
+  { id: 'kawaii-dream', nameKey: 'music_style_kawaii_name', descKey: 'music_style_kawaii_desc', premiumFx: true, accent: '#f9a8d4' },
 ];
 
 export const MUSIC_STYLES: MusicStyleEntry[] = STYLE_LIST.map((s) => ({
