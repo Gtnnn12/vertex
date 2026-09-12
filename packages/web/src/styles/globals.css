@@ -913,35 +913,67 @@
   --fx-bx: 0%;
   --fx-by: 0%;
   /* Personal profile tint (--profile-accent, hex). Empty var = no tint:
-     all consumers fall back to the neutral glass look. Set inline by the
-     UserProfileModal (mount) and by the color picker (live drag). */
+     all consumers fall back to the neutral glass look. Set by the shared
+     profileTint() util (utils/profileTint.ts) on every profile surface. */
   --profile-accent: initial;
   transform: perspective(900px) rotateX(var(--fx-rx)) rotateY(var(--fx-ry));
   transform-style: preserve-3d;
   will-change: transform;
 }
 
-/* Tint consumers — visible wash (≤0.25 alpha), hairline border, banner glow.
-   stylelint-disable-next-line no-duplicate-selectors */
-.profile-fx[style*='--profile-accent'] {
-  /* Only layered over the glass when a tint is actually set. */
-}
-.profile-fx[style*='--profile-accent:#'],
-.profile-fx[style*='--profile-accent: #'] {
+/* ── Tint consumers — ONE implementation, intensity variants only ──
+   Applied via the shared profileTint() util: it sets --profile-accent and
+   adds .profile-tint-compact (popout) or .profile-tint-full (big modal).
+   With no accent the var resolves to 'transparent' → color-mix() makes
+   every layer fully transparent → neutral glass.
+
+   compact: subtle hairline border + faint top wash (small card).
+   full: the tint FILLS the whole surface — top glow from the banner,
+   bottom fade to the base, borders and outer glow scaled up. */
+.profile-tint-compact {
   background-image:
-    linear-gradient(180deg, color-mix(in srgb, var(--profile-accent) 16%, transparent) 0%, transparent 55%);
-  border-color: color-mix(in srgb, var(--profile-accent) 34%, transparent);
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--profile-accent) 20%, transparent),
-    0 24px 80px -24px color-mix(in srgb, var(--profile-accent) 27%, transparent);
+    linear-gradient(180deg, color-mix(in srgb, var(--profile-accent) 14%, transparent) 0%, transparent 55%);
+  border-color: color-mix(in srgb, var(--profile-accent) 30%, transparent);
 }
-.profile-fx[style*='--profile-accent:#'] .profile-fx-banner::after,
-.profile-fx[style*='--profile-accent: #'] .profile-fx-banner::after {
+.profile-tint-compact .profile-fx-banner::after {
   content: '';
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(to top, color-mix(in srgb, var(--profile-accent) 33%, transparent), transparent 60%);
+  background: linear-gradient(to top, color-mix(in srgb, var(--profile-accent) 30%, transparent), transparent 60%);
+}
+
+.profile-tint-full {
+  background-image:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--profile-accent) 26%, transparent) 0%,
+      color-mix(in srgb, var(--profile-accent) 10%, transparent) 34%,
+      transparent 58%,
+      color-mix(in srgb, var(--profile-accent) 12%, transparent) 88%,
+      color-mix(in srgb, var(--profile-accent) 20%, transparent) 100%
+    );
+  border-color: color-mix(in srgb, var(--profile-accent) 38%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--profile-accent) 22%, transparent),
+    0 24px 90px -20px color-mix(in srgb, var(--profile-accent) 34%, transparent);
+}
+.profile-tint-full .profile-fx-banner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(to top, color-mix(in srgb, var(--profile-accent) 42%, transparent), transparent 65%);
+}
+/* Full-modal: the wash must cover the background BEHIND both columns —
+   panel backgrounds are transparent, the card gradient does the work. */
+.profile-tint-full .profile-fx-banner-overlay {
+  background: linear-gradient(
+    to bottom,
+    rgb(var(--bg-chat) / 0.02) 0%,
+    rgb(var(--bg-chat) / 0.22) 62%,
+    rgb(var(--bg-chat) / 0.8) 100%
+  );
 }
 .profile-fx.fx-animatable {
   transition: transform 0.25s ease-out;

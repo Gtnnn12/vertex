@@ -4,6 +4,7 @@ import { Avatar } from './Avatar';
 import { getAvatarGradient, adjustColor, mutedGradient } from '../../utils/gradients';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useProfileCardFX } from './useProfileCardFX';
+import { profileTint } from '../../utils/profileTint';
 
 /**
  * The single source of truth for the profile identity card visual — banner,
@@ -38,6 +39,8 @@ export interface ProfileIdentityCardProps {
   bio?: string | null;
   /** Badges rendered inline after the display name (StaffBadge, NetrexChip…). */
   nameSuffix?: React.ReactNode;
+  /** Personal profile tint (hex) — drives the shared gradient consumers. */
+  profileAccent?: string | null;
   /** Makes the avatar clickable (the popout escalates to the full profile). */
   onAvatarClick?: (e: React.MouseEvent) => void;
   /** Content rendered below the bio, after a divider (member since, actions…). */
@@ -64,6 +67,7 @@ export function ProfileIdentityCard({
   customStatus,
   bio,
   nameSuffix,
+  profileAccent,
   onAvatarClick,
   footer,
   className = '',
@@ -82,13 +86,18 @@ export function ProfileIdentityCard({
 
   const hasBio = !!(bio && bio.trim());
 
+  // Shared tint util — compact intensity (same consumers as the big modal,
+  // one CSS implementation, never duplicated per surface).
+  const tint = profileTint(profileAccent, 'compact');
+
   return (
     <div
       ref={fx.ref}
       onMouseMove={fx.onMouseMove}
       onMouseLeave={fx.onMouseLeave}
       data-profile-identity-card
-      className={`profile-fx fx-animatable profile-stagger relative rounded-[14px] overflow-hidden select-none glass-modal ${className}`}
+      className={`profile-fx fx-animatable profile-stagger ${tint.className} relative rounded-[14px] overflow-hidden select-none glass-modal ${className}`}
+      style={tint.style}
     >
       {/* Cursor glow layer */}
       <span className="profile-fx-glow" aria-hidden />

@@ -147,6 +147,7 @@ export function UserProfilePopout({ user: propUser, onClose, anchor, placement =
         bannerSrc={bannerSrc}
         avatarColor={user.avatarColor}
         accentColor={user.accentColor}
+        profileAccent={user.profileAccent}
         userId={user.homeUserId ?? user.id}
         status={user.status as 'online' | 'idle' | 'dnd' | 'offline' | null}
         customStatus={user.customStatus}
