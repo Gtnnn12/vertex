@@ -340,18 +340,10 @@ export function UserProfileModal() {
 
   // Personal tint drives panel background wash, banner glow and hairline borders.
   const accent = profileAccent;
-  const tintStyle = accent
-    ? ({
-        '--profile-accent': accent,
-        background: `linear-gradient(180deg, ${accent}1f 0%, transparent 60%)`,
-        boxShadow: accent
-          ? `0 0 0 1px ${accent}33, 0 24px 80px -24px ${accent}44`
-          : undefined,
-      } as React.CSSProperties)
-    : undefined;
-  const bannerGlowStyle = accent
-    ? ({ boxShadow: `inset 0 -40px 60px -30px ${accent}55` } as React.CSSProperties)
-    : undefined;
+  // Mount-time application of the saved tint: the var drives ALL consumers
+  // defined in globals.css (.profile-fx panel wash, border, banner glow).
+  // Drag writes the same var directly to the DOM for the live preview.
+  const tintStyle = { '--profile-accent': accent ?? '' } as React.CSSProperties;
 
   const isSelfViewing = isSelfProfile;
 
@@ -376,7 +368,6 @@ export function UserProfileModal() {
               ...(bannerSrc
                 ? { backgroundImage: `url(${bannerSrc})` }
                 : { background: bannerFallback }),
-              ...bannerGlowStyle,
             }}
           />
           <div className="profile-fx-banner-overlay" aria-hidden />
@@ -708,9 +699,11 @@ export function UserProfileModal() {
                   />
                   <span className="text-[11px] text-txt-tertiary hidden sm:inline">Color</span>
                 </label>
-                {/* Explicit save — the ONLY path that hits the network. */}
+                {/* Explicit save — the ONLY path that hits the network. Passes
+                    the in-flight drag color when present (drag does not touch
+                    React state), falling back to the saved state value. */}
                 <button
-                  onClick={() => void handleProfileAccentChange(accent)}
+                  onClick={() => void handleProfileAccentChange(dragAccentRef.current ?? accent)}
                   className="rounded-lg bg-accent-primary px-3 py-1.5 text-[12px] font-bold text-white transition-colors hover:bg-accent-primary/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/50"
                   title="Guardar personalización"
                 >
