@@ -92,6 +92,10 @@ interface UIState {
   // approves/denies a request from inside the panel)
   federationApprovalCount: number;
   setFederationApprovalCount: (count: number) => void;
+
+  // Netrex purchase modal (opened from locked CTAs: music styles, Tablero)
+  netrexPurchaseOpen: boolean;
+  setNetrexPurchaseOpen: (open: boolean) => void;
 }
 
 export const useUIStore = create<UIState>()(
@@ -116,6 +120,9 @@ export const useUIStore = create<UIState>()(
 
       openModal: (modal, data = {}) => set({ activeModal: modal, modalData: data }),
       closeModal: () => set({ activeModal: null, modalData: {} }),
+
+      netrexPurchaseOpen: false,
+      setNetrexPurchaseOpen: (open) => set({ netrexPurchaseOpen: open }),
 
       setIsMobile: (isMobile) => {
         const prev = get().isMobile;
