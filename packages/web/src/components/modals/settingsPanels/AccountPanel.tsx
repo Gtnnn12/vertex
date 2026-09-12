@@ -429,6 +429,7 @@ export function AccountPanel() {
                 bannerSrc={displayBannerSrc}
                 avatarColor={effectiveAvatarColor}
                 accentColor={effectiveAccent}
+                profileAccent={user.profileAccent}
                 userId={user.homeUserId ?? user.id}
                 status={status}
                 customStatus={customStatus.trim() || null}

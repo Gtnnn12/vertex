@@ -19,6 +19,7 @@ import { loadFederatedMutuals, type TaggedMutualFriend, type MutualSpace } from 
 import { StaffBadge, NetrexChip } from '../ui/StaffBadge';
 import { ProfileBoardTab } from '../profile/board/ProfileBoardTab';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { profileTint } from '../../utils/profileTint';
 
 type Tab = 'about' | 'board' | 'friends' | 'spaces';
 
@@ -216,8 +217,9 @@ export function UserProfileModal() {
     const prev = profileAccent;
     setProfileAccent(hex);
     // Keep the direct-DOM preview var in sync (drag writes it without a
-    // re-render; this covers save / preset / clear paths).
-    fx.ref.current?.style.setProperty('--profile-accent', hex ?? '');
+    // re-render; this covers save / preset / clear paths). 'transparent'
+    // keeps the color-mix consumers neutral when the tint is cleared.
+    fx.ref.current?.style.setProperty('--profile-accent', hex || 'transparent');
     dragAccentRef.current = null;
     try {
       await api.users.update({ profileAccent: hex ?? '' });
@@ -236,7 +238,7 @@ export function UserProfileModal() {
       }
     } catch (err) {
       setProfileAccent(prev);
-      fx.ref.current?.style.setProperty('--profile-accent', prev ?? '');
+      fx.ref.current?.style.setProperty('--profile-accent', prev || 'transparent');
       addToast((err as Error).message || 'Could not save profile color', 'warning');
     }
   }, [profileAccent, addToast, fx.ref, user, userOrigin]);
@@ -352,10 +354,11 @@ export function UserProfileModal() {
 
   // Personal tint drives panel background wash, banner glow and hairline borders.
   const accent = profileAccent;
-  // Mount-time application of the saved tint: the var drives ALL consumers
-  // defined in globals.css (.profile-fx panel wash, border, banner glow).
-  // Drag writes the same var directly to the DOM for the live preview.
-  const tintStyle = { '--profile-accent': accent ?? '' } as React.CSSProperties;
+  // Shared tint util — the ONE source for every profile surface. 'full'
+  // intensity fills the whole big modal (top glow from the banner + bottom
+  // fade, behind both columns). Drag writes the same var directly to the
+  // DOM for the live preview.
+  const tint = profileTint(accent, 'full');
 
   const isSelfViewing = isSelfProfile;
 
@@ -366,8 +369,8 @@ export function UserProfileModal() {
         ref={fx.ref}
         onMouseMove={fx.onMouseMove}
         onMouseLeave={fx.onMouseLeave}
-        style={tintStyle}
-        className="profile-fx fx-animatable profile-stagger relative w-full mx-4 max-h-[calc(100vh-2rem)] flex flex-col glass-modal rounded-[14px] animate-slide-up overflow-hidden md:max-w-4xl"
+        style={tint.style}
+        className={`profile-fx fx-animatable profile-stagger ${tint.className} relative w-full mx-4 max-h-[calc(100vh-2rem)] flex flex-col glass-modal rounded-[14px] animate-slide-up overflow-hidden md:max-w-4xl`}
       >
         {/* Cursor glow layer */}
         <span className="profile-fx-glow" aria-hidden />
