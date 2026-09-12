@@ -25,6 +25,14 @@ interface Activity {
     artist: string;
     albumCover?: string;
   };
+  /** Real match data when a local game API provides it (honest or absent). */
+  matchData?: {
+    gameId?: string;
+    map?: string;
+    scoreYou?: number;
+    scoreThem?: number;
+    round?: number;
+  };
 }
 
 // ─── Game dictionary types ──────────────────────────────────────────────────
@@ -44,6 +52,67 @@ interface VersionedDictionary {
 const VALID_TYPES = new Set(['playing', 'listening', 'watching', 'streaming']);
 const POLL_INTERVAL_MS = 15_000;
 const REMOTE_URL = 'https://raw.githubusercontent.com/gtnn12/VERTEX/main/packages/desktop/resources/games.json';
+
+// ─── Dev game mock (VERTEX_MOCK_GAMES) ──────────────────────────────────────
+// Off by default. VERTEX_MOCK_GAMES=cs2[+valorant] injects a fully-populated
+// simulated activity so the Match Card can be developed/tested without the
+// real game running. NEVER active in production builds unless the env var is
+// explicitly set. Mock ids map to dictionary games for name/type.
+
+interface MockGameSpec {
+  /** Dictionary game id this mock simulates. */
+  id: string;
+  state: 'ingame' | 'menu';
+  details?: string;
+  matchData?: Activity['matchData'];
+}
+
+const MOCK_GAME_SPECS: Record<string, MockGameSpec> = {
+  cs2: {
+    id: 'cs2',
+    state: 'ingame',
+    details: 'Competitivo · Dust II',
+    matchData: { gameId: 'cs2', map: 'Dust II', scoreYou: 8, scoreThem: 6, round: 14 },
+  },
+  valorant: {
+    id: 'valorant',
+    state: 'ingame',
+    details: 'Swiftplay · Split',
+    matchData: { gameId: 'valorant', map: 'Split' },
+  },
+};
+
+function parseMockGames(): MockGameSpec[] {
+  const raw = process.env.VERTEX_MOCK_GAMES;
+  if (!raw) return [];
+  return raw
+    .split(/[+,]/)
+    .map((s) => s.trim().toLowerCase())
+    .map((key) => MOCK_GAME_SPECS[key])
+    .filter((spec): spec is MockGameSpec => Boolean(spec));
+}
+
+let mockActivities: Activity[] | null = null;
+
+function getMockActivities(): Activity[] | null {
+  if (mockActivities) return mockActivities;
+  const specs = parseMockGames();
+  if (specs.length === 0) return null;
+  const start = Date.now() - 14 * 60 * 1000; // match "running" for 14 minutes
+  mockActivities = specs.map((spec) => {
+    const dict = gameEntries.find((g) => g.id === spec.id);
+    return {
+      type: 'playing' as const,
+      name: dict?.name ?? spec.id,
+      state: spec.state,
+      ...(spec.details ? { details: spec.details } : {}),
+      ...(spec.matchData ? { matchData: spec.matchData } : {}),
+      timestamps: { start },
+    };
+  });
+  console.log(`[ActivityDetector] MOCK GAMES ACTIVE: ${specs.map((s) => s.id).join(', ')} (dev only)`);
+  return mockActivities;
+}
 
 // ─── Module state ───────────────────────────────────────────────────────────
 
@@ -469,6 +538,26 @@ function parseProcessList(stdout: string): Set<string> {
 
 function poll(): void {
   if (isPolling) return; // Previous poll still in-flight
+
+  // ── DEV MOCK MODE (VERTEX_MOCK_GAMES) ──
+  // Injects the simulated activities INSTEAD of real process scanning, so
+  // the whole pipeline (main → renderer → WS → server → other clients)
+  // sees exactly what a real game would produce. Off unless the env var is
+  // explicitly set.
+  const mocks = getMockActivities();
+  if (mocks && mocks.length > 0) {
+    isPolling = true;
+    const nextKey = JSON.stringify(mocks);
+    if (nextKey !== activityKey) {
+      activityKey = nextKey;
+      currentGameId = mocks[0] ? `mock:${mocks[0].name}` : null;
+      currentActivity = mocks[0] ?? null;
+      onChangeCallback?.(currentActivity);
+    }
+    setTimeout(() => { isPolling = false; }, POLL_INTERVAL_MS);
+    return;
+  }
+
   isPolling = true;
 
   const { executable, args } = getProcessCommand();
