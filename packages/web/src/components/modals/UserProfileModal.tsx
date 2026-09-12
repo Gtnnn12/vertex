@@ -116,6 +116,10 @@ export function UserProfileModal() {
   const [loadingMutuals, setLoadingMutuals] = useState(false);
   const [friendActionLoading, setFriendActionLoading] = useState(false);
   const [profileAccent, setProfileAccent] = useState<string | null>(null);
+  // In-flight drag color for the direct-DOM preview: while dragging,
+  // --profile-accent is written straight to the modal container — no React
+  // state, no re-render — and committed to state only on save.
+  const dragAccentRef = useRef<string | null>(null);
 
   // “Listening now” — one shared block for every profile surface, with the
   // exact lookup the activity panel uses (same store, same key). Must be
@@ -211,14 +215,19 @@ export function UserProfileModal() {
   const handleProfileAccentChange = useCallback(async (hex: string | null) => {
     const prev = profileAccent;
     setProfileAccent(hex);
+    // Keep the direct-DOM preview var in sync (drag writes it without a
+    // re-render; this covers save / preset / clear paths).
+    fx.ref.current?.style.setProperty('--profile-accent', hex ?? '');
+    dragAccentRef.current = null;
     try {
       await api.users.update({ profileAccent: hex ?? '' });
       addToast('Personalización guardada', 'success');
     } catch (err) {
       setProfileAccent(prev);
+      fx.ref.current?.style.setProperty('--profile-accent', prev ?? '');
       addToast((err as Error).message || 'Could not save profile color', 'warning');
     }
-  }, [profileAccent, addToast]);
+  }, [profileAccent, addToast, fx.ref]);
 
   if (!isOpen || !user) return null;
 
@@ -687,9 +696,13 @@ export function UserProfileModal() {
                   <input
                     type="color"
                     value={accent ?? '#7c6cff'}
-                    // Live preview ONLY — zero network while dragging. The
-                    // explicit save button commits the value.
-                    onChange={(e) => setProfileAccent(e.target.value)}
+                    // Live preview ONLY via direct CSS-var write — zero network
+                    // and zero re-render while dragging. The explicit save
+                    // button commits the value.
+                    onChange={(e) => {
+                      dragAccentRef.current = e.target.value;
+                      fx.ref.current?.style.setProperty('--profile-accent', e.target.value);
+                    }}
                     className="w-5 h-5 rounded cursor-pointer bg-transparent border border-white/[0.15] p-0.5"
                     aria-label="Profile color"
                   />
