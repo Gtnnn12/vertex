@@ -20,7 +20,7 @@ COPY packages/shared/package.json packages/shared/
 COPY packages/server/package.json packages/server/
 
 RUN corepack enable && corepack prepare pnpm@latest --activate \
-    && pnpm install --frozen-lockfile=false --filter @vertex/server...
+    && pnpm install --frozen-lockfile=false --filter @vertex/server... --ignore-scripts
 
 # Build server + shared
 COPY packages/shared packages/shared
