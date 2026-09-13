@@ -436,7 +436,7 @@ function createWindow(): void {
           first && typeof first === 'object' && 'message' in first
             ? String(first.message)
             : String(args[2] ?? '');
-        if (message.includes('[license-ipc')) {
+        if (message.includes('[license-ipc') || message.includes('[apply-debug]')) {
           console.log(`[renderer] ${message}`);
         }
       }) as never,
