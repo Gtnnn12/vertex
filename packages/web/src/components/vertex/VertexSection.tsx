@@ -402,7 +402,7 @@ export function VertexSection() {
               </div>
 
               <div className="p-3">
-                <div className="rounded-[10px] border border-white/[0.06] bg-[#0d0d13] overflow-hidden">
+                <div className="rounded-[10px] border border-white/[0.06] bg-surface-chat overflow-hidden">
                   <div className="flex h-[132px]">
                     {/* Rail */}
                     <div className="w-[34px] flex flex-col items-center pt-2 gap-2 border-r border-white/[0.05] bg-white/[0.015]">

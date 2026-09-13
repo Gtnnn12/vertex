@@ -181,6 +181,13 @@ function applyResolved(prefs: VertexPreferences): void {
 
   const meta = document.querySelector<HTMLMetaElement>('meta[name="color-scheme"]');
   if (meta) meta.setAttribute('content', resolveTheme(prefs.theme));
+
+  // Notify optional layers (e.g. the Netrex custom theme) so they can
+  // re-derive after a base-theme switch. Decoupled via DOM event: no import
+  // cycle, and listeners are free to ignore it.
+  window.dispatchEvent(new CustomEvent('vertex:themechange', {
+    detail: { theme: resolveTheme(prefs.theme) },
+  }));
 }
 
 /**

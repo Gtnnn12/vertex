@@ -420,7 +420,7 @@ function PresetCard({
         className="flex items-center justify-between gap-1 px-2.5 py-2"
         style={{ background: preset.secondary, borderTop: '1px solid rgba(255,255,255,0.05)' }}
       >
-        <span className="truncate text-[10px] font-bold text-white/85">{preset.name}</span>
+        <span className="truncate text-[10px] font-bold text-txt-primary">{preset.name}</span>
         <span
           className={`flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center rounded-full transition-all duration-200 ${
             selected ? 'scale-100 opacity-100' : 'scale-50 opacity-0'
@@ -763,7 +763,7 @@ export function PersonalizationEditor({ isNetrex, initialState, onSave, onClose 
                     aria-checked={preview.effectsEnabled}
                     aria-label={t('effects_enabled')}
                     className="relative h-5 w-9 rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/50"
-                    style={{ background: preview.effectsEnabled ? accentCss : 'rgba(255,255,255,0.1)' }}
+                    style={{ background: preview.effectsEnabled ? accentCss : 'rgb(var(--interactive-muted) / 0.6)' }}
                   >
                     <span
                       className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform duration-200 ${
@@ -795,7 +795,7 @@ export function PersonalizationEditor({ isNetrex, initialState, onSave, onClose 
             </div>
             <div
               className="rounded-2xl border border-white/[0.08] p-2 shadow-[0_20px_60px_-24px_rgba(0,0,0,0.65)] transition-shadow duration-300"
-              style={{ background: 'rgba(255,255,255,0.02)' }}
+              style={{ background: 'rgb(var(--interactive-muted) / 0.35)' }}
             >
               <VERTEXAppPreview preview={preview} />
             </div>
@@ -804,7 +804,7 @@ export function PersonalizationEditor({ isNetrex, initialState, onSave, onClose 
       </div>
 
       {/* ── Sticky footer ── */}
-      <div className="prem-footer sticky bottom-0 -mx-6 -mb-6 mt-6 border-t border-white/[0.07] bg-[#111118]/85 px-6 py-4 backdrop-blur-xl">
+      <div className="prem-footer sticky bottom-0 -mx-6 -mb-6 mt-6 border-t border-white/[0.07] bg-surface-elevated/85 px-6 py-4 backdrop-blur-xl">
         {onSave ? (
           <div className="flex items-center justify-between gap-3">
             <button
