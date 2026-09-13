@@ -441,11 +441,83 @@ export function UserProfileModal() {
           </div>
         </div>
 
-        {/* Two-column body: profile (left) + Board (right). Board collapses
-            below the profile on narrow viewports. */}
-        <div className="flex flex-col md:flex-row flex-1 min-h-0">
-        {/* ── Left column — profile ── */}
-        <div className="flex flex-col min-h-0 md:w-[55%] md:border-r md:border-white/[0.06]">
+        {/* Two-column body (INVERTED, Discord-reference): LEFT = the Board
+            (~45%, own scroll, full height). RIGHT = the profile (banner,
+            avatar, tabs, actions). On mobile: profile first, board below. */}
+        <div className="flex flex-col-reverse md:flex-row flex-1 min-h-0">
+        {/* ── LEFT column — the Board ── */}
+        <div
+          data-stagger="6"
+          className="flex flex-col min-h-0 md:w-[45%] border-t md:border-t-0 md:border-r border-white/[0.06] max-h-[50vh] md:max-h-none"
+        >
+          {/* Board header — panel title + tint picker + save. NO fake tabs. */}
+          <div className="flex items-center justify-between px-4 py-2.5 flex-shrink-0 border-b border-white/[0.06]">
+            <span className="text-[11px] uppercase tracking-wide font-semibold text-txt-tertiary">
+              {boardTabLabel}
+            </span>
+            {isSelfViewing && (
+              <div className="flex items-center gap-2">
+                {/* Personal profile tint — color picker + soft-dark preset */}
+                <label
+                  className="flex items-center gap-1.5 cursor-pointer"
+                  title="Profile color"
+                >
+                  <input
+                    type="color"
+                    value={accent ?? '#7c6cff'}
+                    // Live preview ONLY via direct CSS-var write — zero network
+                    // and zero re-render while dragging. The explicit save
+                    // button commits the value.
+                    onChange={(e) => {
+                      dragAccentRef.current = e.target.value;
+                      fx.ref.current?.style.setProperty('--profile-accent', e.target.value);
+                    }}
+                    className="w-5 h-5 rounded cursor-pointer bg-transparent border border-white/[0.15] p-0.5"
+                    aria-label="Profile color"
+                  />
+                  <span className="text-[11px] text-txt-tertiary hidden sm:inline">Color</span>
+                </label>
+                {/* Explicit save — the ONLY path that hits the network. Passes
+                    the in-flight drag color when present (drag does not touch
+                    React state), falling back to the saved state value. */}
+                <button
+                  onClick={() => void handleProfileAccentChange(dragAccentRef.current ?? accent)}
+                  className="rounded-lg bg-accent-primary px-3 py-1.5 text-[12px] font-bold text-white transition-colors hover:bg-accent-primary/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/50"
+                  title="Guardar personalización"
+                >
+                  Guardar personalización
+                </button>
+                <button
+                  onClick={() => void handleProfileAccentChange('#2a2438')}
+                  className="w-5 h-5 rounded border border-white/[0.15] bg-gradient-to-b from-[#3a3352] to-[#1c1828]"
+                  title="Soft dark"
+                  aria-label="Soft dark preset"
+                />
+                {accent && (
+                  <button
+                    onClick={() => void handleProfileAccentChange(null)}
+                    className="text-[11px] text-txt-tertiary hover:text-txt-secondary"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="flex-1 overflow-y-auto scrollbar-thin min-h-0 px-2 pb-2">
+            <ProfileBoardTab
+              user={user}
+              origin={userOrigin}
+              onBoardSaved={(widgets) => {
+                setUser((prev) => (prev ? { ...prev, profileBoard: widgets } : prev));
+              }}
+            />
+          </div>
+        </div>
+        {/* /left column — the Board */}
+
+        {/* ── RIGHT column — the profile ── */}
+        <div className="flex flex-col min-h-0 md:w-[55%]">
         {/* Tab bar — sliding accent indicator */}
         <div data-stagger="3" className="px-5 flex-shrink-0 border-b border-white/[0.06]">
           <div ref={tabsWrapRef} className="flex gap-1 relative">
@@ -684,99 +756,7 @@ export function UserProfileModal() {
         </div>
         {/* /action buttons */}
         </div>
-        {/* /left column */}
-
-        {/* ── Right column — the Board (own scroll; collapses below on mobile) ── */}
-        <div
-          data-stagger="6"
-          className="flex flex-col min-h-0 md:w-[45%] border-t md:border-t-0 md:border-l border-white/[0.06] max-h-[50vh] md:max-h-none"
-        >
-          {/* Board header — mini-tabs (Tablero active; Actividad & Wishlist as
-              honest "Próximamente" placeholders) + add-widget CTA. */}
-          <div className="flex items-center justify-between px-4 pt-3 pb-2 flex-shrink-0">
-            <div
-              className="flex items-center gap-1 rounded-lg bg-white/[0.04] p-0.5"
-              role="tablist"
-              aria-label={boardTabLabel}
-            >
-              <button
-                type="button"
-                role="tab"
-                aria-selected="true"
-                className="px-2.5 py-1 rounded-md text-[11.5px] font-semibold text-txt-primary bg-white/[0.09]"
-              >
-                {boardTabLabel}
-              </button>
-              {[t('board_tab_activity'), t('board_tab_wishlist')].map((label) => (
-                <span
-                  key={label}
-                  title={t('board_tab_soon')}
-                  className="px-2.5 py-1 rounded-md text-[11.5px] font-medium text-txt-tertiary/60 cursor-not-allowed select-none"
-                >
-                  {label}
-                </span>
-              ))}
-            </div>
-            {isSelfViewing && (
-              <div className="flex items-center gap-2">
-                {/* Personal profile tint — color picker + soft-dark preset */}
-                <label
-                  className="flex items-center gap-1.5 cursor-pointer"
-                  title="Profile color"
-                >
-                  <input
-                    type="color"
-                    value={accent ?? '#7c6cff'}
-                    // Live preview ONLY via direct CSS-var write — zero network
-                    // and zero re-render while dragging. The explicit save
-                    // button commits the value.
-                    onChange={(e) => {
-                      dragAccentRef.current = e.target.value;
-                      fx.ref.current?.style.setProperty('--profile-accent', e.target.value);
-                    }}
-                    className="w-5 h-5 rounded cursor-pointer bg-transparent border border-white/[0.15] p-0.5"
-                    aria-label="Profile color"
-                  />
-                  <span className="text-[11px] text-txt-tertiary hidden sm:inline">Color</span>
-                </label>
-                {/* Explicit save — the ONLY path that hits the network. Passes
-                    the in-flight drag color when present (drag does not touch
-                    React state), falling back to the saved state value. */}
-                <button
-                  onClick={() => void handleProfileAccentChange(dragAccentRef.current ?? accent)}
-                  className="rounded-lg bg-accent-primary px-3 py-1.5 text-[12px] font-bold text-white transition-colors hover:bg-accent-primary/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/50"
-                  title="Guardar personalización"
-                >
-                  Guardar personalización
-                </button>
-                <button
-                  onClick={() => void handleProfileAccentChange('#2a2438')}
-                  className="w-5 h-5 rounded border border-white/[0.15] bg-gradient-to-b from-[#3a3352] to-[#1c1828]"
-                  title="Soft dark"
-                  aria-label="Soft dark preset"
-                />
-                {accent && (
-                  <button
-                    onClick={() => void handleProfileAccentChange(null)}
-                    className="text-[11px] text-txt-tertiary hover:text-txt-secondary"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-          <div className="flex-1 overflow-y-auto scrollbar-thin min-h-0 px-2 pb-2">
-            <ProfileBoardTab
-              user={user}
-              origin={userOrigin}
-              onBoardSaved={(widgets) => {
-                setUser((prev) => (prev ? { ...prev, profileBoard: widgets } : prev));
-              }}
-            />
-          </div>
-        </div>
-        {/* /right column */}
+        {/* /right column — the profile */}
         </div>
         {/* /two-column body */}
       </div>
