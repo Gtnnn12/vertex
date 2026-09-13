@@ -1547,5 +1547,7 @@
   "profile_action_cancel_request": "Cancelar solicitud",
   "profile_action_accept": "Aceptar",
   "profile_action_ignore": "Ignorar",
-  "profile_action_remove_friend": "Eliminar amigo"
+  "profile_action_remove_friend": "Eliminar amigo",
+  "board_tab_mutual_friends": "Amigos en común",
+  "board_tab_mutual_spaces": "Servidores en común"
 }

@@ -14,6 +14,10 @@ interface ProfileBoardTabProps {
   origin: string;
   /** Called after a successful save so the modal can refresh its user view. */
   onBoardSaved?: (widgets: BoardWidget[]) => void;
+  /** Controlled editor state: the "+ Añadir widget" button lives in the
+      modal's board header (row 2), so the modal opens the editor here. */
+  externalEditing?: boolean;
+  onExternalEditingChange?: (editing: boolean) => void;
 }
 
 /**
@@ -21,7 +25,7 @@ interface ProfileBoardTabProps {
  * renders each type with its registry renderer. Everything else (locked
  * state, editor hosting, empty state) is a mode of THIS component.
  */
-export function ProfileBoardTab({ user, origin, onBoardSaved }: ProfileBoardTabProps) {
+export function ProfileBoardTab({ user, origin, onBoardSaved, externalEditing, onExternalEditingChange }: ProfileBoardTabProps) {
   const { t } = useLanguage();
   const currentUser = useAuthStore((s) => s.user);
   const setNetrexPurchaseOpen = useUIStore((s) => s.setNetrexPurchaseOpen);
@@ -38,7 +42,14 @@ export function ProfileBoardTab({ user, origin, onBoardSaved }: ProfileBoardTabP
     () => (Array.isArray(user.profileBoard) ? user.profileBoard : []),
     [user.profileBoard],
   );
-  const [editing, setEditing] = useState(false);
+  // Editor state: externally controlled when the modal drives it (its header
+  // hosts the add button), local fallback otherwise.
+  const [localEditing, setLocalEditing] = useState(false);
+  const editing = externalEditing ?? localEditing;
+  const setEditing = (v: boolean) => {
+    setLocalEditing(v);
+    onExternalEditingChange?.(v);
+  };
   const [displayed, setDisplayed] = useState<BoardWidget[] | null>(null);
   const shown = displayed ?? widgets;
   const { saveBoard, saving } = useProfileBoard();
@@ -100,23 +111,11 @@ export function ProfileBoardTab({ user, origin, onBoardSaved }: ProfileBoardTabP
   }
 
   // ── View mode ──
+  // NOTE: the "+ Añadir widget" button lives in the MODAL's board header
+  // (row 2) — it must not be duplicated here. This component only renders
+  // widgets + empty state (with its own inline add for that context).
   return (
     <div>
-      {canEdit && (
-        <div className="mb-3 flex items-center justify-end">
-          <button
-            type="button"
-            onClick={() => setEditing(true)}
-            className="flex items-center gap-1.5 rounded-lg bg-accent-primary px-3.5 py-2 text-[12.5px] font-bold text-white shadow-[0_4px_14px_-6px_rgba(0,0,0,0.5)] transition-all hover:bg-accent-primary/85 hover:shadow-[0_6px_18px_-6px_rgba(0,0,0,0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/50 motion-safe:hover:-translate-y-px"
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden>
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-            {t('board_add_widget')}
-          </button>
-        </div>
-      )}
-
       {shown.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-white/[0.09] px-6 py-10 text-center">
           <p className="text-[13px] text-txt-secondary">
