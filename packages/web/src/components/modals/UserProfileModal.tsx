@@ -375,88 +375,174 @@ export function UserProfileModal() {
         {/* Cursor glow layer */}
         <span className="profile-fx-glow" aria-hidden />
 
-        {/* Header — tall full-width banner (Discord-style, image truly visible) */}
-        <div data-stagger="1" className="h-[180px] flex-shrink-0 relative overflow-hidden">
-          <div
-            className="profile-fx-banner"
-            style={{
-              ...(bannerSrc
-                ? { backgroundImage: `url(${bannerSrc})` }
-                : { background: bannerFallback }),
-            }}
-          />
-          <div className="profile-fx-banner-overlay" aria-hidden />
-          {/* Close button */}
-          <button
-            onClick={closeModal}
-            className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center transition-colors z-[3]"
-            aria-label="Close"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
-              <path d="M18.4 4L12 10.4L5.6 4L4 5.6L10.4 12L4 18.4L5.6 20L12 13.6L18.4 20L20 18.4L13.6 12L20 5.6L18.4 4Z" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Header (avatar + name + badges + bio) — avatar overlaps the banner */}
-        <div data-stagger="2" className="px-6 flex-shrink-0 relative">
-          <div
-            className="profile-presence-ring inline-block align-top -mt-[64px] mb-2 relative z-10"
-            data-status={user.status ?? 'offline'}
-          >
-            <Avatar
-              src={user.avatar}
-              name={displayName}
-              size={112}
-              status={user.status as 'online' | 'idle' | 'dnd' | 'offline' | null}
-              userId={user.homeUserId ?? user.id}
-              user={user}
-              ring={{ width: 4, color: 'rgba(20,20,26,0.85)' }}
-              className="block"
+        {/* Two-column body (Discord layout): LEFT ~35% = compact profile column
+            (own banner + avatar + identity, like Discord's member card).
+            RIGHT ~65% = the Board with its own header tabs. The banner does NOT
+            span both columns. Mobile: profile first, board below. */}
+        <div className="flex flex-col md:flex-row flex-1 min-h-0">
+        {/* ── LEFT column — compact profile ── */}
+        <div className="flex flex-col min-h-0 md:w-[35%] border-t md:border-t-0 md:border-r border-white/[0.06] max-h-[50vh] md:max-h-none">
+          {/* Column banner — small, column-width only (not full-window) */}
+          <div data-stagger="1" className="h-[96px] flex-shrink-0 relative overflow-hidden">
+            <div
+              className="profile-fx-banner"
+              style={{
+                ...(bannerSrc
+                  ? { backgroundImage: `url(${bannerSrc})` }
+                  : { background: bannerFallback }),
+              }}
             />
+            <div className="profile-fx-banner-overlay" aria-hidden />
+            {/* Close button */}
+            <button
+              onClick={closeModal}
+              className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center transition-colors z-[3]"
+              aria-label="Close"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+                <path d="M18.4 4L12 10.4L5.6 4L4 5.6L10.4 12L4 18.4L5.6 20L12 13.6L18.4 20L20 18.4L13.6 12L20 5.6L18.4 4Z" />
+              </svg>
+            </button>
           </div>
 
-          <div className="mb-4">
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <Username
-                username={displayName}
-                className="text-[24px] font-bold leading-tight tracking-[-0.01em]"
+          {/* Identity — avatar overlaps the column banner */}
+          <div data-stagger="2" className="px-5 flex-1 overflow-y-auto scrollbar-thin min-h-0">
+            <div
+              className="profile-presence-ring inline-block align-top -mt-[44px] mb-2 relative z-10"
+              data-status={user.status ?? 'offline'}
+            >
+              <Avatar
+                src={user.avatar}
+                name={displayName}
+                size={88}
+                status={user.status as 'online' | 'idle' | 'dnd' | 'offline' | null}
+                userId={user.homeUserId ?? user.id}
+                user={user}
+                ring={{ width: 4, color: 'rgba(20,20,26,0.85)' }}
+                className="block"
               />
-              {user.staffRole && <StaffBadge role={user.staffRole} />}
-              {user.netrexEnabled && <NetrexChip />}
             </div>
-            <span className="mt-1.5 inline-flex items-center h-[22px] px-2 rounded-md border border-white/[0.08] bg-white/[0.04] font-mono text-[12px] tracking-[0.01em] text-txt-secondary">
-              @{user.username}
-            </span>
-            {user.customStatus && (
-              <div className="text-[13px] text-txt-secondary italic mt-1.5">
-                {user.customStatus}
+
+            <div className="pb-4">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Username
+                  username={displayName}
+                  className="text-[19px] font-bold leading-tight tracking-[-0.01em]"
+                />
+                {user.staffRole && <StaffBadge role={user.staffRole} />}
+                {user.netrexEnabled && <NetrexChip />}
               </div>
-            )}
-            {user.bio && (
-              <p className="mt-3 max-w-[560px] text-[13px] leading-relaxed text-txt-secondary whitespace-pre-wrap break-words line-clamp-3">
-                {user.bio.replace(/[*_~`#>\[\]]/g, '').slice(0, 240)}
-              </p>
-            )}
+              <span className="mt-1 inline-flex items-center h-[20px] px-1.5 rounded-md border border-white/[0.08] bg-white/[0.04] font-mono text-[11px] tracking-[0.01em] text-txt-secondary">
+                @{user.username}
+              </span>
+              {user.customStatus && (
+                <div className="text-[12.5px] text-txt-secondary italic mt-1.5">
+                  {user.customStatus}
+                </div>
+              )}
+              {user.bio && (
+                <p className="mt-2 text-[12.5px] leading-relaxed text-txt-secondary whitespace-pre-wrap break-words line-clamp-3">
+                  {user.bio.replace(/[*_~`#>\[\]]/g, '').slice(0, 160)}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Footer: membership + roles + actions — pinned to the column bottom */}
+          <div data-stagger="3" className="flex-shrink-0 px-5 pb-4">
+            <div className="space-y-3 text-[12px] text-txt-secondary border-t border-white/[0.06] pt-3">
+              <div>
+                <span className="block text-[10.5px] uppercase tracking-wide font-semibold text-txt-tertiary mb-0.5">
+                  {t('profile_member_since')}
+                </span>
+                {new Date(user.createdAt).toLocaleDateString(undefined, {
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric',
+                })}
+              </div>
+              {user.staffRole ? (
+                <div className="flex flex-wrap gap-1.5">
+                  <span className="inline-flex items-center gap-1 rounded-md border border-white/[0.08] px-2 py-0.5 text-[11px] font-medium text-txt-secondary">
+                    <span className="h-1.5 w-1.5 rounded-full bg-accent-primary" />
+                    {user.staffRole}
+                  </span>
+                </div>
+              ) : null}
+            </div>
+            <div className="flex gap-2 mt-3">
+              {friendship.state === 'none' && (
+                <button onClick={handleAddFriend} disabled={friendActionLoading}
+                  className="flex-1 py-2 rounded-lg text-[12.5px] font-medium text-txt-primary border border-white/[0.08] bg-white/[0.06] hover:bg-white/[0.10] transition-colors disabled:opacity-50">
+                  {friendActionLoading ? '...' : t('profile_action_add_friend')}
+                </button>
+              )}
+              {friendship.state === 'outbound_pending' && (
+                <button onClick={handleCancelRequest} disabled={friendActionLoading}
+                  className="flex-1 py-2 rounded-lg text-[12.5px] font-medium text-amber-400 border border-amber-400/30 hover:bg-amber-400/10 transition-colors disabled:opacity-50">
+                  {friendActionLoading ? '...' : t('profile_action_cancel_request')}
+                </button>
+              )}
+              {friendship.state === 'inbound_pending' && (
+                <>
+                  <button onClick={handleAcceptRequest} disabled={friendActionLoading}
+                    className="flex-1 py-2 rounded-lg text-[12.5px] font-medium text-white bg-accent-primary hover:bg-accent-primary/80 transition-colors disabled:opacity-50">
+                    {friendActionLoading ? '...' : t('profile_action_accept')}
+                  </button>
+                  <button onClick={handleDeclineRequest} disabled={friendActionLoading}
+                    className="py-2 px-3 rounded-lg text-[12.5px] font-medium text-txt-tertiary border border-white/[0.06] hover:bg-white/[0.06] transition-colors disabled:opacity-50">
+                    {friendActionLoading ? '...' : t('profile_action_ignore')}
+                  </button>
+                </>
+              )}
+              {friendship.state === 'friends' && (
+                <button onClick={handleRemoveFriend} disabled={friendActionLoading}
+                  className="flex-1 py-2 rounded-lg text-[12.5px] font-medium text-txt-danger border border-txt-danger/30 hover:bg-txt-danger/10 transition-colors disabled:opacity-50">
+                  {friendActionLoading ? '...' : t('profile_action_remove_friend')}
+                </button>
+              )}
+              {friendship.state !== 'self' && (
+                <button
+                  onClick={handleSendMessage}
+                  className="py-2 px-3 rounded-lg text-[12.5px] font-medium text-white bg-accent-primary hover:bg-accent-primary/85 dm-icon-btn transition-colors"
+                >
+                  {t('profile_action_message')}
+                </button>
+              )}
+            </div>
           </div>
         </div>
+        {/* /left column — compact profile */}
 
-        {/* Two-column body (INVERTED, Discord-reference): LEFT = the Board
-            (~45%, own scroll, full height). RIGHT = the profile (banner,
-            avatar, tabs, actions). On mobile: profile first, board below. */}
-        <div className="flex flex-col-reverse md:flex-row flex-1 min-h-0">
-        {/* ── LEFT column — the Board ── */}
-        <div
-          data-stagger="6"
-          className="flex flex-col min-h-0 md:w-[45%] border-t md:border-t-0 md:border-r border-white/[0.06] max-h-[50vh] md:max-h-none"
-        >
-          {/* Board header — panel title + tint picker + save. NO fake tabs. */}
-          <div className="flex items-center justify-between px-4 py-2.5 flex-shrink-0 border-b border-white/[0.06]">
-            <span className="text-[11px] uppercase tracking-wide font-semibold text-txt-tertiary">
-              {boardTabLabel}
-            </span>
+        {/* ── RIGHT column — the Board (wide) ── */}
+        <div data-stagger="4" className="flex flex-col min-h-0 md:w-[65%]">
+          {/* Board header: real tabs left (Tablero active; Actividad / Lista de
+              deseos honest placeholders), widgets label + add button right */}
+          <div className="flex items-center justify-between gap-3 px-4 py-2.5 flex-shrink-0 border-b border-white/[0.06]">
+            <div ref={tabsWrapRef} className="flex gap-1 relative flex-shrink min-w-0 overflow-x-auto scrollbar-none">
+              <button
+                data-tab-key="board"
+                className="px-3 py-1.5 text-[13px] font-semibold rounded-md text-txt-primary bg-white/[0.06]"
+              >
+                {boardTabLabel}
+              </button>
+              <button
+                disabled
+                title={t('board_tab_soon')}
+                className="px-3 py-1.5 text-[13px] font-medium rounded-md text-txt-tertiary/60 cursor-not-allowed"
+              >
+                {t('board_tab_activity')}
+              </button>
+              <button
+                disabled
+                title={t('board_tab_soon')}
+                className="px-3 py-1.5 text-[13px] font-medium rounded-md text-txt-tertiary/60 cursor-not-allowed"
+              >
+                {t('board_tab_wishlist')}
+              </button>
+            </div>
             {isSelfViewing && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-shrink-0">
                 {/* Personal profile tint — color picker + soft-dark preset */}
                 <label
                   className="flex items-center gap-1.5 cursor-pointer"
@@ -504,7 +590,15 @@ export function UserProfileModal() {
               </div>
             )}
           </div>
-          <div className="flex-1 overflow-y-auto scrollbar-thin min-h-0 px-2 pb-2">
+
+          {/* Widgets strip: "Tus widgets" + prominent add button */}
+          <div className="flex items-center justify-between px-4 pt-3 pb-1 flex-shrink-0">
+            <span className="text-[11px] uppercase tracking-wide font-semibold text-txt-tertiary">
+              {t('board_your_widgets')}
+            </span>
+          </div>
+
+          <div className="flex-1 overflow-y-auto scrollbar-thin min-h-0 px-4 pb-4">
             <ProfileBoardTab
               user={user}
               origin={userOrigin}
@@ -514,249 +608,7 @@ export function UserProfileModal() {
             />
           </div>
         </div>
-        {/* /left column — the Board */}
-
-        {/* ── RIGHT column — the profile ── */}
-        <div className="flex flex-col min-h-0 md:w-[55%]">
-        {/* Tab bar — sliding accent indicator */}
-        <div data-stagger="3" className="px-5 flex-shrink-0 border-b border-white/[0.06]">
-          <div ref={tabsWrapRef} className="flex gap-1 relative">
-            {tabs.map((tab) => (
-              <button
-                key={tab.key}
-                data-tab-key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`px-3 py-2 text-[13px] font-medium rounded-t-lg transition-colors relative ${
-                  activeTab === tab.key
-                    ? 'text-txt-primary'
-                    : 'text-txt-tertiary hover:text-txt-secondary'
-                }`}
-              >
-                {tab.label}
-                {tab.count !== undefined && !loadingMutuals && (
-                  <span className="ml-1 text-[11px] text-txt-tertiary tabular-nums">
-                    (<CountUp value={tab.count} duration={500} />)
-                  </span>
-                )}
-              </button>
-            ))}
-            <div ref={barRef} className="profile-tab-indicator" aria-hidden />
-          </div>
-        </div>
-
-        {/* Tab content */}
-        <div data-stagger="4" className="flex-1 overflow-y-auto scrollbar-thin p-5 min-h-[200px]">
-          {activeTab === 'about' && (
-            <div className="space-y-4">
-              {/* Bio */}
-              {user.bio && (
-                <div>
-                  <span className="text-[11px] uppercase tracking-wide font-semibold text-txt-tertiary">
-                    About Me
-                  </span>
-                  <div className="text-[13px] text-txt-secondary mt-1 whitespace-pre-wrap break-words leading-relaxed [&_strong]:font-semibold [&_strong]:text-txt-primary [&_em]:italic [&_a]:text-accent-primary [&_a]:underline">
-                    <ReactMarkdown
-                      allowedElements={['p', 'strong', 'em', 'a', 'br']}
-                      unwrapDisallowed
-                      components={{
-                        a: ({ href, children }) => (
-                          <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
-                        ),
-                      }}
-                    >
-                      {user.bio}
-                    </ReactMarkdown>
-                  </div>
-                </div>
-              )}
-
-              {/* Member Since */}
-              <div>
-                <span className="text-[11px] uppercase tracking-wide font-semibold text-txt-tertiary">
-                  Member Since
-                </span>
-                <div className="text-[13px] text-txt-secondary mt-1">
-                  {new Date(user.createdAt).toLocaleDateString(undefined, {
-                    month: 'long',
-                    day: 'numeric',
-                    year: 'numeric',
-                  })}
-                </div>
-              </div>
-
-            </div>
-          )}
-
-          {activeTab === 'friends' && (
-            <div>
-              {loadingMutuals ? (
-                <div className="flex items-center justify-center py-8">
-                  <svg className="animate-spin w-5 h-5 text-txt-tertiary" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                </div>
-              ) : mutualFriends.length === 0 ? (
-                <div className="text-center py-8 text-txt-tertiary text-[13px]">
-                  No mutual friends
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-2">
-                  {mutualFriends.map((friend) => {
-                    const fname = friend.displayName ?? parseFederatedUsername(friend.username).baseName;
-                    return (
-                      <button
-                        key={friend.id}
-                        onClick={() => handleViewFriend(friend)}
-                        className="flex items-center gap-2.5 p-2.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.04] transition-colors text-left"
-                      >
-                        <Avatar
-                          src={friend.avatar}
-                          name={fname}
-                          size={40}
-                          status={friend.status as 'online' | 'idle' | 'dnd' | 'offline' | null}
-                          userId={friend.homeUserId ?? friend.id}
-                          avatarColor={friend.avatarColor}
-                        />
-                        <div className="min-w-0">
-                          <div className="text-[13px] font-medium text-txt-primary truncate">
-                            {fname}
-                          </div>
-                          <div className="text-[11px] text-txt-tertiary capitalize">
-                            {friend.status}
-                          </div>
-                          {friend._instanceOrigin && (
-                            <div className="flex items-center gap-1 text-[10px] text-txt-tertiary/70 truncate">
-                              <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" className="shrink-0">
-                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
-                              </svg>
-                              <span className="truncate">{(() => { try { return new URL(friend._instanceOrigin).host; } catch { return '?'; } })()}</span>
-                            </div>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === 'spaces' && (
-            <div>
-              {loadingMutuals ? (
-                <div className="flex items-center justify-center py-8">
-                  <svg className="animate-spin w-5 h-5 text-txt-tertiary" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                </div>
-              ) : mutualSpaces.length === 0 ? (
-                <div className="text-center py-8 text-txt-tertiary text-[13px]">
-                  No mutual spaces
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {mutualSpaces.map((space) => {
-                    const spaceApi = getApiForOrigin(space._instanceOrigin);
-                    return (
-                    <button
-                      key={`${space.id}:${space._instanceOrigin}`}
-                      onClick={() => handleGoToSpace(space.id)}
-                      className="flex items-center gap-3 w-full p-2.5 rounded-lg hover:bg-white/[0.06] transition-colors text-left"
-                    >
-                      <div className="relative shrink-0">
-                        {space.icon ? (
-                          <img
-                            src={space.icon.startsWith('http') ? space.icon : spaceApi.uploads.url(space.icon)}
-                            alt={space.name}
-                            className="w-8 h-8 rounded-lg object-cover"
-                          />
-                        ) : (
-                          <div
-                            className="w-8 h-8 rounded-lg flex items-center justify-center text-[13px] font-semibold text-white"
-                            style={{ background: getSpaceGradient(space.id, space.name, space.avatarColor).gradient }}
-                          >
-                            {space.name.charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                        {space._instanceOrigin && (
-                          <div className="absolute -bottom-0.5 -right-0.5 w-[14px] h-[14px] rounded-full bg-[#1a1a23] flex items-center justify-center">
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className="text-txt-tertiary/80">
-                              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
-                            </svg>
-                          </div>
-                        )}
-                      </div>
-                      <div className="min-w-0 flex flex-col">
-                        <span className="text-[13px] font-medium text-txt-primary truncate">
-                          {space.name}
-                        </span>
-                        {space._instanceOrigin && (
-                          <span className="text-[10px] text-txt-tertiary/70 truncate flex items-center gap-1">
-                            <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" className="shrink-0">
-                              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
-                            </svg>
-                            {(() => { try { return new URL(space._instanceOrigin).host; } catch { return '?'; } })()}
-                          </span>
-                        )}
-                      </div>
-                    </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-        {/* /left column tab content */}
-
-        {/* Action buttons — luminous hover */}
-        <div data-stagger="5" className="flex-shrink-0 px-5 py-3 border-t border-white/[0.06] flex gap-2">
-          <button
-            onClick={handleSendMessage}
-            className="flex-1 py-2 rounded-lg text-[13px] font-medium text-white bg-accent-primary hover:bg-accent-primary/85 dm-icon-btn transition-colors"
-          >
-            Send Message
-          </button>
-
-          {friendship.state === 'none' && (
-            <button onClick={handleAddFriend} disabled={friendActionLoading}
-              className="flex-1 py-2 rounded-lg text-[13px] font-medium text-txt-primary border border-white/[0.08] bg-white/[0.06] hover:bg-white/[0.10] transition-colors disabled:opacity-50">
-              {friendActionLoading ? '...' : 'Add Friend'}
-            </button>
-          )}
-
-          {friendship.state === 'outbound_pending' && (
-            <button onClick={handleCancelRequest} disabled={friendActionLoading}
-              className="flex-1 py-2 rounded-lg text-[13px] font-medium text-amber-400 border border-amber-400/30 hover:bg-amber-400/10 transition-colors disabled:opacity-50">
-              {friendActionLoading ? '...' : 'Cancel Request'}
-            </button>
-          )}
-
-          {friendship.state === 'inbound_pending' && (
-            <>
-              <button onClick={handleAcceptRequest} disabled={friendActionLoading}
-                className="flex-1 py-2 rounded-lg text-[13px] font-medium text-white bg-accent-primary hover:bg-accent-primary/80 transition-colors disabled:opacity-50">
-                {friendActionLoading ? '...' : 'Accept'}
-              </button>
-              <button onClick={handleDeclineRequest} disabled={friendActionLoading}
-                className="py-2 px-3 rounded-lg text-[13px] font-medium text-txt-tertiary border border-white/[0.06] hover:bg-white/[0.06] transition-colors disabled:opacity-50">
-                {friendActionLoading ? '...' : 'Ignore'}
-              </button>
-            </>
-          )}
-
-          {friendship.state === 'friends' && (
-            <button onClick={handleRemoveFriend} disabled={friendActionLoading}
-              className="flex-1 py-2 rounded-lg text-[13px] font-medium text-txt-danger border border-txt-danger/30 hover:bg-txt-danger/10 transition-colors disabled:opacity-50">
-              {friendActionLoading ? '...' : 'Remove Friend'}
-            </button>
-          )}
-        </div>
-        {/* /action buttons */}
-        </div>
-        {/* /right column — the profile */}
+        {/* /right column — the Board */}
         </div>
         {/* /two-column body */}
       </div>
