@@ -43,10 +43,13 @@ export const useMusicWidgetStore = create<MusicWidgetState>((set, get) => ({
     try {
       const updated: User = await api.users.update({ musicWidgetStyle: style });
       // Server response is the truth (it may have fallen back to vinyl).
+      // setUser ALSO refreshes netrexEnabled from the authoritative source,
+      // so a permanently-granted Netrex licence picked up mid-session
+      // unblocks the Apply button on the very next interaction.
+      useAuthStore.getState().setUser(updated);
       const confirmed = isMusicStyleId(updated.musicWidgetStyle)
         ? updated.musicWidgetStyle
         : 'vinyl';
-      useAuthStore.getState().setUser(updated);
       set({ selected: confirmed, saving: false, previewStyle: null });
     } catch {
       // Rollback on failure — UI returns to the previous selection.
