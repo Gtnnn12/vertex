@@ -384,7 +384,7 @@ export function UserProfileModal() {
             span both columns. Mobile: profile first, board below. */}
         <div className="flex flex-col md:flex-row flex-1 min-h-0">
         {/* ── LEFT column — compact profile ── */}
-        <div className="flex flex-col min-h-0 md:w-[35%] border-t md:border-t-0 md:border-r border-white/[0.06] max-h-[50vh] md:max-h-none">
+        <div className="flex flex-col min-h-0 md:w-[45%] border-t md:border-t-0 md:border-r border-white/[0.06] max-h-[50vh] md:max-h-none min-w-0 md:min-w-[320px]">
           {/* Banner + avatar — ONE relative container, Discord-exact:
               banner 140px cover rounded-top; avatar ABSOLUTE bottom -36px
               left 16px (half out of the banner), no negative margins. */}
@@ -519,7 +519,7 @@ export function UserProfileModal() {
         {/* /left column — compact profile */}
 
         {/* ── RIGHT column — the Board (wide) ── */}
-        <div data-stagger="4" className="flex flex-col min-h-0 md:w-[65%]">
+        <div data-stagger="4" className="flex flex-col min-h-0 md:w-[55%] min-w-0">
           {/* Board header — DECOUPLED rows: row 1 = the tabs on their own
               line; row 2 = "Tus widgets" + add + tint controls. */}
           <div className="px-4 py-2.5 flex-shrink-0 border-b border-white/[0.06]">
