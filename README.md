@@ -1,6 +1,4 @@
-<div align="center">
 
-<img src="packages/web/public/icons/logo.png" alt="VERTEX" width="160" />
 
 # VERTEX
 
