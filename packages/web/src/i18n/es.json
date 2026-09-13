@@ -1549,5 +1549,6 @@
   "profile_action_ignore": "Ignorar",
   "profile_action_remove_friend": "Eliminar amigo",
   "board_tab_mutual_friends": "Amigos en común",
-  "board_tab_mutual_spaces": "Servidores en común"
+  "board_tab_mutual_spaces": "Servidores en común",
+  "menu_view_profile": "Ver perfil"
 }

@@ -6,6 +6,11 @@ import { useCanonicalUserView } from '../../utils/userViewLookup';
 import { parseFederatedUsername } from '../../utils/identity';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuthStore } from '../../stores/authStore';
+import { useSocialStore } from '../../stores/socialStore';
+import { useContextMenuStore } from '../../stores/contextMenuStore';
+import { useUIStore } from '../../stores/uiStore';
+import { buildUserContextMenuItems } from '../../utils/userContextMenu';
+import { pointAnchor } from '../../hooks/useFloatingPosition';
 
 /**
  * Netrex "Cuadrícula Compacta de Miembros" (feature: memberGridCompact).
@@ -70,9 +75,51 @@ function GridCell({
   const { baseName } = parseFederatedUsername(canonical.username);
   const displayName = canonical.displayName ?? baseName;
 
+  const { t } = useLanguage();
+  const me = useAuthStore((s) => s.user);
+  const openUserProfile = useUIStore((s) => s.openUserProfile);
+  const openContextMenu = useContextMenuStore((s) => s.open);
+
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    openContextMenu(
+      { x: e.clientX, y: e.clientY },
+      buildUserContextMenuItems({
+        user: canonical,
+        me,
+        friends: useSocialStore.getState().friends,
+        requests: useSocialStore.getState().requests,
+        t,
+        onViewProfile: (u) => openUserProfile(u, pointAnchor(e.clientX, e.clientY), 'left'),
+        onAddFriend: () => useSocialStore.getState().sendFriendRequest(canonical.username).catch(() => {}),
+        onRemoveFriend: () => {
+          const f = useSocialStore.getState().friends.find((fr) => fr.id === canonical.id);
+          if (f) useSocialStore.getState().removeFriend(f.id).catch(() => {});
+        },
+        onCancelRequest: () => {
+          const s = useSocialStore.getState();
+          const req = s.requests.find((r) => r.user && (r.user.homeUserId ?? r.user.id) === (canonical.homeUserId ?? canonical.id));
+          if (req) s.cancelFriendRequest(req.id).catch(() => {});
+        },
+        onAcceptRequest: () => {
+          const s = useSocialStore.getState();
+          const req = s.requests.find((r) => r.user && (r.user.homeUserId ?? r.user.id) === (canonical.homeUserId ?? canonical.id));
+          if (req) s.updateFriendRequest(req.id, 'accepted').catch(() => {});
+        },
+        onDeclineRequest: () => {
+          const s = useSocialStore.getState();
+          const req = s.requests.find((r) => r.user && (r.user.homeUserId ?? r.user.id) === (canonical.homeUserId ?? canonical.id));
+          if (req) s.updateFriendRequest(req.id, 'declined').catch(() => {});
+        },
+      }),
+    );
+  }, [canonical, me, t, openContextMenu, openUserProfile]);
+
   return (
     <button
       onClick={(e) => onMemberClick(e, canonical)}
+      onContextMenu={handleContextMenu}
       className="relative rounded-full hover:opacity-80 transition-opacity"
       style={{ width: CELL_SIZE, height: CELL_SIZE }}
       title={displayName}

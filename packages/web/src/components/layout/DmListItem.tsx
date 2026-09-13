@@ -198,8 +198,8 @@ export function DmListItem({ dm, isActive, isUnread, user, onSelect, onClose, on
     </div>
   );
 
-  // Group DMs get a context menu wrapper
-  if (isGroup && handleContextMenu) {
+  // Context menu wrapper — 1-on-1 DMs (user menu) and group DMs (leave) alike.
+  if (handleContextMenu) {
     return <div onContextMenu={handleContextMenu}>{itemJsx}</div>;
   }
 

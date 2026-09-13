@@ -1,8 +1,12 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import type { MemberWithUser, Activity } from '@backspace/shared';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useActivityStore } from '../../stores/activityStore';
+import { useAuthStore } from '../../stores/authStore';
+import { useSocialStore } from '../../stores/socialStore';
+import { useContextMenuStore } from '../../stores/contextMenuStore';
+import { buildUserContextMenuItems } from '../../utils/userContextMenu';
 import { Avatar } from '../ui/Avatar';
 import { Username } from '../ui/Username';
 import { ActivityCard, hasRichActivity, getActivityAccentClass } from '../ui/ActivityCard';
@@ -69,6 +73,52 @@ export function MemberSidebarRow({
   const { baseName } = parseFederatedUsername(canonical.username);
   const displayName = canonical.displayName ?? baseName;
 
+  const { t } = useLanguage();
+  const openContextMenu = useContextMenuStore((s) => s.open);
+  const openUserProfile = useUIStore((s) => s.openUserProfile);
+  const me = useAuthStore((s) => s.user);
+  const friends = useSocialStore((s) => s.friends);
+  const friendRequests = useSocialStore((s) => s.requests);
+
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openContextMenu(
+        { x: e.clientX, y: e.clientY },
+        buildUserContextMenuItems({
+          user: canonical,
+          me,
+          friends,
+          requests: friendRequests,
+          t,
+          onViewProfile: (u) => openUserProfile(u, e.currentTarget.getBoundingClientRect(), 'left'),
+          onAddFriend: () => useSocialStore.getState().sendFriendRequest(canonical.username).catch(() => {}),
+          onRemoveFriend: () => {
+            const f = friends.find((fr) => fr.id === canonical.id);
+            if (f) useSocialStore.getState().removeFriend(f.id).catch(() => {});
+          },
+          onCancelRequest: () => {
+            const s = useSocialStore.getState();
+            const req = s.requests.find((r) => r.user && (r.user.homeUserId ?? r.user.id) === (canonical.homeUserId ?? canonical.id));
+            if (req) s.cancelFriendRequest(req.id).catch(() => {});
+          },
+          onAcceptRequest: () => {
+            const s = useSocialStore.getState();
+            const req = s.requests.find((r) => r.user && (r.user.homeUserId ?? r.user.id) === (canonical.homeUserId ?? canonical.id));
+            if (req) s.updateFriendRequest(req.id, 'accepted').catch(() => {});
+          },
+          onDeclineRequest: () => {
+            const s = useSocialStore.getState();
+            const req = s.requests.find((r) => r.user && (r.user.homeUserId ?? r.user.id) === (canonical.homeUserId ?? canonical.id));
+            if (req) s.updateFriendRequest(req.id, 'declined').catch(() => {});
+          },
+        }),
+      );
+    },
+    [canonical, me, friends, friendRequests, t, openContextMenu, openUserProfile],
+  );
+
   const rowClass = isRichActivity
     ? `flex items-center gap-2.5 px-2.5 py-2 rounded-[10px] mb-1 cursor-pointer transition-colors glass-pill border-l-2 ${accentClass}`
     : 'flex items-center gap-2.5 px-2 py-1.5 rounded-[4px] hover:bg-interactive-hover cursor-pointer group transition-colors';
@@ -77,6 +127,7 @@ export function MemberSidebarRow({
     <div
       key={member.userId}
       onClick={(e) => onClickMember(e, canonical)}
+      onContextMenu={handleContextMenu}
       className={rowClass}
     >
       <Avatar

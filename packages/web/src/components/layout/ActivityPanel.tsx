@@ -1,7 +1,10 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useCallback } from 'react';
 import { useSocialStore } from '../../stores/socialStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useActivityStore } from '../../stores/activityStore';
+import { useContextMenuStore } from '../../stores/contextMenuStore';
+import { buildUserContextMenuItems } from '../../utils/userContextMenu';
+import { pointAnchor } from '../../hooks/useFloatingPosition';
 import { Avatar } from '../ui/Avatar';
 import { Username } from '../ui/Username';
 import { ActivityCard, hasRichActivity, getActivityAccentClass } from '../ui/ActivityCard';
@@ -102,6 +105,45 @@ function ActivityFriendRow({
   const friendDisplayName = canonical.displayName ?? baseName;
   const primary = getPrimaryActivity(activities);
 
+  const { t } = useLanguage();
+  const openContextMenu = useContextMenuStore((s) => s.open);
+  const openUserProfileMenu = useUIStore((s) => s.openUserProfile);
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    openContextMenu(
+      { x: e.clientX, y: e.clientY },
+      buildUserContextMenuItems({
+        user: canonical,
+        me: useAuthStore.getState().user,
+        friends: useSocialStore.getState().friends,
+        requests: useSocialStore.getState().requests,
+        t,
+        onViewProfile: (u) => openUserProfileMenu(u, pointAnchor(e.clientX, e.clientY), 'left'),
+        onAddFriend: () => useSocialStore.getState().sendFriendRequest(canonical.username).catch(() => {}),
+        onRemoveFriend: () => {
+          const f = useSocialStore.getState().friends.find((fr) => fr.id === canonical.id);
+          if (f) useSocialStore.getState().removeFriend(f.id).catch(() => {});
+        },
+        onCancelRequest: () => {
+          const s = useSocialStore.getState();
+          const req = s.requests.find((r) => r.user && (r.user.homeUserId ?? r.user.id) === (canonical.homeUserId ?? canonical.id));
+          if (req) s.cancelFriendRequest(req.id).catch(() => {});
+        },
+        onAcceptRequest: () => {
+          const s = useSocialStore.getState();
+          const req = s.requests.find((r) => r.user && (r.user.homeUserId ?? r.user.id) === (canonical.homeUserId ?? canonical.id));
+          if (req) s.updateFriendRequest(req.id, 'accepted').catch(() => {});
+        },
+        onDeclineRequest: () => {
+          const s = useSocialStore.getState();
+          const req = s.requests.find((r) => r.user && (r.user.homeUserId ?? r.user.id) === (canonical.homeUserId ?? canonical.id));
+          if (req) s.updateFriendRequest(req.id, 'declined').catch(() => {});
+        },
+      }),
+    );
+  }, [canonical, t, openContextMenu, openUserProfileMenu]);
+
   const getStatusColor = () => {
     if (isOffline) return 'bg-txt-tertiary/40';
     if (primary && primary.type !== 'custom') {
@@ -124,6 +166,7 @@ function ActivityFriendRow({
   return (
     <div
       onClick={(e) => onClickFriend(e, friend)}
+      onContextMenu={handleContextMenu}
       className={rowClass}
     >
       <div className="relative flex-shrink-0">

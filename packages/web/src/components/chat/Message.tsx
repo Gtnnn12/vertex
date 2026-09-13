@@ -6,6 +6,8 @@ import { MentionBadge } from './MentionBadge';
 import { Avatar } from '../ui/Avatar';
 import { ProfileAvatar } from '../ui/ProfileAvatar';
 import { useContextMenuStore } from '../../stores/contextMenuStore';
+import { useSocialStore } from '../../stores/socialStore';
+import { buildUserContextMenuItems } from '../../utils/userContextMenu';
 import { buildMessageMenuItems } from './messageMenuItems';
 import { useAuthStore } from '../../stores/authStore';
 import { useChatStore } from '../../stores/chatStore';
@@ -285,6 +287,49 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
     openUserProfile(message.user, e.currentTarget.getBoundingClientRect());
   };
 
+  // Right-click on the avatar/username → user context menu (shared builder).
+  const handleUserContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      if (!message.user || pending) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const friends = useSocialStore.getState().friends;
+      const requests = useSocialStore.getState().requests;
+      useContextMenuStore.getState().open(
+        { x: e.clientX, y: e.clientY },
+        buildUserContextMenuItems({
+          user: message.user,
+          me: currentUser,
+          friends,
+          requests,
+          t,
+          onViewProfile: (u) => openUserProfile(u, e.currentTarget.getBoundingClientRect()),
+          onAddFriend: () => useSocialStore.getState().sendFriendRequest(message.user!.username).catch(() => {}),
+          onRemoveFriend: () => {
+            const f = friends.find((fr) => fr.id === message.user!.id);
+            if (f) useSocialStore.getState().removeFriend(f.id).catch(() => {});
+          },
+          onCancelRequest: () => {
+            const s = useSocialStore.getState();
+            const req = s.requests.find((r) => r.user && (r.user.homeUserId ?? r.user.id) === (message.user!.homeUserId ?? message.user!.id));
+            if (req) s.cancelFriendRequest(req.id).catch(() => {});
+          },
+          onAcceptRequest: () => {
+            const s = useSocialStore.getState();
+            const req = s.requests.find((r) => r.user && (r.user.homeUserId ?? r.user.id) === (message.user!.homeUserId ?? message.user!.id));
+            if (req) s.updateFriendRequest(req.id, 'accepted').catch(() => {});
+          },
+          onDeclineRequest: () => {
+            const s = useSocialStore.getState();
+            const req = s.requests.find((r) => r.user && (r.user.homeUserId ?? r.user.id) === (message.user!.homeUserId ?? message.user!.id));
+            if (req) s.updateFriendRequest(req.id, 'declined').catch(() => {});
+          },
+        }),
+      );
+    },
+    [message.user, pending, currentUser, t, openUserProfile],
+  );
+
   const handleContextMenu = (e: React.MouseEvent) => {
     if (pending) {
       e.preventDefault();
@@ -423,7 +468,7 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
       {/* Avatar or timestamp column */}
       <div className="w-10 flex-shrink-0 flex items-start justify-center">
         {isFirstInGroup || message.replyTo ? (
-          <div className="mt-0.5">
+          <div className="mt-0.5" onContextMenu={handleUserContextMenu}>
             <ProfileAvatar
               src={displayIdentity.avatar}
               name={displayName}
@@ -464,7 +509,7 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
 
         {(isFirstInGroup || message.replyTo) && (
           <div className="flex items-baseline gap-2 mb-0.5">
-            <span onClick={handleUsernameClick} className="flex items-center gap-1.5">
+            <span onClick={handleUsernameClick} onContextMenu={handleUserContextMenu} className="flex items-center gap-1.5">
               <Username
                 username={displayName}
                 className="font-semibold cursor-pointer hover:underline text-[15px] leading-tight"
