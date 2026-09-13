@@ -42,25 +42,31 @@ export interface User {
 
 /**
  * Catalogue of music-widget (Spotify card) visual styles. `vinyl` is the free
- * default; every other entry requires the Netrex entitlement. The SERVER is
+ * default (and the migration target for removed legacy styles — the server
+ * and the client both fall back to it for unknown/premium-without-entitlement
+ * values). Every other entry requires the Netrex entitlement. The SERVER is
  * the authority: it validates the style on save and falls back to `vinyl`
  * when the entitlement is missing.
+ *
+ * 2026-09 catalog renewal: the 7 legacy styles (cassette, holographic-cd,
+ * crystal-orbit, spectrum, boombox, glass-prism, arcade) were REMOVED —
+ * users with one stored fall back to `vinyl` automatically.
  */
 export const MUSIC_WIDGET_STYLES = [
   'vinyl',
-  'cassette',
-  'holographic-cd',
-  'crystal-orbit',
-  'spectrum',
-  'boombox',
-  'glass-prism',
-  'arcade',
+  'aurora',
+  'pixel-paradise',
   'kawaii-dream',
+  'neon-city',
+  'holo-room',
+  'nihon',
+  'sweetie',
+  'ink-panic',
 ] as const;
 export type MusicWidgetStyle = (typeof MUSIC_WIDGET_STYLES)[number];
 
 /** Styles that do NOT require the Netrex entitlement. */
-export const MUSIC_WIDGET_FREE_STYLES: readonly MusicWidgetStyle[] = ['vinyl', 'arcade'];
+export const MUSIC_WIDGET_FREE_STYLES: readonly MusicWidgetStyle[] = ['vinyl', 'aurora', 'pixel-paradise'];
 
 // ─── Profile Board (Tablero) — Netrex-gated profile widgets ───────────────
 

@@ -27,15 +27,17 @@ export interface MusicStyleEntry {
 }
 
 const STYLE_LIST: Omit<MusicStyleEntry, 'requiresNetrex'>[] = [
+  // ── FREE ──
   { id: 'vinyl', nameKey: 'music_style_vinyl_name', descKey: 'music_style_vinyl_desc', premiumFx: false, accent: '#1db954' },
-  { id: 'cassette', nameKey: 'music_style_cassette_name', descKey: 'music_style_cassette_desc', premiumFx: true, accent: '#f472b6' },
-  { id: 'holographic-cd', nameKey: 'music_style_holo_name', descKey: 'music_style_holo_desc', premiumFx: true, accent: '#a78bfa' },
-  { id: 'crystal-orbit', nameKey: 'music_style_crystal_name', descKey: 'music_style_crystal_desc', premiumFx: true, accent: '#7dd3fc' },
-  { id: 'spectrum', nameKey: 'music_style_spectrum_name', descKey: 'music_style_spectrum_desc', premiumFx: true, accent: '#fbbf24' },
-  { id: 'boombox', nameKey: 'music_style_boombox_name', descKey: 'music_style_boombox_desc', premiumFx: true, accent: '#34d399' },
-  { id: 'glass-prism', nameKey: 'music_style_prism_name', descKey: 'music_style_prism_desc', premiumFx: true, accent: '#93c5fd' },
-  { id: 'arcade', nameKey: 'music_style_arcade_name', descKey: 'music_style_arcade_desc', premiumFx: true, accent: '#fb7185' },
+  { id: 'aurora', nameKey: 'music_style_aurora_name', descKey: 'music_style_aurora_desc', premiumFx: false, accent: '#7fe8c4' },
+  { id: 'pixel-paradise', nameKey: 'music_style_pixel_name', descKey: 'music_style_pixel_desc', premiumFx: false, accent: '#ffd166' },
+  // ── NETREX ──
   { id: 'kawaii-dream', nameKey: 'music_style_kawaii_name', descKey: 'music_style_kawaii_desc', premiumFx: true, accent: '#f9a8d4' },
+  { id: 'neon-city', nameKey: 'music_style_neon_name', descKey: 'music_style_neon_desc', premiumFx: true, accent: '#22d3ee' },
+  { id: 'holo-room', nameKey: 'music_style_holoroom_name', descKey: 'music_style_holoroom_desc', premiumFx: true, accent: '#60a5fa' },
+  { id: 'nihon', nameKey: 'music_style_nihon_name', descKey: 'music_style_nihon_desc', premiumFx: true, accent: '#f43f5e' },
+  { id: 'sweetie', nameKey: 'music_style_sweetie_name', descKey: 'music_style_sweetie_desc', premiumFx: true, accent: '#fda4af' },
+  { id: 'ink-panic', nameKey: 'music_style_ink_name', descKey: 'music_style_ink_desc', premiumFx: true, accent: '#ef4444' },
 ];
 
 export const MUSIC_STYLES: MusicStyleEntry[] = STYLE_LIST.map((s) => ({
