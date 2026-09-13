@@ -20,10 +20,12 @@
 import {
   ACCENT_PRESETS,
   applyPreferences,
+  getResolvedTheme,
   type AccentPreset,
 } from './vertexTheme';
 import type { EffectId } from './vertexTheme';
 import type { PreviewState } from '../components/netrex/VERTEXAppPreview';
+import { buildPreviewState } from '../components/netrex/VERTEXAppPreview';
 
 const CUSTOM_THEME_KEY = 'vertex.customTheme';
 
@@ -92,24 +94,46 @@ interface CustomThemeVars {
   [k: string]: string;
 }
 
+/** Every CSS custom property this module may inject on :root (for clean removal). */
+const MANAGED_VARS = [
+  '--accent-primary',
+  '--accent-primary-hover',
+  '--accent-primary-active',
+  '--accent-primary-glow',
+  '--accent-primary-comma',
+  '--bg-base',
+  '--bg-chat',
+  '--bg-channel',
+  '--bg-members',
+  '--bg-elevated',
+  '--bg-input',
+  '--border-hard',
+  '--border-soft',
+  '--text-primary',
+  '--text-message',
+  '--text-secondary',
+  '--text-tertiary',
+  '--text-category',
+  '--custom-bg',
+] as const;
+
 /**
- * Derive the full :root variable set from the editor state. Everything the
- * app consumes through Tailwind utilities is covered: surfaces, borders,
- * text hierarchy and the primary action accent.
+ * Derive the :root variable set from the editor state.
+ *
+ * THEME-AWARE: the base theme (dark/light) owns surfaces, borders and text —
+ * the custom theme only overrides the ACCENT plus, in DARK mode, the surfaces
+ * the user explicitly customized. Injecting hardcoded dark surfaces in light
+ * mode is what broke Light; now light always keeps its base palette and just
+ * takes the user's accent.
  */
 export function buildCustomThemeVars(state: PreviewState): CustomThemeVars {
   const vars: CustomThemeVars = {};
   const ch = (hex: string) => hexToRgbChannels(hex)?.join(' ') ?? null;
 
-  const accent = state.accentColor.hex;
-  const primary = state.primaryColor.hex;
-  const secondary = state.secondaryColor.hex;
-  const bg = state.backgroundSolid || state.bgColor.hex;
-  const surface = state.surfaceColor.hex;
-  const text = state.textColor.hex;
-  const muted = state.mutedColor.hex;
+  const accent = state.accentColor?.hex ?? '';
 
-  // Accent (drives --accent-primary and all Tailwind accent-* utilities).
+  // Accent (drives --accent-primary and all Tailwind accent-* utilities) —
+  // applied in BOTH themes: it is the one thing the user is personalizing.
   const accentCh = ch(accent);
   if (accentCh) {
     vars['--accent-primary'] = accentCh;
@@ -119,31 +143,36 @@ export function buildCustomThemeVars(state: PreviewState): CustomThemeVars {
     vars['--accent-primary-comma'] = hexToRgbChannels(accent)!.join(', ');
   }
 
-  // Surfaces. If the user only picked an accent (surfaces left at defaults),
-  // derive a coherent ramp from the background instead of leaving a mix.
-  const bgCh = ch(bg);
-  if (bgCh) {
-    vars['--bg-base'] = bgCh;
-    vars['--bg-chat'] = bgCh;
-    vars['--bg-channel'] = ch(mixHex(bg, secondary, 0.75)) ?? bgCh;
-    vars['--bg-members'] = vars['--bg-channel'];
-    vars['--bg-elevated'] = ch(mixHex(bg, secondary, 0.45)) ?? bgCh;
-    vars['--bg-input'] = ch(mixHex(bg, '#000000', 0.18)) ?? bgCh;
-  }
+  // Surfaces / borders / text: DARK-only overrides. In light mode the base
+  // palette wins so the whole app stays airy and readable.
+  if (getResolvedTheme() === 'dark') {
+    const primary = state.primaryColor?.hex ?? '';
+    const secondary = state.secondaryColor?.hex ?? '';
+    const bg = state.backgroundSolid || state.bgColor?.hex || '';
+    const text = state.textColor?.hex ?? '';
+    const muted = state.mutedColor?.hex ?? '';
 
-  // Borders follow the surface ramp.
-  vars['--border-hard'] = ch(mixHex(bg, '#ffffff', 0.09)) ?? vars['--bg-base'];
-  vars['--border-soft'] = ch(mixHex(bg, '#ffffff', 0.13)) ?? vars['--bg-base'];
+    const bgCh = ch(bg);
+    if (bgCh) {
+      vars['--bg-base'] = bgCh;
+      vars['--bg-chat'] = bgCh;
+      vars['--bg-channel'] = ch(mixHex(bg, secondary, 0.75)) ?? bgCh;
+      vars['--bg-members'] = vars['--bg-channel'];
+      vars['--bg-elevated'] = ch(mixHex(bg, secondary, 0.45)) ?? bgCh;
+      vars['--bg-input'] = ch(mixHex(bg, '#000000', 0.18)) ?? bgCh;
+    }
 
-  // Text hierarchy — the picked text color for primary/message, muted for the
-  // dimmer tiers, auto-tinted toward the background for contrast safety.
-  const textCh = ch(text);
-  if (textCh) {
-    vars['--text-primary'] = textCh;
-    vars['--text-message'] = textCh;
-    vars['--text-secondary'] = ch(mixHex(text, muted, 0.45)) ?? textCh;
-    vars['--text-tertiary'] = ch(mixHex(text, muted, 0.72)) ?? textCh;
-    vars['--text-category'] = ch(mixHex(text, muted, 0.85)) ?? textCh;
+    vars['--border-hard'] = ch(mixHex(bg, '#ffffff', 0.09)) ?? vars['--bg-base'] ?? '';
+    vars['--border-soft'] = ch(mixHex(bg, '#ffffff', 0.13)) ?? vars['--bg-base'] ?? '';
+
+    const textCh = ch(text);
+    if (textCh) {
+      vars['--text-primary'] = textCh;
+      vars['--text-message'] = textCh;
+      vars['--text-secondary'] = ch(mixHex(text, muted, 0.45)) ?? textCh;
+      vars['--text-tertiary'] = ch(mixHex(text, muted, 0.72)) ?? textCh;
+      vars['--text-category'] = ch(mixHex(text, muted, 0.85)) ?? textCh;
+    }
   }
 
   return vars;
@@ -151,6 +180,11 @@ export function buildCustomThemeVars(state: PreviewState): CustomThemeVars {
 
 function applyCustomThemeDom(state: PreviewState): void {
   if (!ROOT) return;
+
+  // Clear previously injected vars first, then inject the fresh set — this
+  // makes theme switches (dark↔light) re-derive the layer from scratch
+  // instead of stacking stale dark surfaces on top of light.
+  clearCustomThemeDom();
 
   const vars = buildCustomThemeVars(state);
 
@@ -160,20 +194,23 @@ function applyCustomThemeDom(state: PreviewState): void {
   for (const [k, v] of Object.entries(vars)) {
     ROOT.style.setProperty(k, v);
   }
-  ROOT.setAttribute('data-custom-theme', '1');
+  if (Object.keys(vars).length > 0) ROOT.setAttribute('data-custom-theme', '1');
 
-  // App-wide background: solid or gradient behind everything.
-  ROOT.style.setProperty(
-    '--custom-bg',
-    state.backgroundType === 'gradient' ? state.backgroundGradient : state.backgroundSolid
-  );
+  // App-wide background: solid or gradient behind everything — dark mode
+  // only. Light mode keeps the base body background.
+  if (getResolvedTheme() === 'dark') {
+    ROOT.style.setProperty(
+      '--custom-bg',
+      state.backgroundType === 'gradient' ? state.backgroundGradient : state.backgroundSolid
+    );
+  }
 }
 
 function clearCustomThemeDom(): void {
   if (!ROOT) return;
-  const vars = buildCustomThemeVars({} as PreviewState);
-  // Remove only the variables we manage (safe even if state was partial).
-  for (const k of Object.keys(vars)) ROOT.style.removeProperty(k);
+  // Remove every variable this module manages — no state reconstruction needed,
+  // so this can never throw on a partial/corrupted saved state.
+  for (const k of MANAGED_VARS) ROOT.style.removeProperty(k);
   ROOT.style.removeProperty('--custom-bg');
   ROOT.removeAttribute('data-custom-theme');
 }
@@ -191,9 +228,11 @@ export function applyNetrexPersonalization(state: PreviewState): {
   const accent = nearestAccentPreset(state.accentColor.hex);
   const effect = effectFromGlow(state.glowIntensity, state.effectsEnabled);
 
-  // Layer 1: exact custom theme (surfaces, text, borders, accent variables).
+  // Layer 1: exact custom theme (accent always; surfaces/text in dark only).
   applyCustomThemeDom(state);
-  document.body.style.background = 'var(--custom-bg, var(--bg-base))';
+  document.body.style.background = getResolvedTheme() === 'dark'
+    ? 'var(--custom-bg, var(--bg-base))'
+    : '';
 
   // Layer 2: keep the canonical accent/effects pipeline in sync.
   applyPreferences({ accent: accent.id, effects: effect });
@@ -257,10 +296,36 @@ export function initNetrexCustomTheme(): void {
     } as PreviewState;
 
     applyCustomThemeDom(state);
-    document.body.style.background = 'var(--custom-bg, var(--bg-base))';
+    document.body.style.background = getResolvedTheme() === 'dark'
+      ? 'var(--custom-bg, var(--bg-base))'
+      : '';
   } catch {
     /* corrupt payload — ignore, base theme applies */
   }
+}
+
+/**
+ * Re-sync the custom theme layer after a base-theme switch (dark↔light).
+ * Dark re-injects surfaces + custom bg; light drops to accent-only.
+ */
+export function resyncNetrexCustomTheme(): void {
+  try {
+    const raw = localStorage.getItem(CUSTOM_THEME_KEY);
+    if (!raw) return;
+    const saved = JSON.parse(raw) as { state?: Partial<PreviewState> };
+    if (!saved.state) return;
+    applyCustomThemeDom(buildPreviewState(saved.state));
+    document.body.style.background = getResolvedTheme() === 'dark'
+      ? 'var(--custom-bg, var(--bg-base))'
+      : '';
+  } catch {
+    /* ignore */
+  }
+}
+
+// Live re-sync on every base-theme switch (dark↔light, incl. system flips).
+if (typeof window !== 'undefined') {
+  window.addEventListener('vertex:themechange', () => resyncNetrexCustomTheme());
 }
 
 export { clearCustomThemeDom, CUSTOM_THEME_KEY };
