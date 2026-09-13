@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import type { User } from '@backspace/shared';
 import { Avatar } from '../ui/Avatar';
 import { Username } from '../ui/Username';
+import { CustomStatusBubble } from '../ui/CustomStatusBubble';
 import { useProfileCardFX } from '../ui/useProfileCardFX';
 import { CountUp } from '../../utils/CountUp';
 import { useUIStore } from '../../stores/uiStore';
@@ -340,7 +341,7 @@ export function UserProfileModal() {
         ref={fx.ref}
         onMouseMove={fx.onMouseMove}
         onMouseLeave={fx.onMouseLeave}
-        style={tint.style}
+        style={{ ...(tint.style ?? {}), clipPath: 'inset(0 round 14px)' }}
         className={`profile-fx fx-animatable profile-stagger ${tint.className} relative w-full mx-4 max-h-[calc(100vh-2rem)] flex flex-col glass-modal rounded-[14px] animate-slide-up overflow-hidden md:max-w-4xl`}
       >
         {/* Cursor glow layer */}
@@ -358,7 +359,7 @@ export function UserProfileModal() {
               left 16px (half out of the banner), no negative margins. */}
           <div data-stagger="1" className="px-4 pt-4 flex-shrink-0">
           <div className="relative">
-            <div className="relative h-[140px] rounded-t-xl overflow-hidden">
+            <div className="relative h-[140px] md:rounded-t-[13px] rounded-t-xl overflow-hidden">
               <div
                 className="profile-fx-banner"
                 style={{
@@ -382,10 +383,7 @@ export function UserProfileModal() {
               </button>
             </div>
             <div className="absolute -bottom-9 left-4 z-20">
-              <div
-                className="profile-presence-ring"
-                data-status={user.status ?? 'offline'}
-              >
+              <div>
                 <Avatar
                   src={user.avatar}
                   name={displayName}
@@ -413,14 +411,12 @@ export function UserProfileModal() {
                 {user.staffRole && <StaffBadge role={user.staffRole} />}
                 {user.netrexEnabled && <NetrexChip />}
               </div>
-              <span className="mt-4 inline-flex items-center h-[20px] px-1.5 rounded-md border border-white/[0.08] bg-white/[0.04] font-mono text-[11px] tracking-[0.01em] text-txt-secondary">
-                @{user.username}
-              </span>
-              {user.customStatus && (
-                <div className="text-[12.5px] text-txt-secondary italic mt-4">
-                  {user.customStatus}
-                </div>
-              )}
+              <div className="mt-4">
+                <span className="inline-flex items-center h-[20px] px-1.5 rounded-md border border-white/[0.08] bg-white/[0.04] font-mono text-[11px] tracking-[0.01em] text-txt-secondary">
+                  @{user.username}
+                </span>
+              </div>
+              <CustomStatusBubble status={user.customStatus} />
               {user.bio && user.bio.trim() ? (
                 <p className="mt-4 text-[12.5px] leading-relaxed text-txt-secondary whitespace-pre-wrap break-words line-clamp-3">
                   {user.bio.replace(/[*_~`#>\[\]]/g, '').trim().slice(0, 160)}
