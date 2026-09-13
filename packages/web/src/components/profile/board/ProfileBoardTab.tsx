@@ -117,12 +117,6 @@ export function ProfileBoardTab({ user, origin, onBoardSaved }: ProfileBoardTabP
         </div>
       )}
 
-      {/* Spotify — the "now playing" block as the board's own showpiece
-          (FULL size, not the compact variant). Netrex-gated widget: viewers
-          without the entitlement see the classic vinyl — the block itself
-          handles that via resolveMusicStyle. */}
-      <SpotifyVinylBlock lookupUserId={user.homeUserId ?? user.id} isSelf={isSelfProfile} />
-
       {shown.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-white/[0.09] px-6 py-10 text-center">
           <p className="text-[13px] text-txt-secondary">
@@ -139,7 +133,7 @@ export function ProfileBoardTab({ user, origin, onBoardSaved }: ProfileBoardTabP
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-5 min-[420px]:grid-cols-2 min-[420px]:items-start">
+        <div className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 min-[420px]:items-start">
           {shown.map((w) => {
             const def = WIDGET_REGISTRY[w.type];
             if (!def || w.visible === false) return null;
@@ -155,6 +149,12 @@ export function ProfileBoardTab({ user, origin, onBoardSaved }: ProfileBoardTabP
           })}
         </div>
       )}
+
+      {/* Spotify — the "now playing" block LAST (game → quote → music),
+          FULL size. Netrex-gated: the block itself resolves the style. */}
+      <div className="mt-4">
+        <SpotifyVinylBlock lookupUserId={user.homeUserId ?? user.id} isSelf={isSelfProfile} />
+      </div>
     </div>
   );
 }

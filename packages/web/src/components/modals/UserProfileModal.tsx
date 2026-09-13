@@ -382,8 +382,9 @@ export function UserProfileModal() {
         <div className="flex flex-col md:flex-row flex-1 min-h-0">
         {/* ── LEFT column — compact profile ── */}
         <div className="flex flex-col min-h-0 md:w-[35%] border-t md:border-t-0 md:border-r border-white/[0.06] max-h-[50vh] md:max-h-none">
-          {/* Column banner — small, column-width only (not full-window) */}
-          <div data-stagger="1" className="h-[96px] flex-shrink-0 relative overflow-hidden">
+          {/* Column banner — its OWN rounded surface, column-width only */}
+          <div data-stagger="1" className="px-4 pt-4 flex-shrink-0">
+          <div className="h-[96px] relative rounded-xl overflow-hidden">
             <div
               className="profile-fx-banner"
               style={{
@@ -404,11 +405,14 @@ export function UserProfileModal() {
               </svg>
             </button>
           </div>
+          </div>
 
-          {/* Identity — avatar overlaps the column banner */}
-          <div data-stagger="2" className="px-5 flex-1 overflow-y-auto scrollbar-thin min-h-0">
+          {/* Identity — one vertical flow, consistent 16-20px rhythm:
+              avatar (-20px overlap) → name+badges → @user → bio →
+              member since → role chip. All left-aligned. */}
+          <div data-stagger="2" className="px-5 pt-2 pb-4 flex-1 overflow-y-auto scrollbar-thin min-h-0">
             <div
-              className="profile-presence-ring inline-block align-top -mt-[44px] mb-2 relative z-10"
+              className="profile-presence-ring inline-block align-top -mt-5 mb-3 relative z-10"
               data-status={user.status ?? 'offline'}
             >
               <Avatar
@@ -445,13 +449,8 @@ export function UserProfileModal() {
                   {user.bio.replace(/[*_~`#>\[\]]/g, '').slice(0, 160)}
                 </p>
               )}
-            </div>
-          </div>
 
-          {/* Footer: membership + roles + actions — pinned to the column bottom */}
-          <div data-stagger="3" className="flex-shrink-0 px-5 pb-4">
-            <div className="space-y-3 text-[12px] text-txt-secondary border-t border-white/[0.06] pt-3">
-              <div>
+              <div className="mt-4 text-[12px] text-txt-secondary">
                 <span className="block text-[10.5px] uppercase tracking-wide font-semibold text-txt-tertiary mb-0.5">
                   {t('profile_member_since')}
                 </span>
@@ -462,7 +461,7 @@ export function UserProfileModal() {
                 })}
               </div>
               {user.staffRole ? (
-                <div className="flex flex-wrap gap-1.5">
+                <div className="mt-4 flex flex-wrap gap-1.5">
                   <span className="inline-flex items-center gap-1 rounded-md border border-white/[0.08] px-2 py-0.5 text-[11px] font-medium text-txt-secondary">
                     <span className="h-1.5 w-1.5 rounded-full bg-accent-primary" />
                     {user.staffRole}
@@ -470,7 +469,11 @@ export function UserProfileModal() {
                 </div>
               ) : null}
             </div>
-            <div className="flex gap-2 mt-3">
+          </div>
+
+          {/* Actions — pinned to the column bottom */}
+          <div data-stagger="3" className="flex-shrink-0 px-5 pb-4">
+            <div className="flex gap-2">
               {friendship.state === 'none' && (
                 <button onClick={handleAddFriend} disabled={friendActionLoading}
                   className="flex-1 py-2 rounded-lg text-[12.5px] font-medium text-txt-primary border border-white/[0.08] bg-white/[0.06] hover:bg-white/[0.10] transition-colors disabled:opacity-50">
@@ -516,10 +519,10 @@ export function UserProfileModal() {
 
         {/* ── RIGHT column — the Board (wide) ── */}
         <div data-stagger="4" className="flex flex-col min-h-0 md:w-[65%]">
-          {/* Board header: real tabs left (Tablero active; Actividad / Lista de
-              deseos honest placeholders), widgets label + add button right */}
-          <div className="flex items-center justify-between gap-3 px-4 py-2.5 flex-shrink-0 border-b border-white/[0.06]">
-            <div ref={tabsWrapRef} className="flex gap-1 relative flex-shrink min-w-0 overflow-x-auto scrollbar-none">
+          {/* Board header — DECOUPLED rows: row 1 = the tabs on their own
+              line; row 2 = "Tus widgets" + tint controls. Never one cramped line. */}
+          <div className="px-4 py-2.5 flex-shrink-0 border-b border-white/[0.06]">
+            <div ref={tabsWrapRef} className="flex gap-1 relative min-w-0 overflow-x-auto scrollbar-none">
               <button
                 data-tab-key="board"
                 className="px-3 py-1.5 text-[13px] font-semibold rounded-md text-txt-primary bg-white/[0.06]"
@@ -541,6 +544,13 @@ export function UserProfileModal() {
                 {t('board_tab_wishlist')}
               </button>
             </div>
+          </div>
+
+          {/* Row 2: widgets label + tint picker/save */}
+          <div className="flex items-center justify-between gap-3 px-4 pt-3 pb-1 flex-shrink-0">
+            <span className="text-[11px] uppercase tracking-wide font-semibold text-txt-tertiary whitespace-nowrap">
+              {t('board_your_widgets')}
+            </span>
             {isSelfViewing && (
               <div className="flex items-center gap-2 flex-shrink-0">
                 {/* Personal profile tint — color picker + soft-dark preset */}
@@ -589,13 +599,6 @@ export function UserProfileModal() {
                 )}
               </div>
             )}
-          </div>
-
-          {/* Widgets strip: "Tus widgets" + prominent add button */}
-          <div className="flex items-center justify-between px-4 pt-3 pb-1 flex-shrink-0">
-            <span className="text-[11px] uppercase tracking-wide font-semibold text-txt-tertiary">
-              {t('board_your_widgets')}
-            </span>
           </div>
 
           <div className="flex-1 overflow-y-auto scrollbar-thin min-h-0 px-4 pb-4">
