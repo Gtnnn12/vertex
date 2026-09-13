@@ -21,7 +21,7 @@ import { ProfileBoardTab } from '../profile/board/ProfileBoardTab';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { profileTint } from '../../utils/profileTint';
 
-type Tab = 'about' | 'board' | 'friends' | 'spaces';
+type Tab = 'board' | 'friends' | 'spaces';
 
 type FriendshipStatus =
   | { state: 'self' }
@@ -111,12 +111,15 @@ export function UserProfileModal() {
 
   const [user, setUser] = useState<User | null>(null);
   const [userOrigin, setUserOrigin] = useState('');
-  const [activeTab, setActiveTab] = useState<Tab>('about');
+  const [activeTab, setActiveTab] = useState<Tab>('board');
+  // Lifted editor state: the "+ Añadir widget" button lives in the board
+  // header (row 2), the editor lives in ProfileBoardTab.
   const [mutualFriends, setMutualFriends] = useState<TaggedMutualFriend[]>([]);
   const [mutualSpaces, setMutualSpaces] = useState<MutualSpace[]>([]);
   const [loadingMutuals, setLoadingMutuals] = useState(false);
   const [friendActionLoading, setFriendActionLoading] = useState(false);
   const [profileAccent, setProfileAccent] = useState<string | null>(null);
+  const [boardEditing, setBoardEditing] = useState(false);
   // In-flight drag color for the direct-DOM preview: while dragging,
   // --profile-accent is written straight to the modal container — no React
   // state, no re-render — and committed to state only on save.
@@ -166,7 +169,7 @@ export function UserProfileModal() {
 
   useEffect(() => {
     if (isOpen && userId) {
-      setActiveTab('about');
+      setActiveTab('board');
       const origin = passedOrigin || (passedUser ? resolveUserOrigin(passedUser) : '');
       setUserOrigin(origin);
       // Use the passed user directly (avoids 404 for federated users on local API)
@@ -335,7 +338,7 @@ export function UserProfileModal() {
     setUserOrigin(friendOrigin);
     setUser(friend);
     loadMutuals(friend.id, friend);
-    setActiveTab('about');
+    setActiveTab('board');
     // Update modal data so re-opening preserves context
     useUIStore.getState().openModal('userProfile', { userId: friend.id, user: friend, origin: friendOrigin });
   };
@@ -346,10 +349,10 @@ export function UserProfileModal() {
   };
 
 
-  const tabs: { key: Tab; label: string; count?: number }[] = [
-    { key: 'about', label: 'About' },
-    { key: 'friends', label: 'Mutual Friends', count: mutualFriends.length },
-    { key: 'spaces', label: 'Mutual Spaces', count: mutualSpaces.length },
+  const tabs: { key: Tab; label: string; count?: number; disabled?: boolean }[] = [
+    { key: 'board', label: boardTabLabel },
+    { key: 'friends', label: t('board_tab_mutual_friends'), count: mutualFriends.length },
+    { key: 'spaces', label: t('board_tab_mutual_spaces'), count: mutualSpaces.length },
   ];
 
   // Personal tint drives panel background wash, banner glow and hairline borders.
@@ -514,76 +517,92 @@ export function UserProfileModal() {
         {/* ── RIGHT column — the Board (wide) ── */}
         <div data-stagger="4" className="flex flex-col min-h-0 md:w-[65%]">
           {/* Board header — DECOUPLED rows: row 1 = the tabs on their own
-              line; row 2 = "Tus widgets" + tint controls. Never one cramped line. */}
+              line; row 2 = "Tus widgets" + add + tint controls. */}
           <div className="px-4 py-2.5 flex-shrink-0 border-b border-white/[0.06]">
             <div ref={tabsWrapRef} className="flex gap-1 relative min-w-0 overflow-x-auto scrollbar-none">
-              <button
-                data-tab-key="board"
-                className="px-3 py-1.5 text-[13px] font-semibold rounded-md text-txt-primary bg-white/[0.06]"
-              >
-                {boardTabLabel}
-              </button>
-              <button
-                disabled
-                title={t('board_tab_soon')}
-                className="px-3 py-1.5 text-[13px] font-medium rounded-md text-txt-tertiary/60 cursor-not-allowed"
-              >
-                {t('board_tab_activity')}
-              </button>
-              <button
-                disabled
-                title={t('board_tab_soon')}
-                className="px-3 py-1.5 text-[13px] font-medium rounded-md text-txt-tertiary/60 cursor-not-allowed"
-              >
-                {t('board_tab_wishlist')}
-              </button>
+              {tabs.map((tab) => (
+                <button
+                  key={tab.key}
+                  data-tab-key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`px-3 py-1.5 text-[13px] rounded-md transition-colors ${
+                    activeTab === tab.key
+                      ? 'font-semibold text-txt-primary bg-white/[0.06]'
+                      : 'font-medium text-txt-tertiary hover:text-txt-secondary'
+                  }`}
+                >
+                  {tab.label}
+                  {tab.count !== undefined && !loadingMutuals && (
+                    <span className="ml-1 text-[11px] text-txt-tertiary tabular-nums">
+                      ({tab.count})
+                    </span>
+                  )}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Row 2: widgets label + tint picker/save */}
-          <div className="flex items-center justify-between gap-3 px-4 pt-3 pb-1 flex-shrink-0">
-            <span className="text-[11px] uppercase tracking-wide font-semibold text-txt-tertiary whitespace-nowrap">
-              {t('board_your_widgets')}
-            </span>
-            {isSelfViewing && (
+          {activeTab === 'board' ? (
+            <>
+            {/* Row 2: widgets label + add button + tint picker/save — ONE row */}
+            <div className="flex items-center justify-between gap-3 px-4 pt-3 pb-1 flex-shrink-0">
+              <span className="text-[11px] uppercase tracking-wide font-semibold text-txt-tertiary whitespace-nowrap">
+                {t('board_your_widgets')}
+              </span>
               <div className="flex items-center gap-2 flex-shrink-0">
-                {/* Personal profile tint — color picker + soft-dark preset */}
-                <label
-                  className="flex items-center gap-1.5 cursor-pointer"
-                  title="Profile color"
-                >
-                  <input
-                    type="color"
-                    value={accent ?? '#7c6cff'}
-                    // Live preview ONLY via direct CSS-var write — zero network
-                    // and zero re-render while dragging. The explicit save
-                    // button commits the value.
-                    onChange={(e) => {
-                      dragAccentRef.current = e.target.value;
-                      fx.ref.current?.style.setProperty('--profile-accent', e.target.value);
-                    }}
-                    className="w-5 h-5 rounded cursor-pointer bg-transparent border border-white/[0.15] p-0.5"
-                    aria-label="Profile color"
-                  />
-                  <span className="text-[11px] text-txt-tertiary hidden sm:inline">Color</span>
-                </label>
+                {isSelfViewing && (
+                  <button
+                    onClick={() => setBoardEditing(true)}
+                    className="flex items-center gap-1.5 rounded-lg bg-accent-primary px-3 py-1.5 text-[12px] font-bold text-white transition-colors hover:bg-accent-primary/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/50"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden>
+                      <path d="M12 5v14M5 12h14" />
+                    </svg>
+                    {t('board_add_widget')}
+                  </button>
+                )}
+                {isSelfViewing && (
+                  <label
+                    className="flex items-center gap-1.5 cursor-pointer"
+                    title="Profile color"
+                  >
+                    <input
+                      type="color"
+                      value={accent ?? '#7c6cff'}
+                      // Live preview ONLY via direct CSS-var write — zero network
+                      // and zero re-render while dragging. The explicit save
+                      // button commits the value.
+                      onChange={(e) => {
+                        dragAccentRef.current = e.target.value;
+                        fx.ref.current?.style.setProperty('--profile-accent', e.target.value);
+                      }}
+                      className="w-5 h-5 rounded cursor-pointer bg-transparent border border-white/[0.15] p-0.5"
+                      aria-label="Profile color"
+                    />
+                    <span className="text-[11px] text-txt-tertiary hidden sm:inline">Color</span>
+                  </label>
+                )}
                 {/* Explicit save — the ONLY path that hits the network. Passes
                     the in-flight drag color when present (drag does not touch
                     React state), falling back to the saved state value. */}
-                <button
-                  onClick={() => void handleProfileAccentChange(dragAccentRef.current ?? accent)}
-                  className="rounded-lg bg-accent-primary px-3 py-1.5 text-[12px] font-bold text-white transition-colors hover:bg-accent-primary/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/50"
-                  title="Guardar personalización"
-                >
-                  Guardar personalización
-                </button>
-                <button
-                  onClick={() => void handleProfileAccentChange('#2a2438')}
-                  className="w-5 h-5 rounded border border-white/[0.15] bg-gradient-to-b from-[#3a3352] to-[#1c1828]"
-                  title="Soft dark"
-                  aria-label="Soft dark preset"
-                />
-                {accent && (
+                {isSelfViewing && (
+                  <button
+                    onClick={() => void handleProfileAccentChange(dragAccentRef.current ?? accent)}
+                    className="rounded-lg bg-accent-primary px-3 py-1.5 text-[12px] font-bold text-white transition-colors hover:bg-accent-primary/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/50"
+                    title="Guardar personalización"
+                  >
+                    Guardar personalización
+                  </button>
+                )}
+                {isSelfViewing && (
+                  <button
+                    onClick={() => void handleProfileAccentChange('#2a2438')}
+                    className="w-5 h-5 rounded border border-white/[0.15] bg-gradient-to-b from-[#3a3352] to-[#1c1828]"
+                    title="Soft dark"
+                    aria-label="Soft dark preset"
+                  />
+                )}
+                {isSelfViewing && accent && (
                   <button
                     onClick={() => void handleProfileAccentChange(null)}
                     className="text-[11px] text-txt-tertiary hover:text-txt-secondary"
@@ -592,18 +611,120 @@ export function UserProfileModal() {
                   </button>
                 )}
               </div>
-            )}
-          </div>
+            </div>
 
-          <div className="flex-1 overflow-y-auto scrollbar-thin min-h-0 px-4 pb-4">
-            <ProfileBoardTab
-              user={user}
-              origin={userOrigin}
-              onBoardSaved={(widgets) => {
-                setUser((prev) => (prev ? { ...prev, profileBoard: widgets } : prev));
-              }}
-            />
-          </div>
+            <div className="flex-1 overflow-y-auto scrollbar-thin min-h-0 px-4 pb-4">
+              <ProfileBoardTab
+                user={user}
+                origin={userOrigin}
+                externalEditing={boardEditing}
+                onExternalEditingChange={setBoardEditing}
+                onBoardSaved={(widgets) => {
+                  setUser((prev) => (prev ? { ...prev, profileBoard: widgets } : prev));
+                }}
+              />
+            </div>
+            </>
+          ) : (
+            <div className="flex-1 overflow-y-auto scrollbar-thin min-h-0 p-4">
+              {activeTab === 'friends' && (
+                <div>
+                  {loadingMutuals ? (
+                    <div className="flex items-center justify-center py-8">
+                      <svg className="animate-spin w-5 h-5 text-txt-tertiary" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                    </div>
+                  ) : mutualFriends.length === 0 ? (
+                    <div className="text-center py-8 text-txt-tertiary text-[13px]">
+                      No mutual friends
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                      {mutualFriends.map((friend) => {
+                        const fname = friend.displayName ?? parseFederatedUsername(friend.username).baseName;
+                        return (
+                          <button
+                            key={friend.id}
+                            onClick={() => handleViewFriend(friend)}
+                            className="flex items-center gap-2.5 p-2.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.04] transition-colors text-left"
+                          >
+                            <Avatar
+                              src={friend.avatar}
+                              name={fname}
+                              size={40}
+                              status={friend.status as 'online' | 'idle' | 'dnd' | 'offline' | null}
+                              userId={friend.homeUserId ?? friend.id}
+                              avatarColor={friend.avatarColor}
+                            />
+                            <div className="min-w-0">
+                              <div className="text-[13px] font-medium text-txt-primary truncate">
+                                {fname}
+                              </div>
+                              <div className="text-[11px] text-txt-tertiary capitalize">
+                                {friend.status}
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'spaces' && (
+                <div>
+                  {loadingMutuals ? (
+                    <div className="flex items-center justify-center py-8">
+                      <svg className="animate-spin w-5 h-5 text-txt-tertiary" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                    </div>
+                  ) : mutualSpaces.length === 0 ? (
+                    <div className="text-center py-8 text-txt-tertiary text-[13px]">
+                      No mutual spaces
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {mutualSpaces.map((space) => {
+                        const spaceApi = getApiForOrigin(space._instanceOrigin);
+                        return (
+                          <button
+                            key={`${space.id}:${space._instanceOrigin}`}
+                            onClick={() => handleGoToSpace(space.id)}
+                            className="flex items-center gap-3 w-full p-2.5 rounded-lg hover:bg-white/[0.06] transition-colors text-left"
+                          >
+                            <div className="relative shrink-0">
+                              {space.icon ? (
+                                <img
+                                  src={space.icon.startsWith('http') ? space.icon : spaceApi.uploads.url(space.icon)}
+                                  alt={space.name}
+                                  className="w-8 h-8 rounded-lg object-cover"
+                                />
+                              ) : (
+                                <div
+                                  className="w-8 h-8 rounded-lg flex items-center justify-center text-[13px] font-semibold text-white"
+                                  style={{ background: getSpaceGradient(space.id, space.name, space.avatarColor).gradient }}
+                                >
+                                  {space.name.charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                            </div>
+                            <span className="text-[13px] font-medium text-txt-primary truncate">
+                              {space.name}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
         {/* /right column — the Board */}
         </div>
