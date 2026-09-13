@@ -1539,5 +1539,13 @@
   "matchcard_in_menu": "In menu",
   "matchcard_round": "Round {n}",
   "matchcard_agent_select": "Selecting agents",
-  "matchcard_party": "Party of {n}"
+  "matchcard_party": "Party of {n}",
+  "board_your_widgets": "Your widgets",
+  "profile_member_since": "Member since",
+  "profile_action_message": "Message",
+  "profile_action_add_friend": "Add Friend",
+  "profile_action_cancel_request": "Cancel Request",
+  "profile_action_accept": "Accept",
+  "profile_action_ignore": "Ignore",
+  "profile_action_remove_friend": "Remove Friend"
 }
