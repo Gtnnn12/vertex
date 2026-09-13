@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Avatar } from './Avatar';
+import { CustomStatusBubble } from './CustomStatusBubble';
 import { getAvatarGradient, adjustColor, mutedGradient } from '../../utils/gradients';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useProfileCardFX } from './useProfileCardFX';
@@ -118,11 +119,9 @@ export function ProfileIdentityCard({
       {/* Body */}
       <div className="px-4 pb-4 relative">
         <div data-stagger="2" className="relative">
-          {/* Presence ring — breathing halo in the status color */}
-          <div
-            className="profile-presence-ring inline-block align-top"
-            data-status={status ?? 'offline'}
-          >
+          {/* The ONLY presence indicator is the standardized dot rendered by
+              <Avatar> — no decorative halo on top of it. */}
+          <div className="inline-block align-top">
             <Avatar
               src={avatarSrc ?? undefined}
               name={displayName}
@@ -148,9 +147,7 @@ export function ProfileIdentityCard({
             >
               @{username}
             </span>
-            {customStatus && (
-              <div className="text-[13px] text-txt-secondary italic mt-1.5">{customStatus}</div>
-            )}
+            <CustomStatusBubble status={customStatus} />
           </div>
         </div>
 

@@ -1,0 +1,14 @@
+/* Custom-status bubble entrance — 120ms fade+scale. Reduced motion: none. */
+@keyframes statusBubbleIn {
+  from { opacity: 0; transform: scale(0.94); }
+  to { opacity: 1; transform: scale(1); }
+}
+.status-bubble-in {
+  animation: statusBubbleIn 0.12s ease-out backwards;
+  transform-origin: top left;
+}
+@media (prefers-reduced-motion: reduce) {
+  .status-bubble-in {
+    animation: none;
+  }
+}
