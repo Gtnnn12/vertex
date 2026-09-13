@@ -1293,7 +1293,21 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
     ).all();
     const myFriendIds = new Set(myFriendRows.map(f => f.userId === myId ? f.friendId : f.userId));
     const targetFriendIds = new Set(targetFriendRows.map(f => f.userId === resolvedTargetId ? f.friendId : f.userId));
-    const mutualFriendIds = [...myFriendIds].filter((id) => targetFriendIds.has(id));
+    // Canonical normalization: map every friend id to homeUserId ?? id so
+    // replicated/federated identities intersect correctly (raw local ids can
+    // differ between instances for the same person).
+    const canonicalize = (ids: Set<string>): Set<string> => {
+      const out = new Set<string>();
+      for (const fid of ids) {
+        if (fid === myId || fid === resolvedTargetId) continue; // never count viewer/target
+        const row = db.select({ homeUserId: schema.users.homeUserId }).from(schema.users).where(eq(schema.users.id, fid)).get();
+        out.add(row?.homeUserId ?? fid);
+      }
+      return out;
+    };
+    const myCanon = canonicalize(myFriendIds);
+    const targetCanon = canonicalize(targetFriendIds);
+    const mutualFriendIds = [...myCanon].filter((id) => targetCanon.has(id));
 
     const mutualFriends = mutualFriendIds.length > 0
       ? db.select().from(schema.users).where(inArray(schema.users.id, mutualFriendIds)).all().map(u => sanitizeUser(u))
