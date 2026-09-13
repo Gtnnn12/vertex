@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import type { Channel } from '@backspace/shared';
-import { useSpaceStore, getChannelOrigin, getMyUserIdForOrigin } from '../../stores/spaceStore';
+import { useSpaceStore, getChannelOrigin, getMyUserIdForOrigin, type TaggedSpace } from '../../stores/spaceStore';
 import { useChatStore } from '../../stores/chatStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useAuthStore } from '../../stores/authStore';
@@ -31,6 +31,7 @@ import { isSelf } from '../../utils/identity';
 import { useAudioDevices } from '../../hooks/useAudioDevices';
 import { DropdownItem } from '../modals/settingsPanels/_shared/SettingsPickerPrimitives';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { Tooltip } from '../ui/Tooltip';
 
 export function ChannelSidebar() {
   const spaces = useSpaceStore((s) => s.spaces);
@@ -666,6 +667,32 @@ export function ChannelSidebar() {
   return (
     <>
     <div data-sidebar-column className="w-60 md:w-full bg-surface-channel flex flex-col flex-shrink-0 select-none md:pl-[96px] md:border-r md:border-white/[0.04] ">
+      {/* Server banner — full sidebar width, directly above the identity header.
+          Rendered only when the space has one: no banner → no reserved space.
+          GIFs animate naturally in the <img>; no CSS animation is layered on
+          top (reduced-motion safe). Sits below the floating space rail
+          (z-[100], left-3 + 72px wide) thanks to the sidebar's md:pl-[96px]. */}
+      {(space as TaggedSpace)?.banner && (() => {
+        const b = (space as TaggedSpace).banner!;
+        const bannerSrc = b.startsWith('http') || b.startsWith('/') ? b : `/api/uploads/${b}`;
+        return (
+          <button
+            type="button"
+            onClick={() => openModal('spaceSettings')}
+            className="relative block w-full h-[96px] overflow-hidden bg-surface-base focus:outline-none group/banner"
+            aria-label={space.name}
+          >
+            <img
+              src={bannerSrc}
+              alt=""
+              draggable={false}
+              className="w-full h-full object-cover"
+            />
+            {/* Bottom hairline melts the banner into the identity module below */}
+            <div className="absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-surface-channel to-transparent pointer-events-none" />
+          </button>
+        );
+      })()}
       {/* Space identity module — application context header */}
       <div className="px-2.5 pt-2.5 pb-2 z-10">
         <div className="rounded-[14px] border border-white/[0.06] bg-gradient-to-br from-white/[0.05] to-white/[0.02] overflow-hidden shadow-[0_4px_20px_-8px_rgba(0,0,0,0.55)]">
@@ -674,20 +701,22 @@ export function ChannelSidebar() {
               onClick={() => openModal('spaceSettings')}
               className="flex items-center gap-2.5 min-w-0 flex-1 p-2 text-left transition-colors hover:bg-white/[0.03]"
             >
-              <div
-                className="w-11 h-11 rounded-[12px] flex-shrink-0 overflow-hidden flex items-center justify-center shadow-[0_2px_12px_rgba(0,0,0,0.35)] ring-1 ring-white/[0.08]"
-                style={space.icon ? undefined : { background: getSpaceGradient(space.id, space.name, space.avatarColor).gradient }}
-              >
-                {space.icon ? (
-                  <img
-                    src={space.icon.startsWith('http') || space.icon.startsWith('/') ? space.icon : `/api/uploads/${space.icon}`}
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <span className="text-[16px] font-bold text-white">{space.name.charAt(0).toUpperCase()}</span>
-                )}
-              </div>
+              <Tooltip content={space.name} position="bottom" delay={350}>
+                <div
+                  className="w-10 h-10 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center shadow-[0_2px_12px_rgba(0,0,0,0.35)] ring-2 ring-white/[0.08] transition-shadow duration-150 hover:ring-accent-primary/70"
+                  style={space.icon ? undefined : { background: getSpaceGradient(space.id, space.name, space.avatarColor).gradient }}
+                >
+                  {space.icon ? (
+                    <img
+                      src={space.icon.startsWith('http') || space.icon.startsWith('/') ? space.icon : `/api/uploads/${space.icon}`}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-[15px] font-bold text-white">{space.name.charAt(0).toUpperCase()}</span>
+                  )}
+                </div>
+              </Tooltip>
               <div className="min-w-0 flex-1">
                 <div className="font-bold text-[16px] tracking-[-0.02em] text-txt-primary truncate leading-snug">
                   {space.name}

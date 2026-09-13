@@ -317,6 +317,7 @@
   "banned_by_on": "Bloqueado por {moderator} el {date}",
   "banner": "Banner",
   "banner_color": "Color de banner",
+  "banner_too_large": "El banner es demasiado grande (máx. 10 MB)",
   "bans": "Bloqueos",
   "bans_hint": "Usuarios bloqueados en este espacio",
   "be_the_first_to_join": "Sé el primero en unirse",

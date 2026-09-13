@@ -11,8 +11,12 @@ import { api } from '../../../api/client';
 import { useTransferStore } from '../../../stores/transferStore';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { waitForTransferAttachment } from '../../../utils/waitForTransfer';
+import { isAnimatedGif } from '../../../utils/isAnimatedGif';
 import { getMyUserIdForOrigin } from '../../../stores/spaceStore';
 import { hasPermissionBit, PermissionBits } from '../../../utils/permissions';
+
+/** Client-side pre-check for the space banner (10 MB, mirrors server max upload). */
+const MAX_SPACE_BANNER_BYTES = 10 * 1024 * 1024;
 
 interface OverviewPanelProps {
   spaceId: string;
@@ -142,10 +146,46 @@ export function OverviewPanel({ spaceId }: OverviewPanelProps) {
   const handleBannerSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setBannerCropSrc(reader.result as string);
-    reader.readAsDataURL(file);
+    void processBannerFile(file);
     if (bannerFileInputRef.current) bannerFileInputRef.current.value = '';
+  };
+
+  // Animated GIFs bypass the crop modal: the canvas crop would draw only the
+  // first frame and re-export it as static WebP, destroying the animation.
+  // We upload the original bytes verbatim so every frame is preserved. Static
+  // images keep the existing crop flow.
+  const processBannerFile = async (file: File) => {
+    if (file.size > MAX_SPACE_BANNER_BYTES) {
+      setSaveError(t('banner_too_large'));
+      return;
+    }
+    if (await isAnimatedGif(file)) {
+      if (bannerPreview) URL.revokeObjectURL(bannerPreview);
+      const previewUrl = URL.createObjectURL(file);
+      setBannerPreview(previewUrl);
+      setBannerCropSrc(null);
+      setUploadingBanner(true);
+      try {
+        const tid = await useTransferStore.getState().startUpload(file, {
+          tray: false,
+          origin: space?._instanceOrigin || undefined,
+        });
+        const { filename } = await waitForTransferAttachment(tid);
+        setBannerFilename(filename);
+      } catch {
+        setSaveError(t('failed_to_upload_banner'));
+        setBannerPreview(null);
+        setBannerFilename(null);
+        URL.revokeObjectURL(previewUrl);
+      } finally {
+        setUploadingBanner(false);
+      }
+    } else {
+      setBannerFilename(null);
+      const reader = new FileReader();
+      reader.onload = () => setBannerCropSrc(reader.result as string);
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleBannerCropComplete = async (blob: Blob) => {
