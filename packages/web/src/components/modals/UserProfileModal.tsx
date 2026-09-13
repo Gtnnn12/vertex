@@ -384,13 +384,15 @@ export function UserProfileModal() {
         <div className="flex flex-col min-h-0 md:w-[35%] border-t md:border-t-0 md:border-r border-white/[0.06] max-h-[50vh] md:max-h-none">
           {/* Column banner — its OWN rounded surface, column-width only */}
           <div data-stagger="1" className="px-4 pt-4 flex-shrink-0">
-          <div className="h-[96px] relative rounded-xl overflow-hidden">
+          <div className="h-[120px] relative rounded-t-xl overflow-hidden">
             <div
               className="profile-fx-banner"
               style={{
                 ...(bannerSrc
                   ? { backgroundImage: `url(${bannerSrc})` }
                   : { background: bannerFallback }),
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
               }}
             />
             <div className="profile-fx-banner-overlay" aria-hidden />
@@ -407,12 +409,12 @@ export function UserProfileModal() {
           </div>
           </div>
 
-          {/* Identity — one vertical flow, consistent 16-20px rhythm:
-              avatar (-20px overlap) → name+badges → @user → bio →
-              member since → role chip. All left-aligned. */}
+          {/* Identity — one vertical flow, uniform 16px rhythm:
+              avatar (-24px overlap) → name+badges → @user → bio →
+              member since. All left-aligned. No loose role chips. */}
           <div data-stagger="2" className="px-5 pt-2 pb-4 flex-1 overflow-y-auto scrollbar-thin min-h-0">
             <div
-              className="profile-presence-ring inline-block align-top -mt-5 mb-3 relative z-10"
+              className="profile-presence-ring inline-block align-top -mt-6 mb-4 relative z-10"
               data-status={user.status ?? 'offline'}
             >
               <Avatar
@@ -436,19 +438,19 @@ export function UserProfileModal() {
                 {user.staffRole && <StaffBadge role={user.staffRole} />}
                 {user.netrexEnabled && <NetrexChip />}
               </div>
-              <span className="mt-1 inline-flex items-center h-[20px] px-1.5 rounded-md border border-white/[0.08] bg-white/[0.04] font-mono text-[11px] tracking-[0.01em] text-txt-secondary">
+              <span className="mt-4 inline-flex items-center h-[20px] px-1.5 rounded-md border border-white/[0.08] bg-white/[0.04] font-mono text-[11px] tracking-[0.01em] text-txt-secondary">
                 @{user.username}
               </span>
               {user.customStatus && (
-                <div className="text-[12.5px] text-txt-secondary italic mt-1.5">
+                <div className="text-[12.5px] text-txt-secondary italic mt-4">
                   {user.customStatus}
                 </div>
               )}
-              {user.bio && (
-                <p className="mt-2 text-[12.5px] leading-relaxed text-txt-secondary whitespace-pre-wrap break-words line-clamp-3">
-                  {user.bio.replace(/[*_~`#>\[\]]/g, '').slice(0, 160)}
+              {user.bio && user.bio.trim() ? (
+                <p className="mt-4 text-[12.5px] leading-relaxed text-txt-secondary whitespace-pre-wrap break-words line-clamp-3">
+                  {user.bio.replace(/[*_~`#>\[\]]/g, '').trim().slice(0, 160)}
                 </p>
-              )}
+              ) : null}
 
               <div className="mt-4 text-[12px] text-txt-secondary">
                 <span className="block text-[10.5px] uppercase tracking-wide font-semibold text-txt-tertiary mb-0.5">
@@ -460,14 +462,6 @@ export function UserProfileModal() {
                   year: 'numeric',
                 })}
               </div>
-              {user.staffRole ? (
-                <div className="mt-4 flex flex-wrap gap-1.5">
-                  <span className="inline-flex items-center gap-1 rounded-md border border-white/[0.08] px-2 py-0.5 text-[11px] font-medium text-txt-secondary">
-                    <span className="h-1.5 w-1.5 rounded-full bg-accent-primary" />
-                    {user.staffRole}
-                  </span>
-                </div>
-              ) : null}
             </div>
           </div>
 
