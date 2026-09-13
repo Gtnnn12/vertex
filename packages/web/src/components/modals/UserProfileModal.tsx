@@ -375,8 +375,8 @@ export function UserProfileModal() {
         {/* Cursor glow layer */}
         <span className="profile-fx-glow" aria-hidden />
 
-        {/* Banner — parallax layer + gradient overlay melting into the card */}
-        <div data-stagger="1" className="h-[110px] flex-shrink-0 relative overflow-hidden">
+        {/* Header — tall full-width banner (Discord-style, image truly visible) */}
+        <div data-stagger="1" className="h-[180px] flex-shrink-0 relative overflow-hidden">
           <div
             className="profile-fx-banner"
             style={{
@@ -398,34 +398,34 @@ export function UserProfileModal() {
           </button>
         </div>
 
-        {/* Header (avatar + name) */}
-        <div data-stagger="2" className="px-5 flex-shrink-0 relative">
+        {/* Header (avatar + name + badges + bio) — avatar overlaps the banner */}
+        <div data-stagger="2" className="px-6 flex-shrink-0 relative">
           <div
-            className="profile-presence-ring inline-block align-top -mt-[52px] mb-2 relative z-10"
+            className="profile-presence-ring inline-block align-top -mt-[64px] mb-2 relative z-10"
             data-status={user.status ?? 'offline'}
           >
             <Avatar
               src={user.avatar}
               name={displayName}
-              size={96}
+              size={112}
               status={user.status as 'online' | 'idle' | 'dnd' | 'offline' | null}
               userId={user.homeUserId ?? user.id}
               user={user}
-              ring={{ width: 3, color: 'rgba(20,20,26,0.82)' }}
+              ring={{ width: 4, color: 'rgba(20,20,26,0.85)' }}
               className="block"
             />
           </div>
 
-          <div className="mb-3">
-            <div className="flex items-center gap-2 flex-wrap">
+          <div className="mb-4">
+            <div className="flex items-center gap-2.5 flex-wrap">
               <Username
                 username={displayName}
-                className="text-[20px] font-bold leading-tight tracking-[-0.01em]"
+                className="text-[24px] font-bold leading-tight tracking-[-0.01em]"
               />
               {user.staffRole && <StaffBadge role={user.staffRole} />}
               {user.netrexEnabled && <NetrexChip />}
             </div>
-            <span className="mt-1 inline-flex items-center h-[22px] px-2 rounded-md border border-white/[0.08] bg-white/[0.04] font-mono text-[12px] tracking-[0.01em] text-txt-secondary">
+            <span className="mt-1.5 inline-flex items-center h-[22px] px-2 rounded-md border border-white/[0.08] bg-white/[0.04] font-mono text-[12px] tracking-[0.01em] text-txt-secondary">
               @{user.username}
             </span>
             {user.customStatus && (
@@ -433,8 +433,11 @@ export function UserProfileModal() {
                 {user.customStatus}
               </div>
             )}
-            {/* Spotify vinyl — full-size showpiece in the modal header area. */}
-            <SpotifyVinylBlock lookupUserId={profileUserId} isSelf={isSelfProfile} />
+            {user.bio && (
+              <p className="mt-3 max-w-[560px] text-[13px] leading-relaxed text-txt-secondary whitespace-pre-wrap break-words line-clamp-3">
+                {user.bio.replace(/[*_~`#>\[\]]/g, '').slice(0, 240)}
+              </p>
+            )}
           </div>
         </div>
 
@@ -688,10 +691,32 @@ export function UserProfileModal() {
           data-stagger="6"
           className="flex flex-col min-h-0 md:w-[45%] border-t md:border-t-0 md:border-l border-white/[0.06] max-h-[50vh] md:max-h-none"
         >
-          <div className="flex items-center justify-between px-4 py-2.5 flex-shrink-0 border-b border-white/[0.06]">
-            <span className="text-[11px] uppercase tracking-wide font-semibold text-txt-tertiary">
-              {boardTabLabel}
-            </span>
+          {/* Board header — mini-tabs (Tablero active; Actividad & Wishlist as
+              honest "Próximamente" placeholders) + add-widget CTA. */}
+          <div className="flex items-center justify-between px-4 pt-3 pb-2 flex-shrink-0">
+            <div
+              className="flex items-center gap-1 rounded-lg bg-white/[0.04] p-0.5"
+              role="tablist"
+              aria-label={boardTabLabel}
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected="true"
+                className="px-2.5 py-1 rounded-md text-[11.5px] font-semibold text-txt-primary bg-white/[0.09]"
+              >
+                {boardTabLabel}
+              </button>
+              {[t('board_tab_activity'), t('board_tab_wishlist')].map((label) => (
+                <span
+                  key={label}
+                  title={t('board_tab_soon')}
+                  className="px-2.5 py-1 rounded-md text-[11.5px] font-medium text-txt-tertiary/60 cursor-not-allowed select-none"
+                >
+                  {label}
+                </span>
+              ))}
+            </div>
             {isSelfViewing && (
               <div className="flex items-center gap-2">
                 {/* Personal profile tint — color picker + soft-dark preset */}
@@ -741,7 +766,7 @@ export function UserProfileModal() {
               </div>
             )}
           </div>
-          <div className="flex-1 overflow-y-auto scrollbar-thin min-h-0">
+          <div className="flex-1 overflow-y-auto scrollbar-thin min-h-0 px-2 pb-2">
             <ProfileBoardTab
               user={user}
               origin={userOrigin}
