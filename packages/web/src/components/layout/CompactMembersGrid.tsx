@@ -11,6 +11,7 @@ import { useContextMenuStore } from '../../stores/contextMenuStore';
 import { useUIStore } from '../../stores/uiStore';
 import { buildUserContextMenuItems } from '../../utils/userContextMenu';
 import { pointAnchor } from '../../hooks/useFloatingPosition';
+import { PRESENCE_META } from '../../utils/presence';
 
 /**
  * Netrex "Cuadrícula Compacta de Miembros" (feature: memberGridCompact).
@@ -26,11 +27,11 @@ const INITIAL_VISIBLE = 12;
 const SKELETON_ROWS = 4;
 const CELL_SIZE = 38;
 
-/** Grid-local status dot palette: green = online, blue = away, orange = busy. */
+/** Grid status dots come from the shared presence map — never local palettes. */
 const DOT_COLORS: Record<string, string> = {
-  online: '#23a55a',
-  idle: '#3ba1e8',
-  dnd: '#f0a832',
+  online: PRESENCE_META.online.hex,
+  idle: PRESENCE_META.idle.hex,
+  dnd: PRESENCE_META.dnd.hex,
 };
 
 /** Compact elapsed label ("now", "11 min", "3 hr", "2 d") matching the reference design. */
