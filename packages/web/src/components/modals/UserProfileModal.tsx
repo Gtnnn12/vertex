@@ -385,55 +385,59 @@ export function UserProfileModal() {
         <div className="flex flex-col md:flex-row flex-1 min-h-0">
         {/* ── LEFT column — compact profile ── */}
         <div className="flex flex-col min-h-0 md:w-[35%] border-t md:border-t-0 md:border-r border-white/[0.06] max-h-[50vh] md:max-h-none">
-          {/* Column banner — its OWN rounded surface, column-width only */}
+          {/* Banner + avatar — ONE relative container, Discord-exact:
+              banner 140px cover rounded-top; avatar ABSOLUTE bottom -36px
+              left 16px (half out of the banner), no negative margins. */}
           <div data-stagger="1" className="px-4 pt-4 flex-shrink-0">
-          <div className="h-[140px] relative rounded-t-xl overflow-hidden">
-            <div
-              className="profile-fx-banner"
-              style={{
-                ...(bannerSrc
-                  ? { backgroundImage: `url(${bannerSrc})` }
-                  : { background: bannerFallback }),
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-              }}
-            />
-            <div className="profile-fx-banner-overlay" aria-hidden />
-            {/* Close button */}
-            <button
-              onClick={closeModal}
-              className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center transition-colors z-[3]"
-              aria-label="Close"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
-                <path d="M18.4 4L12 10.4L5.6 4L4 5.6L10.4 12L4 18.4L5.6 20L12 13.6L18.4 20L20 18.4L13.6 12L20 5.6L18.4 4Z" />
-              </svg>
-            </button>
-          </div>
-          </div>
-
-          {/* Identity — centered column (Discord-mobile style): avatar (-24px
-              overlap, ABOVE the banner via z-20) → name+badges → @user →
-              bio → member since. All center-aligned. */}
-          <div data-stagger="2" className="px-5 pt-2 pb-4 flex-1 overflow-y-auto scrollbar-thin min-h-0 flex flex-col items-center text-center">
-            <div
-              className="profile-presence-ring -mt-6 mb-4 relative z-20 flex-shrink-0"
-              data-status={user.status ?? 'offline'}
-            >
-              <Avatar
-                src={user.avatar}
-                name={displayName}
-                size={88}
-                status={user.status as 'online' | 'idle' | 'dnd' | 'offline' | null}
-                userId={user.homeUserId ?? user.id}
-                user={user}
-                ring={{ width: 4, color: 'rgba(20,20,26,0.85)' }}
-                className="block"
+          <div className="relative">
+            <div className="relative h-[140px] rounded-t-xl overflow-hidden">
+              <div
+                className="profile-fx-banner"
+                style={{
+                  ...(bannerSrc
+                    ? { backgroundImage: `url(${bannerSrc})` }
+                    : { background: bannerFallback }),
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                }}
               />
+              <div className="profile-fx-banner-overlay" aria-hidden />
+              {/* Close button */}
+              <button
+                onClick={closeModal}
+                className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center transition-colors z-[3]"
+                aria-label="Close"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+                  <path d="M18.4 4L12 10.4L5.6 4L4 5.6L10.4 12L4 18.4L5.6 20L12 13.6L18.4 20L20 18.4L13.6 12L20 5.6L18.4 4Z" />
+                </svg>
+              </button>
             </div>
+            <div className="absolute -bottom-9 left-4 z-20">
+              <div
+                className="profile-presence-ring"
+                data-status={user.status ?? 'offline'}
+              >
+                <Avatar
+                  src={user.avatar}
+                  name={displayName}
+                  size={88}
+                  status={user.status as 'online' | 'idle' | 'dnd' | 'offline' | null}
+                  userId={user.homeUserId ?? user.id}
+                  user={user}
+                  ring={{ width: 6, color: 'rgb(26 22 32 / 0.92)' }}
+                  className="block"
+                />
+              </div>
+            </div>
+          </div>
+          </div>
 
-            <div className="pb-4 flex flex-col items-center">
-              <div className="flex items-center justify-center gap-2 flex-wrap">
+          {/* Identity — LEFT-aligned again (like the reference); pt-14 (56px)
+              reserves room for the avatar half hanging under the banner. */}
+          <div data-stagger="2" className="px-5 pt-14 pb-4 flex-1 overflow-y-auto scrollbar-thin min-h-0">
+            <div className="pb-4">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Username
                   username={displayName}
                   className="text-[19px] font-bold leading-tight tracking-[-0.01em]"
