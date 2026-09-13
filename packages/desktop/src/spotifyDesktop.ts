@@ -45,14 +45,26 @@ function getSpotifyWindowTitle(): Promise<string | null> {
     };
 
     if (platform === 'win32') {
-      // /v adds the window-title column; /nh skips the CSV header.
+      // PowerShell Get-Process — tasklist /v truncates output on this machine
+      // (dies partway through the process list), while this always returns the
+      // front-window title. Only processes WITH a MainWindowTitle come back,
+      // so a hit means a real visible window (not a background helper).
+      // UTF-8 output encoding: 'está' must survive the pipe.
       execFile(
-        'tasklist',
-        ['/v', '/fo', 'csv', '/nh'],
-        { maxBuffer: 1024 * 1024 * 8, timeout: 6000, windowsHide: true },
+        'powershell.exe',
+        [
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          '[Console]::OutputEncoding=[Text.Encoding]::UTF8; ' +
+            '$t = (Get-Process Spotify -ErrorAction SilentlyContinue | ' +
+            'Where-Object { $_.MainWindowTitle } | Select-Object -First 1).MainWindowTitle; ' +
+            "if ($t) { [Console]::Out.Write($t) } else { [Console]::Out.Write('') }",
+        ],
+        { timeout: 6000, windowsHide: true, maxBuffer: 1024 * 64, encoding: 'utf8' },
         (err, stdout) => {
           if (err || !stdout) return done(null);
-          done(findSpotifyTitleFromTasklist(stdout));
+          done(stdout);
         },
       );
       return;
