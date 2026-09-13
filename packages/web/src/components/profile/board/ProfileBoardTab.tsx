@@ -5,6 +5,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { useUIStore } from '../../../stores/uiStore';
 import { getApiForOrigin, resolveUserOrigin } from '../../../stores/spaceStore';
 import { WIDGET_REGISTRY } from './widgetRegistry';
+import { SpotifyVinylBlock } from '../../spotify/SpotifyVinylBlock';
 import { BoardEditor } from './BoardEditor';
 import { useProfileBoard } from './useProfileBoard';
 
@@ -115,6 +116,12 @@ export function ProfileBoardTab({ user, origin, onBoardSaved }: ProfileBoardTabP
           </button>
         </div>
       )}
+
+      {/* Spotify — the "now playing" block as the board's own showpiece
+          (FULL size, not the compact variant). Netrex-gated widget: viewers
+          without the entitlement see the classic vinyl — the block itself
+          handles that via resolveMusicStyle. */}
+      <SpotifyVinylBlock lookupUserId={user.homeUserId ?? user.id} isSelf={isSelfProfile} />
 
       {shown.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-white/[0.09] px-6 py-10 text-center">
