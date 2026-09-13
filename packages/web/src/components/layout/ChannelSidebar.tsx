@@ -495,7 +495,7 @@ export function ChannelSidebar() {
   if (!space) {
     return (
       <>
-<div data-sidebar-column className="w-60 md:w-full bg-surface-channel flex flex-col flex-shrink-0 select-none md:pl-[96px] md:border-r md:border-white/[0.04] bg-[linear-gradient(180deg,#1b1b24_0%,#15151c_100%)]">
+<div data-sidebar-column className="w-60 md:w-full bg-surface-channel flex flex-col flex-shrink-0 select-none md:pl-[96px] md:border-r md:border-white/[0.04] ">
         {/* Search module — primary navigation tool */}
         <div className="px-2.5 pt-2.5 z-10">
           <DmSearchBar />
@@ -665,7 +665,7 @@ export function ChannelSidebar() {
 
   return (
     <>
-    <div data-sidebar-column className="w-60 md:w-full bg-surface-channel flex flex-col flex-shrink-0 select-none md:pl-[96px] md:border-r md:border-white/[0.04] bg-[linear-gradient(180deg,#1b1b24_0%,#15151c_100%)]">
+    <div data-sidebar-column className="w-60 md:w-full bg-surface-channel flex flex-col flex-shrink-0 select-none md:pl-[96px] md:border-r md:border-white/[0.04] ">
       {/* Space identity module — application context header */}
       <div className="px-2.5 pt-2.5 pb-2 z-10">
         <div className="rounded-[14px] border border-white/[0.06] bg-gradient-to-br from-white/[0.05] to-white/[0.02] overflow-hidden shadow-[0_4px_20px_-8px_rgba(0,0,0,0.55)]">

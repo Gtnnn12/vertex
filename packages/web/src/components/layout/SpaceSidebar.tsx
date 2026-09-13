@@ -1088,7 +1088,7 @@ export function SpaceSidebar() {
   }, [openFolderId, resolvedLayout]);
 
   return (
-    <nav data-pip-obstacle="left" className="w-[72px] bg-surface-base flex flex-col items-center py-3 overflow-y-auto flex-shrink-0 no-scrollbar select-none md:fixed md:left-3 md:top-3 md:bottom-3 md:z-[100] md:rounded-[18px] md:border md:border-white/[0.06] md:bg-[linear-gradient(180deg,#17171f_0%,#111118_100%)] md:shadow-[0_10px_36px_rgba(0,0,0,0.5),0_2px_10px_rgba(0,0,0,0.3)] md:h-auto" style={{ paddingBottom: 16, ...(isElectron() ? { top: '33px' } : {}) }} onDragOver={(e) => { if (dragState) e.preventDefault(); }} onDrop={handleDrop}>
+    <nav data-pip-obstacle="left" className="w-[72px] bg-surface-base flex flex-col items-center py-3 overflow-y-auto flex-shrink-0 no-scrollbar select-none md:fixed md:left-3 md:top-3 md:bottom-3 md:z-[100] md:rounded-[18px] md:border md:border-white/[0.06] md:bg-surface-base md:shadow-[0_10px_36px_rgba(0,0,0,0.18),0_2px_10px_rgba(0,0,0,0.10)] md:h-auto" style={{ paddingBottom: 16, ...(isElectron() ? { top: '33px' } : {}) }} onDragOver={(e) => { if (dragState) e.preventDefault(); }} onDrop={handleDrop}>
       {/* HOME — root entry */}
       <span className="mb-1.5 text-[6.5px] font-bold uppercase tracking-[0.3em] text-txt-tertiary/45 select-none">Home</span>
 

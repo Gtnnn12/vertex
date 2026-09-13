@@ -51,8 +51,8 @@ function AccentCard({ preset, selected, onSelect }: { preset: AccentPreset; sele
       }`}
       style={selected ? { boxShadow: `0 10px 32px -16px ${rgbAlpha(preset.primary, 0.55)}` } : undefined}
     >
-      {/* Preview strip — the accent framed on a neutral canvas */}
-      <div className="relative h-[52px] border-b border-white/[0.05] overflow-hidden bg-[#0e0e14]">
+      {/* Preview strip — the accent framed on the current theme's surface */}
+      <div className="relative h-[52px] border-b border-white/[0.05] overflow-hidden bg-surface-chat">
         <div
           className="absolute -top-7 -right-7 w-24 h-24 rounded-full transition-opacity duration-300 pointer-events-none"
           style={{ background: `radial-gradient(circle, ${rgbAlpha(preset.primary, 0.5)} 0%, transparent 70%)`, opacity: selected ? 0.3 : 0.16 }}
@@ -228,7 +228,7 @@ function OptionCard({
       }`}
       style={selected ? { boxShadow: '0 10px 32px -16px rgb(var(--accent-primary-glow) / 0.5)' } : undefined}
     >
-      <div className={`flex-shrink-0 w-12 h-12 rounded-[9px] flex items-center justify-center border overflow-hidden bg-[#0e0e14] ${selected ? 'border-accent-primary/30' : 'border-white/[0.06]'}`}>
+      <div className={`flex-shrink-0 w-12 h-12 rounded-[9px] flex items-center justify-center border overflow-hidden bg-surface-elevated ${selected ? 'border-accent-primary/30' : 'border-white/[0.06]'}`}>
         {swatch}
       </div>
       <div className="min-w-0 flex-1">
