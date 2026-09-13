@@ -1,6 +1,7 @@
 import React from 'react';
 import type { User } from '@backspace/shared';
 import { getAvatarGradient } from '../../utils/gradients';
+import { PRESENCE_META, type PresenceStatus } from '../../utils/presence';
 
 interface AvatarProps {
   src?: string | null;
@@ -16,10 +17,10 @@ interface AvatarProps {
 }
 
 const statusColors: Record<string, string> = {
-  online: 'bg-status-online',
-  idle: 'bg-status-idle',
-  dnd: 'bg-status-dnd',
-  offline: 'bg-status-offline',
+  online: PRESENCE_META.online.tailwindClass,
+  idle: PRESENCE_META.idle.tailwindClass,
+  dnd: PRESENCE_META.dnd.tailwindClass,
+  offline: PRESENCE_META.offline.tailwindClass,
 };
 
 /**
@@ -47,9 +48,10 @@ function getDotMetrics(avatarSize: number, ringWidth: number = 0) {
   } else if (avatarSize <= 48) {
     dot = 6; gap = 3; avatarInset = 4;
   } else {
-    dot = Math.round(avatarSize * 0.15);
-    gap = Math.round(avatarSize * 0.05);
-    avatarInset = Math.round(avatarSize * 0.10);
+    // Large profile avatars keep the SAME small standardized dot as rows —
+    // the indicator must not balloon with the avatar (the 80px profile
+    // avatars used to grow a ~12px dot that read as a big floating blob).
+    dot = 8; gap = 4; avatarInset = 6;
   }
   return { dot, gap, inset: avatarInset + ringWidth };
 }

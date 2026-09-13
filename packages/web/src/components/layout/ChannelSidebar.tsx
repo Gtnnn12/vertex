@@ -551,7 +551,6 @@ export function ChannelSidebar() {
                 <span className={`text-[13px] font-bold tracking-[0.08em] transition-colors ${isVertexPage ? 'text-txt-primary' : 'text-txt-secondary group-hover:text-txt-primary'}`}>
                   VERTEX
                 </span>
-                <span className="mt-[3px] text-[9.5px] font-semibold tracking-[0.06em] text-txt-tertiary">v0.1.0</span>
               </div>
               {isVertexPage && (
                 <span className="w-[6px] h-[6px] rounded-full bg-accent-primary flex-shrink-0" />

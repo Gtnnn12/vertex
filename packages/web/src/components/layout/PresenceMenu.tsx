@@ -2,7 +2,8 @@ import React from 'react';
 import type { ContextMenuItem } from '../../stores/contextMenuStore';
 import type { User } from '@backspace/shared';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { useSetPresence, type PresenceStatus } from '../../hooks/usePresence';
+import { useSetPresence } from '../../hooks/usePresence';
+import { PRESENCE_META, PRESENCE_ORDER, type PresenceStatus } from '../../utils/presence';
 import { ActivityPicker } from './ActivityPicker';
 
 /**
@@ -17,32 +18,28 @@ export function usePresenceMenuItems(user: User): ContextMenuItem[] {
 
   const current = user.status ?? 'online';
 
-  const statuses: Array<{ status: PresenceStatus; label: string; color: string }> = [
-    { status: 'online', label: t('online'), color: '#23a55a' },
-    { status: 'idle', label: t('idle'), color: '#3ba1e8' },
-    { status: 'dnd', label: t('do_not_disturb'), color: '#f0a832' },
-    { status: 'offline', label: t('invisible'), color: '#80848e' },
-  ];
-
-  const presenceItems: ContextMenuItem[] = statuses.map(({ status, label, color }) => ({
-    type: 'action' as const,
-    key: `presence-${status}`,
-    label: `${label}${current === status ? ' ✓' : ''}`,
-    icon: (
-      <span
-        aria-hidden="true"
-        style={{
-          display: 'inline-block',
-          width: 10,
-          height: 10,
-          borderRadius: '50%',
-          backgroundColor: color,
-          flexShrink: 0,
-        }}
-      />
-    ),
-    onClick: () => setPresence(status),
-  }));
+  const presenceItems: ContextMenuItem[] = PRESENCE_ORDER.map((status) => {
+    const meta = PRESENCE_META[status];
+    return {
+      type: 'action' as const,
+      key: `presence-${status}`,
+      label: `${t(meta.labelKey)}${current === status ? ' ✓' : ''}`,
+      icon: (
+        <span
+          aria-hidden="true"
+          style={{
+            display: 'inline-block',
+            width: 10,
+            height: 10,
+            borderRadius: '50%',
+            backgroundColor: meta.hex,
+            flexShrink: 0,
+          }}
+        />
+      ),
+      onClick: () => setPresence(status as PresenceStatus),
+    };
+  });
 
   // Activity picker widget (manual/web provider).
   const activitySummary: ContextMenuItem[] = [

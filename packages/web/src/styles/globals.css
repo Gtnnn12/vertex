@@ -71,7 +71,7 @@
     /* ── Status ── */
     --status-online: 134 239 172;
     --status-idle: 252 211 77;
-    --status-dnd: 252 165 165;
+    --status-dnd: 248 113 113;
     --status-offline: 58 58 68;
 
     /* ── Glass Material ── */
@@ -179,7 +179,7 @@
 
     --status-online: 12 150 96;
     --status-idle: 190 128 0;
-    --status-dnd: 210 70 92;
+    --status-dnd: 220 38 64;
     --status-offline: 196 196 204;
 
     --glass-bg: rgba(255, 255, 255, 0.7);
@@ -1022,28 +1022,27 @@
   );
 }
 
-/* Presence ring — halo around the avatar in the status color, breathing. */
-@keyframes profilePresenceBreath {
-  0%, 100% { box-shadow: 0 0 10px -2px var(--presence-color); opacity: 0.75; }
-  50% { box-shadow: 0 0 16px 0px var(--presence-color); opacity: 1; }
-}
+/* Presence ring — static halo around the profile avatar in the status color.
+   Deliberately NOT animated: the previous breathing glow read as a pink blob
+   floating on the avatar's bottom-right edge. The presence indicator itself
+   is the small standardized dot rendered by <Avatar> — this ring only gives
+   the avatar a soft status-tinted rim so it stands off the banner. */
 .profile-presence-ring {
-  --presence-color: rgb(var(--status-offline) / 0.5);
+  --presence-color: rgb(var(--status-offline) / 0.35);
   border-radius: 9999px;
   /* Perfect circle guard: the wrapper must never be shorter than wide
      (a collapsed child margin used to squash the halo into an ellipse). */
   aspect-ratio: 1;
-  box-shadow: 0 0 10px -2px var(--presence-color);
-  animation: profilePresenceBreath 3s ease-in-out infinite;
+  box-shadow: 0 0 6px -1px var(--presence-color);
 }
 .profile-presence-ring[data-status='online'] {
-  --presence-color: rgb(var(--status-online) / 0.55);
+  --presence-color: rgb(var(--status-online) / 0.4);
 }
 .profile-presence-ring[data-status='idle'] {
-  --presence-color: rgb(var(--status-idle) / 0.55);
+  --presence-color: rgb(var(--status-idle) / 0.4);
 }
 .profile-presence-ring[data-status='dnd'] {
-  --presence-color: rgb(var(--status-dnd) / 0.55);
+  --presence-color: rgb(var(--status-dnd) / 0.4);
 }
 
 /* Staggered entrance — apply .profile-stagger to the card; each direct
