@@ -1,36 +1,24 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import type { ActivitySpotify } from '@backspace/shared';
 import type { MusicStyleId } from './musicStyles';
 
 /**
- * The style-specific "disc" visual of the music card. One component, eight
- * variants — driven by the registry id. Everything shares the card shell
- * (header/texts/times) rendered by SpotifyCard; ONLY this visual changes.
+ * The style-specific "disc" visual of the music card. One component — driven
+ * by the registry id. Everything shares the card shell (header/texts/times)
+ * rendered by SpotifyCard; ONLY this visual changes.
  *
  * STRUCTURE: every variant renders inside a dedicated square stage
  * (.spotify-music-disc, width/height = disc size, position:relative). The
  * variant visuals are absolute inset-0 — bounded by the STAGE, never by the
  * card. Without the stage they would stretch across the whole card body.
  *
- * Animation contract (VERTEX motion spec): transform/opacity only; the rotor
- * animations (reels, CD, orbits) are the sanctioned linear exceptions;
- * everything else eases with cubic-bezier. CSS lives in styles/musicStyles.css.
+ * Animation contract (VERTEX motion spec): transform/opacity only; rotor
+ * animations are the sanctioned linear exceptions; everything else eases with
+ * cubic-bezier. CSS lives in styles/musicStyles.css.
+ *
+ * 2026-09 catalog: vinyl (free default) + aurora/pixel-paradise (free) +
+ * kawaii-dream/neon-city/holo-room/nihon/sweetie/ink-panic (Netrex).
  */
-
-/** Spectrum bar heights — precomputed per render, springs via CSS transition. */
-function spectrumScales(seed: number, playing: boolean): number[] {
-  const scales: number[] = [];
-  for (let i = 0; i < 14; i++) {
-    if (!playing) {
-      scales.push(0.18 + ((i * 7 + seed) % 5) * 0.04);
-      continue;
-    }
-    const wave = Math.sin((i / 13) * Math.PI);
-    const jitter = ((i * 37 + seed * 13) % 17) / 17;
-    scales.push(0.22 + wave * (0.45 + jitter * 0.33));
-  }
-  return scales;
-}
 
 /**
  * Cover or the shared no-cover fallback. Every variant renders a SQUARE chip
@@ -78,14 +66,14 @@ export function MusicDisc({
       className="spotify-music-disc"
       style={{ width: size, height: size, '--vinyl-glow': glow } as React.CSSProperties}
     >
-      {style === 'cassette' && <CassetteVisual spotify={spotify} playing={playing} />}
-      {style === 'holographic-cd' && <HoloVisual spotify={spotify} playing={playing} />}
-      {style === 'crystal-orbit' && <CrystalVisual spotify={spotify} playing={playing} />}
-      {style === 'spectrum' && <SpectrumVisual spotify={spotify} glow={glow} playing={playing} />}
-      {style === 'boombox' && <BoomboxVisual playing={playing} />}
-      {style === 'glass-prism' && <PrismVisual spotify={spotify} />}
-      {style === 'arcade' && <ArcadeVisual spotify={spotify} />}
+      {style === 'aurora' && <AuroraVisual spotify={spotify} playing={playing} />}
+      {style === 'pixel-paradise' && <PixelVisual spotify={spotify} playing={playing} />}
       {style === 'kawaii-dream' && <KawaiiVisual spotify={spotify} playing={playing} />}
+      {style === 'neon-city' && <NeonCityVisual spotify={spotify} />}
+      {style === 'holo-room' && <HoloRoomVisual spotify={spotify} />}
+      {style === 'nihon' && <NihonVisual spotify={spotify} />}
+      {style === 'sweetie' && <SweetieVisual spotify={spotify} />}
+      {style === 'ink-panic' && <InkPanicVisual spotify={spotify} />}
       {(style === 'vinyl' || !style) && <VinylVisual spotify={spotify} playing={playing} />}
     </div>
   );
@@ -126,138 +114,6 @@ function VinylVisual({ spotify, playing }: { spotify: ActivitySpotify; playing: 
   );
 }
 
-/* ── 2. CASSETTE ──────────────────────────────────────────────────────────── */
-function CassetteVisual({ spotify, playing }: { spotify: ActivitySpotify; playing: boolean }): React.ReactElement {
-  return (
-    <div className={`music-cassette${playing ? ' is-playing' : ''}`} role="img" aria-label={spotify.albumName ?? spotify.song}>
-      <div className="music-cassette-window" aria-hidden>
-        <span className="music-cassette-reel music-cassette-reel--left" />
-        <span className="music-cassette-reel music-cassette-reel--right" />
-      </div>
-      <div className="music-cassette-label" aria-hidden>
-        <CoverImg spotify={spotify} fit="square" />
-        <span className="music-cassette-label-lines" />
-      </div>
-    </div>
-  );
-}
-
-/* ── 3. HOLOGRAPHIC CD ────────────────────────────────────────────────────── */
-function HoloVisual({ spotify, playing }: { spotify: ActivitySpotify; playing: boolean }): React.ReactElement {
-  const ref = useRef<HTMLDivElement>(null);
-
-  const onMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    const el = ref.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-    el.style.setProperty('--holo-mx', `${x}%`);
-    el.style.setProperty('--holo-my', `${y}%`);
-  };
-
-  return (
-    <div ref={ref} className={`music-holo${playing ? ' is-playing' : ''}`} onPointerMove={onMove} role="img" aria-label={spotify.albumName ?? spotify.song}>
-      <div className="music-holo-tilt">
-        <div className="music-holo-cd" aria-hidden>
-          <div className="music-holo-label">
-            <CoverImg spotify={spotify} />
-          </div>
-        </div>
-        <div className="music-holo-sheen" aria-hidden />
-      </div>
-    </div>
-  );
-}
-
-/* ── 4. CRYSTAL ORBITAL ───────────────────────────────────────────────────── */
-function CrystalVisual({ spotify, playing }: { spotify: ActivitySpotify; playing: boolean }): React.ReactElement {
-  return (
-    <div className={`music-crystal${playing ? ' is-playing' : ''}`} role="img" aria-label={spotify.albumName ?? spotify.song}>
-      <span className="music-crystal-ring music-crystal-ring--1" aria-hidden />
-      <span className="music-crystal-ring music-crystal-ring--2" aria-hidden />
-      <span className="music-crystal-ring music-crystal-ring--3" aria-hidden />
-      <div className="music-crystal-core" aria-hidden>
-        <CoverImg spotify={spotify} />
-      </div>
-      <span className="music-crystal-spark music-crystal-spark--1" aria-hidden />
-      <span className="music-crystal-spark music-crystal-spark--2" aria-hidden />
-      <span className="music-crystal-spark music-crystal-spark--3" aria-hidden />
-    </div>
-  );
-}
-
-/* ── 5. AUDIO SPECTRUM ────────────────────────────────────────────────────── */
-function SpectrumVisual({ spotify, glow, playing }: { spotify: ActivitySpotify; glow: string; playing: boolean }): React.ReactElement {
-  const scales = spectrumScales(3, playing);
-  return (
-    <div className={`music-spectrum${playing ? ' is-playing' : ''}`} role="img" aria-label={spotify.albumName ?? spotify.song}>
-      <div className="music-spectrum-chip" aria-hidden>
-        <CoverImg spotify={spotify} />
-      </div>
-      {scales.map((s, i) => (
-        <span
-          key={i}
-          className={`music-spectrum-bar${i === 0 ? ' music-spectrum-bar--lead' : ''}`}
-          style={{
-            '--bar-scale': s,
-            background: i % 3 === 0 ? glow : `color-mix(in srgb, ${glow} 65%, rgb(255 255 255 / 0.35))`,
-          } as React.CSSProperties}
-        />
-      ))}
-    </div>
-  );
-}
-
-/* ── 6. VERTEX BOOMBOX ────────────────────────────────────────────────────── */
-function BoomboxVisual({ playing }: { playing: boolean }): React.ReactElement {
-  return (
-    <div className={`music-boombox${playing ? ' is-playing' : ''}`} aria-hidden>
-      <span className="music-boombox-speaker" />
-      <span className="music-boombox-deck">
-        <span className="music-boombox-cassette" />
-        <span className="music-boombox-leds">
-          <span className="music-boombox-led" />
-          <span className="music-boombox-led" />
-          <span className="music-boombox-led" />
-          <span className="music-boombox-led" />
-        </span>
-      </span>
-      <span className="music-boombox-speaker" />
-    </div>
-  );
-}
-
-/* ── 7. GLASS PRISM ───────────────────────────────────────────────────────── */
-function PrismVisual({ spotify }: { spotify: ActivitySpotify }): React.ReactElement {
-  return (
-    <div className="music-prism" role="img" aria-label={spotify.albumName ?? spotify.song}>
-      <span
-        className="music-prism-blur"
-        aria-hidden
-        style={{ backgroundImage: spotify.albumCover ? `url(${spotify.albumCover})` : 'radial-gradient(circle at 35% 30%, rgba(147,197,253,0.35), rgba(13,13,13,0.9))' }}
-      />
-      <span className="music-prism-tint" aria-hidden />
-      <div className="music-prism-cover" aria-hidden>
-        <CoverImg spotify={spotify} />
-      </div>
-    </div>
-  );
-}
-
-/* ── 8. ARCADE ─────────────────────────────────────────────────────────────── */
-function ArcadeVisual({ spotify }: { spotify: ActivitySpotify }): React.ReactElement {
-  return (
-    <div className="music-arcade music-arcade--premium" role="img" aria-label={spotify.albumName ?? spotify.song}>
-      <div className="music-arcade-cover" aria-hidden>
-        <CoverImg spotify={spotify} />
-      </div>
-      <span className="music-arcade-heart" aria-hidden />
-      <span className="music-arcade-scanlines" aria-hidden />
-    </div>
-  );
-}
-
 /* ── 9. KAWAII DREAM — cloud frame + floating hearts/stars, pastel glow ───── */
 function KawaiiVisual({ spotify, playing }: { spotify: ActivitySpotify; playing: boolean }): React.ReactElement {
   return (
@@ -273,6 +129,122 @@ function KawaiiVisual({ spotify, playing }: { spotify: ActivitySpotify; playing:
           <CoverImg spotify={spotify} />
         </div>
       </div>
+    </div>
+  );
+}
+/* ── 2. AURORA — night sky, drifting ribbons, floating cover, cold glow ─── */
+function AuroraVisual({ spotify, playing }: { spotify: ActivitySpotify; playing: boolean }): React.ReactElement {
+  return (
+    <div className={`music-aurora${playing ? ' is-playing' : ''}`} role="img" aria-label={spotify.albumName ?? spotify.song}>
+      <span className="music-aurora-ribbon r1" aria-hidden />
+      <span className="music-aurora-ribbon r2" aria-hidden />
+      <span className="music-aurora-ribbon r3" aria-hidden />
+      <span className="music-aurora-star s1" aria-hidden />
+      <span className="music-aurora-star s2" aria-hidden />
+      <span className="music-aurora-star s3" aria-hidden />
+      <div className="music-aurora-cover" aria-hidden>
+        <CoverImg spotify={spotify} />
+      </div>
+      <span className="music-aurora-ridge" aria-hidden />
+    </div>
+  );
+}
+
+/* ── 3. PIXEL PARADISE — 8-bit island scene, sun, clouds, waves ─────────── */
+function PixelVisual({ spotify, playing }: { spotify: ActivitySpotify; playing: boolean }): React.ReactElement {
+  return (
+    <div className={`music-pixel${playing ? ' is-playing' : ''}`} role="img" aria-label={spotify.albumName ?? spotify.song}>
+      <span className="music-pixel-sun" aria-hidden />
+      <span className="music-pixel-cloud c1" aria-hidden />
+      <span className="music-pixel-cloud c2" aria-hidden />
+      <div className="music-pixel-window" aria-hidden>
+        <div className="music-pixel-cover">
+          <CoverImg spotify={spotify} />
+        </div>
+      </div>
+      <span className="music-pixel-wave w1" aria-hidden />
+      <span className="music-pixel-wave w2" aria-hidden />
+      <span className="music-pixel-wave w3" aria-hidden />
+    </div>
+  );
+}
+
+/* ── 4. NEON CITY — night skyline, cover as a glowing billboard ─────────── */
+function NeonCityVisual({ spotify }: { spotify: ActivitySpotify }): React.ReactElement {
+  return (
+    <div className="music-neon" role="img" aria-label={spotify.albumName ?? spotify.song}>
+      <span className="music-neon-skyline" aria-hidden />
+      <span className="music-neon-sign sign-pink" aria-hidden>V</span>
+      <span className="music-neon-sign sign-cyan" aria-hidden>X</span>
+      <div className="music-neon-billboard" aria-hidden>
+        <CoverImg spotify={spotify} />
+      </div>
+      <span className="music-neon-asphalt" aria-hidden />
+    </div>
+  );
+}
+
+/* ── 5. HOLO ROOM — projected hologram: scanlines, beam, emitter base ───── */
+function HoloRoomVisual({ spotify }: { spotify: ActivitySpotify }): React.ReactElement {
+  return (
+    <div className="music-holoroom" role="img" aria-label={spotify.albumName ?? spotify.song}>
+      <span className="music-holoroom-beam" aria-hidden />
+      <div className="music-holoroom-ghost" aria-hidden>
+        <CoverImg spotify={spotify} />
+      </div>
+      <span className="music-holoroom-base" aria-hidden />
+    </div>
+  );
+}
+
+/* ── 6. NIHON — kakemono scroll, hanko, sakura petals ───────────────────── */
+function NihonVisual({ spotify }: { spotify: ActivitySpotify }): React.ReactElement {
+  return (
+    <div className="music-nihon" role="img" aria-label={spotify.albumName ?? spotify.song}>
+      <span className="music-nihon-rod rod-top" aria-hidden />
+      <div className="music-nihon-scroll" aria-hidden>
+        <div className="music-nihon-mount">
+          <CoverImg spotify={spotify} />
+        </div>
+      </div>
+      <span className="music-nihon-rod rod-bottom" aria-hidden />
+      <span className="music-nihon-hanko" aria-hidden>VE</span>
+      <span className="music-nihon-petal p1" aria-hidden>❀</span>
+      <span className="music-nihon-petal p2" aria-hidden>❀</span>
+      <span className="music-nihon-cloud" aria-hidden />
+    </div>
+  );
+}
+
+/* ── 7. SWEETIE — candy frame, bow, bubbles, sparks ──────────────────────── */
+function SweetieVisual({ spotify }: { spotify: ActivitySpotify }): React.ReactElement {
+  return (
+    <div className="music-sweetie" role="img" aria-label={spotify.albumName ?? spotify.song}>
+      <span className="music-sweetie-stripe" aria-hidden />
+      <span className="music-sweetie-bow" aria-hidden />
+      <div className="music-sweetie-cookie" aria-hidden>
+        <CoverImg spotify={spotify} />
+      </div>
+      <span className="music-sweetie-bubble b1" aria-hidden />
+      <span className="music-sweetie-bubble b2" aria-hidden />
+      <span className="music-sweetie-heart" aria-hidden>♥</span>
+    </div>
+  );
+}
+
+/* ── 8. INK PANIC — manga panel: halftone, burst, speed lines ────────────── */
+function InkPanicVisual({ spotify }: { spotify: ActivitySpotify }): React.ReactElement {
+  return (
+    <div className="music-ink" role="img" aria-label={spotify.albumName ?? spotify.song}>
+      <span className="music-ink-halftone" aria-hidden />
+      <span className="music-ink-burst" aria-hidden />
+      <span className="music-ink-note" aria-hidden>♪</span>
+      <div className="music-ink-panel" aria-hidden>
+        <CoverImg spotify={spotify} />
+      </div>
+      <span className="music-ink-speed sp1" aria-hidden />
+      <span className="music-ink-speed sp2" aria-hidden />
+      <span className="music-ink-speed sp3" aria-hidden />
     </div>
   );
 }
