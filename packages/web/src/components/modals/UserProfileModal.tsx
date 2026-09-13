@@ -10,11 +10,12 @@ import { useUIStore } from '../../stores/uiStore';
 import { useSpaceStore, getApiForOrigin, resolveUserOrigin } from '../../stores/spaceStore';
 import { api } from '../../api/client';
 import { useSocialStore, type TaggedFriend, type TaggedFriendRequest } from '../../stores/socialStore';
+import { getFriendshipStatus, type FriendshipStatus } from '../../utils/friendship';
 import { SpotifyVinylBlock } from '../spotify/SpotifyVinylBlock';
 import { mapServerErrorToMessage } from '../../utils/friendErrors';
 import { useAuthStore } from '../../stores/authStore';
 import { getAvatarGradient, getSpaceGradient, adjustColor, mutedGradient } from '../../utils/gradients';
-import { parseFederatedUsername, isSelf, canonicalUserMatch } from '../../utils/identity';
+import { parseFederatedUsername, isSelf } from '../../utils/identity';
 import { loadFederatedMutuals, type TaggedMutualFriend, type MutualSpace } from '../../utils/mutuals';
 import { StaffBadge, NetrexChip } from '../ui/StaffBadge';
 import { ProfileBoardTab } from '../profile/board/ProfileBoardTab';
@@ -22,39 +23,6 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { profileTint } from '../../utils/profileTint';
 
 type Tab = 'board' | 'friends' | 'spaces';
-
-type FriendshipStatus =
-  | { state: 'self' }
-  | { state: 'friends'; friend: TaggedFriend }
-  | { state: 'outbound_pending'; request: TaggedFriendRequest }
-  | { state: 'inbound_pending'; request: TaggedFriendRequest }
-  | { state: 'none' };
-
-function getFriendshipStatus(
-  viewedUser: User,
-  currentUser: User | null,
-  friends: TaggedFriend[],
-  requests: TaggedFriendRequest[],
-): FriendshipStatus {
-  if (!currentUser) return { state: 'none' };
-  if (isSelf(viewedUser, currentUser)) return { state: 'self' };
-
-  const friend = friends.find(f => canonicalUserMatch(f, viewedUser));
-  if (friend) return { state: 'friends', friend };
-
-  const request = requests.find(r =>
-    r.user && canonicalUserMatch(r.user, viewedUser)
-  );
-  if (request?.user) {
-    // request.user is the OTHER party. If their ID === toId, then I am fromId (outbound)
-    const isOutbound = request.user.id === request.toId;
-    return isOutbound
-      ? { state: 'outbound_pending', request }
-      : { state: 'inbound_pending', request };
-  }
-
-  return { state: 'none' };
-}
 
 /**
  * Sliding tab indicator: measures the active tab button and positions the

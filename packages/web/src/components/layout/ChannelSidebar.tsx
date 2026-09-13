@@ -24,6 +24,10 @@ import { DmSearchBar } from './DmSearchBar';
 import { DmListItem } from './DmListItem';
 import { useDragManager, type DropTarget, type LayoutItem } from '../../hooks/useDragManager';
 import { useDelayedLoading } from '../../hooks/useDelayedLoading';
+import { useSocialStore } from '../../stores/socialStore';
+import { buildUserContextMenuItems } from '../../utils/userContextMenu';
+import { pointAnchor } from '../../hooks/useFloatingPosition';
+import { isSelf } from '../../utils/identity';
 import { useAudioDevices } from '../../hooks/useAudioDevices';
 import { DropdownItem } from '../modals/settingsPanels/_shared/SettingsPickerPrimitives';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -38,7 +42,10 @@ export function ChannelSidebar() {
   const setCurrentChannel = useChatStore((s) => s.setCurrentChannel);
   const unreadChannels = useChatStore((s) => s.unreadChannels);
   const openModal = useUIStore((s) => s.openModal);
+  const openUserProfile = useUIStore((s) => s.openUserProfile);
   const user = useAuthStore((s) => s.user);
+  const friends = useSocialStore((s) => s.friends);
+  const friendRequests = useSocialStore((s) => s.requests);
   const currentVoiceChannelId = useVoiceStore((s) => s.currentVoiceChannelId);
   const isMuted = useVoiceStore((s) => s.isMuted);
   const isDeafened = useVoiceStore((s) => s.isDeafened);
@@ -395,23 +402,61 @@ export function ChannelSidebar() {
   const handleDmContextMenu = useCallback((e: React.MouseEvent, dmId: string) => {
     e.preventDefault();
     e.stopPropagation();
-    openContextMenu({ x: e.clientX, y: e.clientY }, [
-      {
+    const dm = dmChannels.find((d) => d.id === dmId);
+    const other = dm && !dm.ownerId ? dm.members.find((m) => !isSelf(m, user)) : undefined;
+
+    const items: ContextMenuItem[] = [];
+
+    if (other) {
+      items.push(...buildUserContextMenuItems({
+        user: other,
+        me: user,
+        friends,
+        requests: friendRequests,
+        t,
+        onViewProfile: (u) => openUserProfile(u, pointAnchor(e.clientX, e.clientY)),
+        onCloseDm: () => {
+          if (currentChannelId === dmId) {
+            navigate('/channels/@me');
+            setCurrentChannel(null);
+          }
+          useSpaceStore.getState().closeDm(dmId);
+        },
+        onAddFriend: () => { useSocialStore.getState().sendFriendRequest(other.username).catch(() => {}); },
+        onRemoveFriend: () => { useSocialStore.getState().removeFriend(other.id).catch(() => {}); },
+        onCancelRequest: () => {
+          const s = useSocialStore.getState();
+          const req = s.requests.find((r) => r.user && (r.user.homeUserId ?? r.user.id) === (other.homeUserId ?? other.id));
+          if (req) s.cancelFriendRequest(req.id).catch(() => {});
+        },
+        onAcceptRequest: () => {
+          const s = useSocialStore.getState();
+          const req = s.requests.find((r) => r.user && (r.user.homeUserId ?? r.user.id) === (other.homeUserId ?? other.id));
+          if (req) s.updateFriendRequest(req.id, 'accepted').catch(() => {});
+        },
+        onDeclineRequest: () => {
+          const s = useSocialStore.getState();
+          const req = s.requests.find((r) => r.user && (r.user.homeUserId ?? r.user.id) === (other.homeUserId ?? other.id));
+          if (req) s.updateFriendRequest(req.id, 'declined').catch(() => {});
+        },
+      }));
+    }
+
+    // Group DMs: keep the existing Leave Group entry.
+    if (dm?.ownerId) {
+      items.push({ key: 'group-sep', type: 'separator' });
+      items.push({
         key: 'leave-group',
         type: 'action',
-        label: 'Leave Group',
+        label: t('leave_group'),
         danger: true,
-        icon: (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M10.09 15.59L11.5 17l5-5-5-5-1.41 1.41L12.67 11H3v2h9.67l-2.58 2.59zM19 3H5a2 2 0 00-2 2v4h2V5h14v14H5v-4H3v4a2 2 0 002 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z" />
-          </svg>
-        ),
-        onClick: () => {
-          setLeaveGroupDmId(dmId);
-        },
-      },
-    ]);
-  }, [openContextMenu]);
+        onClick: () => setLeaveGroupDmId(dmId),
+      });
+    }
+
+    if (items.length === 0) return;
+    openContextMenu({ x: e.clientX, y: e.clientY }, items);
+  }, [openContextMenu, dmChannels, user, friends, friendRequests, t, openUserProfile, currentChannelId, navigate, setCurrentChannel]);
 
   const handleChannelClick = (channelId: string) => {
     setCurrentChannel(channelId);

@@ -1549,5 +1549,6 @@
   "profile_action_ignore": "Ignore",
   "profile_action_remove_friend": "Remove Friend",
   "board_tab_mutual_friends": "Mutual Friends",
-  "board_tab_mutual_spaces": "Mutual Servers"
+  "board_tab_mutual_spaces": "Mutual Servers",
+  "menu_view_profile": "View Profile"
 }

@@ -8,6 +8,9 @@ import { mapServerErrorToMessage } from '../../utils/friendErrors';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { useInstanceStore } from '../../stores/instanceStore';
 import { useUIStore } from '../../stores/uiStore';
+import { useContextMenuStore } from '../../stores/contextMenuStore';
+import { buildUserContextMenuItems } from '../../utils/userContextMenu';
+import { pointAnchor } from '../../hooks/useFloatingPosition';
 import { useFederationStore } from '../../stores/federationStore';
 import { Avatar } from '../ui/Avatar';
 import { MemberListToggleButton } from '../layout/MemberListToggleButton';
@@ -1062,8 +1065,32 @@ function FriendItem({ friend, onRemove, onDm }: { friend: TaggedFriend, onRemove
   const friendDisplayName = canonical.displayName ?? friendBaseName;
   const isOffline = canonical.status === 'offline';
 
+  const { t } = useLanguage();
+  const me = useAuthStore((s) => s.user);
+  const openUserProfile = useUIStore((s) => s.openUserProfile);
+  const openContextMenu = useContextMenuStore((s) => s.open);
+  const friends = useSocialStore((s) => s.friends);
+  const requests = useSocialStore((s) => s.requests);
+
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    openContextMenu(
+      { x: e.clientX, y: e.clientY },
+      buildUserContextMenuItems({
+        user: canonical,
+        me,
+        friends,
+        requests,
+        t,
+        onViewProfile: (u) => openUserProfile(u, pointAnchor(e.clientX, e.clientY), 'left'),
+        onRemoveFriend: onRemove,
+      }),
+    );
+  }, [canonical, me, friends, requests, t, openContextMenu, openUserProfile, onRemove]);
+
   return (
-    <div className="group flex items-center justify-between gap-3 px-4 py-4 rounded-2xl border border-white/[0.05] bg-white/[0.015] transition-all duration-200 hover:border-white/[0.12] hover:bg-white/[0.03]">
+    <div className="group flex items-center justify-between gap-3 px-4 py-4 rounded-2xl border border-white/[0.05] bg-white/[0.015] transition-all duration-200 hover:border-white/[0.12] hover:bg-white/[0.03]" onContextMenu={handleContextMenu}>
       <div className="flex items-center gap-3.5 min-w-0 flex-1">
         <Avatar
           src={canonical.avatar}
