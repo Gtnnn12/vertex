@@ -1022,28 +1022,9 @@
   );
 }
 
-/* Presence ring — static halo around the profile avatar in the status color.
-   Deliberately NOT animated: the previous breathing glow read as a pink blob
-   floating on the avatar's bottom-right edge. The presence indicator itself
-   is the small standardized dot rendered by <Avatar> — this ring only gives
-   the avatar a soft status-tinted rim so it stands off the banner. */
-.profile-presence-ring {
-  --presence-color: rgb(var(--status-offline) / 0.35);
-  border-radius: 9999px;
-  /* Perfect circle guard: the wrapper must never be shorter than wide
-     (a collapsed child margin used to squash the halo into an ellipse). */
-  aspect-ratio: 1;
-  box-shadow: 0 0 6px -1px var(--presence-color);
-}
-.profile-presence-ring[data-status='online'] {
-  --presence-color: rgb(var(--status-online) / 0.4);
-}
-.profile-presence-ring[data-status='idle'] {
-  --presence-color: rgb(var(--status-idle) / 0.4);
-}
-.profile-presence-ring[data-status='dnd'] {
-  --presence-color: rgb(var(--status-dnd) / 0.4);
-}
+/* Presence ring — REMOVED: it was a decorative halo that read as a pink
+   blob floating on the avatar's edge. The only presence indicator on profile
+   surfaces is the small standardized dot rendered by <Avatar>. */
 
 /* Staggered entrance — apply .profile-stagger to the card; each direct
    block with [data-stagger] fades up in cascade. */

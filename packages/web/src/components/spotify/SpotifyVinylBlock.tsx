@@ -27,6 +27,33 @@ function isSpotifyActivity(a: Activity): boolean {
 type GamePlaying = { game: Activity; spotify: ActivitySpotify | null };
 
 /**
+ * Last rich cover seen per song+artist — module scope, so it survives widget
+ * remounts (editor open/close, tab switches). The desktop Vía A push parses
+ * song/artist from the window title but NEVER carries cover art, and the
+ * server merge lets it replace a stored rich activity on free accounts. The
+ * board widget remounting after that push used to fall back to the V logo;
+ * with this cache the cover persists across remounts for as long as the
+ * session lives (one entry per track, bounded by tracks played).
+ */
+const coverCache = new Map<string, string>();
+const coverKey = (s: { song: string; artist: string }) => `${s.song}::${s.artist}`;
+const COVER_CACHE_MAX = 32;
+
+function rememberCover(spotify: ActivitySpotify): ActivitySpotify {
+  if (spotify.albumCover) {
+    if (!coverCache.has(coverKey(spotify))) {
+      if (coverCache.size >= COVER_CACHE_MAX) {
+        coverCache.delete(coverCache.keys().next().value as string);
+      }
+      coverCache.set(coverKey(spotify), spotify.albumCover);
+    }
+    return spotify;
+  }
+  const cached = coverCache.get(coverKey(spotify));
+  return cached ? { ...spotify, albumCover: cached } : spotify;
+}
+
+/**
  * Primary activity is a detected GAME → the widget shows the Match Card.
  * Spotify-type activities outrank `playing` in ACTIVITY_PRIORITY only when
  * both exist as separate rows; a game while music plays means the game is
@@ -83,9 +110,6 @@ export function SpotifyVinylBlock({ lookupUserId, isSelf, compact }: SpotifyViny
 
     // Same resolution the activity panel applies to decide a row exists.
     const primary = getPrimaryActivity(pool);
-    // [TEMP-TRACE d] what the card's data-derivation actually sees
-    // eslint-disable-next-line no-console
-    console.log(`[card-read] lookup=${lookupUserId} self=${!!isSelf} poolSize=${pool.length} primary=${primary ? `type=${primary.type} name="${primary.name}"` : 'none'} payload=${primary?.spotify ? `song="${primary.spotify.song}" artist="${primary.spotify.artist}"` : 'NONE'}`);
 
     // ── MATCH CARD branch: playing a detected game → match card wins. ──
     // Netrex-gated: without the entitlement the widget stays the music box.
@@ -99,7 +123,7 @@ export function SpotifyVinylBlock({ lookupUserId, isSelf, compact }: SpotifyViny
     // Rich payload: OAuth poller (premium) AND the promoted desktop Vía A
     // track (free accounts) — both carry song/artist (+cover when resolved).
     if (primary.type === 'spotify' && primary.spotify) {
-      return { kind: 'music' as const, spotify: primary.spotify };
+      return { kind: 'music' as const, spotify: rememberCover(primary.spotify) };
     }
 
     // Bare desktop detection with no parseable title (ads, menus): the card
