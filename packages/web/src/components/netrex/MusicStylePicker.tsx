@@ -124,7 +124,10 @@ export function MusicStylePicker(): React.ReactElement {
     }
   };
 
-  const dirty = browsing !== null && browsing !== resolveMusicStyle(savedStyle, isNetrex);
+  // dirty ONLY means "another style is being previewed". Re-applying the
+  // already-saved style must stay possible (the preview flag can drift from
+  // the saved value) — it's a cheap idempotent PUT, never disabled for it.
+  const dirty = browsing !== null;
   const canApply = browsing !== null && (!getMusicStyle(browsing).requiresNetrex || isNetrex);
 
   // HONEST STATE: a premium style selected while the front's cached user lacks
