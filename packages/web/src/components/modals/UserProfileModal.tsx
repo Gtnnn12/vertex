@@ -387,7 +387,7 @@ export function UserProfileModal() {
         <div className="flex flex-col min-h-0 md:w-[35%] border-t md:border-t-0 md:border-r border-white/[0.06] max-h-[50vh] md:max-h-none">
           {/* Column banner — its OWN rounded surface, column-width only */}
           <div data-stagger="1" className="px-4 pt-4 flex-shrink-0">
-          <div className="h-[120px] relative rounded-t-xl overflow-hidden">
+          <div className="h-[140px] relative rounded-t-xl overflow-hidden">
             <div
               className="profile-fx-banner"
               style={{
@@ -412,12 +412,12 @@ export function UserProfileModal() {
           </div>
           </div>
 
-          {/* Identity — one vertical flow, uniform 16px rhythm:
-              avatar (-24px overlap) → name+badges → @user → bio →
-              member since. All left-aligned. No loose role chips. */}
-          <div data-stagger="2" className="px-5 pt-2 pb-4 flex-1 overflow-y-auto scrollbar-thin min-h-0">
+          {/* Identity — centered column (Discord-mobile style): avatar (-24px
+              overlap, ABOVE the banner via z-20) → name+badges → @user →
+              bio → member since. All center-aligned. */}
+          <div data-stagger="2" className="px-5 pt-2 pb-4 flex-1 overflow-y-auto scrollbar-thin min-h-0 flex flex-col items-center text-center">
             <div
-              className="profile-presence-ring inline-block align-top -mt-6 mb-4 relative z-10"
+              className="profile-presence-ring -mt-6 mb-4 relative z-20 flex-shrink-0"
               data-status={user.status ?? 'offline'}
             >
               <Avatar
@@ -432,8 +432,8 @@ export function UserProfileModal() {
               />
             </div>
 
-            <div className="pb-4">
-              <div className="flex items-center gap-2 flex-wrap">
+            <div className="pb-4 flex flex-col items-center">
+              <div className="flex items-center justify-center gap-2 flex-wrap">
                 <Username
                   username={displayName}
                   className="text-[19px] font-bold leading-tight tracking-[-0.01em]"
