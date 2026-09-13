@@ -25,10 +25,10 @@ export function WidgetCardShell({ icon, labelKey, children, accent }: WidgetShel
   return (
     <div
       tabIndex={0}
-      className="board-widget group/board min-w-0 rounded-xl border border-white/[0.07] bg-white/[0.035] p-4 outline-none transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-white/[0.14] hover:shadow-[0_12px_30px_-14px_var(--profile-accent,rgb(var(--accent-primary)))66] focus-visible:border-accent-primary/50 focus-visible:ring-1 focus-visible:ring-accent-primary/30 motion-reduce:transition-none motion-reduce:hover:transform-none"
+      className="board-widget group/board min-w-0 rounded-[14px] border border-white/[0.07] bg-white/[0.045] p-5 outline-none transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-white/[0.14] hover:shadow-[0_12px_30px_-14px_var(--profile-accent,rgb(var(--accent-primary)))66] focus-visible:border-accent-primary/50 focus-visible:ring-1 focus-visible:ring-accent-primary/30 motion-reduce:transition-none motion-reduce:hover:transform-none"
       style={{ boxShadow: '0 2px 10px -6px rgba(0,0,0,0.35)' }}
     >
-      <div className="mb-2.5 flex items-baseline gap-2">
+      <div className="mb-3 flex items-baseline gap-2">
         <span className="text-[10px] text-txt-tertiary" aria-hidden>✦</span>
         <span
           className="truncate text-[10px] font-bold uppercase tracking-[0.18em] text-txt-tertiary"
@@ -39,6 +39,8 @@ export function WidgetCardShell({ icon, labelKey, children, accent }: WidgetShel
         <span className="sr-only">{icon}</span>
       </div>
       <div className="min-w-0">{children}</div>
+      {/* Footer hairline — closes the card visually (shared language). */}
+      <div className="mt-3 border-t border-white/[0.06]" aria-hidden />
     </div>
   );
 }
@@ -218,7 +220,7 @@ function GoalValue({ config }: RendererProps) {
   return (
     <div className="min-w-0">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="min-w-0 truncate text-[13px] font-medium text-txt-primary">{title}</span>
+        <span className="min-w-0 break-words line-clamp-2 text-[13px] font-medium text-txt-primary">{title}</span>
         <span className="shrink-0 text-[11px] font-semibold tabular-nums text-txt-tertiary">{progress}%</span>
       </div>
       <div
@@ -260,7 +262,7 @@ function FriendSpotlightValue({ config, lookupUserId }: RendererProps) {
         </span>
       )}
       <div className="min-w-0">
-        {name && <div className="truncate text-[13px] font-semibold text-txt-primary">{name}</div>}
+        {name && <div className="break-words line-clamp-1 text-[13px] font-semibold text-txt-primary">{name}</div>}
         {message && <p className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-txt-secondary">{message}</p>}
         {!name && !message && <EmptyValue textKey="board_empty_friend" />}
       </div>
