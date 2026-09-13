@@ -7,6 +7,7 @@ import { LanguageProvider } from './contexts/LanguageContext';
 import { initVertexAppearance, getSavedPreferences, applyPreferences } from './utils/vertexTheme';
 import { initNetrexCustomTheme } from './utils/netrexPersonalization';
 import './styles/globals.css';
+import './styles/statusBubble.css';
 import './styles/musicStyles.css';
 
 // DEV self-test (Electron only): exercise the full activation chain
