@@ -25,8 +25,8 @@ export function WidgetCardShell({ icon, labelKey, children, accent }: WidgetShel
   return (
     <div
       tabIndex={0}
-      className="board-widget group/board min-w-0 rounded-xl border border-white/[0.06] bg-transparent p-4 outline-none transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-white/[0.12] hover:shadow-[0_10px_28px_-14px_var(--profile-accent,rgb(var(--accent-primary)))66] focus-visible:border-accent-primary/50 focus-visible:ring-1 focus-visible:ring-accent-primary/30 motion-reduce:transition-none motion-reduce:hover:transform-none"
-      style={{ boxShadow: '0 0 0 0 transparent' }}
+      className="board-widget group/board min-w-0 rounded-xl border border-white/[0.07] bg-white/[0.035] p-4 outline-none transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-white/[0.14] hover:shadow-[0_12px_30px_-14px_var(--profile-accent,rgb(var(--accent-primary)))66] focus-visible:border-accent-primary/50 focus-visible:ring-1 focus-visible:ring-accent-primary/30 motion-reduce:transition-none motion-reduce:hover:transform-none"
+      style={{ boxShadow: '0 2px 10px -6px rgba(0,0,0,0.35)' }}
     >
       <div className="mb-2.5 flex items-baseline gap-2">
         <span className="text-[10px] text-txt-tertiary" aria-hidden>✦</span>
@@ -67,12 +67,14 @@ function FavoriteGameValue({ config }: RendererProps) {
   if (!title && !cover) {
     return <EmptyValue textKey="board_empty_default" />;
   }
-  // Editorial two-column card: big cover (40%) with soft overlay + fluid
-  // text column (60%) with a display-serif title.
+  // Editorial two-column card: BIG cover (40%) with soft overlay + fluid text
+  // column (60%) — uppercase caption title, serif-italic quote description,
+  // tag chips row. Discord-inspired but VERTEX-flavoured.
+  const tags = title ? title.split(/[,;·|]+/).map((s) => s.trim()).filter(Boolean) : [];
   return (
-    <div className="flex items-stretch gap-3.5">
+    <div className="flex items-stretch gap-4">
       {cover && (
-        <div className="relative w-[40%] max-w-[132px] shrink-0 overflow-hidden rounded-lg">
+        <div className="relative w-[40%] max-w-[150px] shrink-0 overflow-hidden rounded-lg ring-1 ring-white/[0.08]">
           <img
             src={resolveUploadSrc(cover)}
             alt=""
@@ -81,22 +83,39 @@ function FavoriteGameValue({ config }: RendererProps) {
           />
           <div
             className="pointer-events-none absolute inset-0"
-            style={{ background: 'linear-gradient(180deg, transparent 55%, rgba(0,0,0,0.45) 100%)' }}
+            style={{ background: 'linear-gradient(180deg, transparent 55%, rgba(0,0,0,0.5) 100%)' }}
             aria-hidden
           />
         </div>
       )}
-      <div className="flex min-w-0 flex-1 flex-col justify-center">
+      <div className="flex min-w-0 flex-1 flex-col justify-center gap-2">
         {title && (
           <div
-            className="break-words text-[19px] font-semibold italic leading-tight"
+            className="break-words text-[20px] font-semibold uppercase italic leading-tight"
             style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
           >
             {title}
           </div>
         )}
         {description && (
-          <p className="mt-1.5 line-clamp-4 text-[12.5px] leading-relaxed text-txt-secondary">{description}</p>
+          <p
+            className="line-clamp-4 text-[13px] italic leading-relaxed text-txt-secondary"
+            style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
+          >
+            “{description}”
+          </p>
+        )}
+        {tags.length > 0 && (
+          <div className="mt-0.5 flex flex-wrap gap-1.5">
+            {tags.slice(0, 3).map((tag) => (
+              <span
+                key={tag}
+                className="rounded-md border border-white/[0.09] bg-white/[0.05] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-txt-tertiary"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
         )}
         {!title && !description && <EmptyValue textKey="board_empty_default" />}
       </div>

@@ -106,9 +106,12 @@ export function ProfileBoardTab({ user, origin, onBoardSaved }: ProfileBoardTabP
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-1.5 text-[12px] font-semibold text-txt-secondary transition-colors hover:bg-white/[0.08] hover:text-txt-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-primary/40"
+            className="flex items-center gap-1.5 rounded-lg bg-accent-primary px-3.5 py-2 text-[12.5px] font-bold text-white shadow-[0_4px_14px_-6px_rgba(0,0,0,0.5)] transition-all hover:bg-accent-primary/85 hover:shadow-[0_6px_18px_-6px_rgba(0,0,0,0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/50 motion-safe:hover:-translate-y-px"
           >
-            {t('board_edit')}
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden>
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            {t('board_add_widget')}
           </button>
         </div>
       )}
@@ -129,7 +132,7 @@ export function ProfileBoardTab({ user, origin, onBoardSaved }: ProfileBoardTabP
           )}
         </div>
       ) : (
-        <div className="board-grid grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 min-[420px]:items-start">
+        <div className="grid grid-cols-1 gap-5 min-[420px]:grid-cols-2 min-[420px]:items-start">
           {shown.map((w) => {
             const def = WIDGET_REGISTRY[w.type];
             if (!def || w.visible === false) return null;
