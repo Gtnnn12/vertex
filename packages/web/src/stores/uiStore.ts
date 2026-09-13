@@ -41,8 +41,6 @@ interface UIState {
   modalData: Record<string, unknown>;
   isMobile: boolean;
   showDms: boolean;
-  netrexPurchaseOpen: boolean;
-  setNetrexPurchaseOpen: (open: boolean) => void;
   /** Timestamp of the last Netrex activation — sidebar chip flashes green once. */
   netrexFlashAt: number;
   triggerNetrexFlash: () => void;
@@ -120,9 +118,6 @@ export const useUIStore = create<UIState>()(
 
       openModal: (modal, data = {}) => set({ activeModal: modal, modalData: data }),
       closeModal: () => set({ activeModal: null, modalData: {} }),
-
-      netrexPurchaseOpen: false,
-      setNetrexPurchaseOpen: (open) => set({ netrexPurchaseOpen: open }),
 
       setIsMobile: (isMobile) => {
         const prev = get().isMobile;

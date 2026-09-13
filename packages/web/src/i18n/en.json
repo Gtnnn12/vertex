@@ -317,6 +317,7 @@
   "banned_by_on": "Banned by {moderator} on {date}",
   "banner": "Banner",
   "banner_color": "Banner Color",
+  "banner_too_large": "The banner is too large (max 10 MB)",
   "bans": "Bans",
   "bans_hint": "Users banned from this space",
   "be_the_first_to_join": "Be the first to join",
