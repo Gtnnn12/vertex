@@ -25,6 +25,15 @@ const GRACE_PERIOD_MS = 2 * 60_000;
 /** userId → last epoch ms playback was seen active. */
 const lastActiveAt = new Map<string, number>();
 
+/**
+ * userIds whose now-playing poll answered HTTP 403 — free accounts. The
+ * /currently-playing endpoint requires Premium, so that path will NEVER
+ * succeed for them; the rich data arrives anyway through the desktop
+ * window-title detector. Once flagged: no more requests, no more logs.
+ * In-memory (not DB): a future Premium upgrade heals on server restart.
+ */
+const freeAccountPollingDisabled = new Set<string>();
+
 /** Refresh an expired access token with the stored refresh token. */
 async function refreshAccessToken(userId: string, refreshToken: string): Promise<{
   accessToken: string;
@@ -88,14 +97,16 @@ interface NowPlaying {
   isPlaying: boolean;
 }
 
-async function fetchNowPlaying(accessToken: string): Promise<NowPlaying | null | 'idle'> {
+async function fetchNowPlaying(accessToken: string): Promise<NowPlaying | null | 'idle' | 'forbidden'> {
   try {
     const res = await fetch(SPOTIFY_NOW_PLAYING_URL, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
-    // 204 = nothing playing; 401 = token expired (caller refreshes).
+    // 204 = nothing playing; 401 = token expired (caller refreshes);
+    // 403 = free account — the endpoint requires Premium permanently.
     if (res.status === 204) return 'idle';
     if (res.status === 401) return null;
+    if (res.status === 403) return 'forbidden';
     if (!res.ok) {
       console.warn('[spotify-poller] now-playing HTTP', res.status);
       return null;
@@ -170,6 +181,10 @@ async function pollOnce(): Promise<void> {
   const now = Date.now();
 
   for (const row of rows) {
+    // Free account (403 already seen): this path can never work — skip
+    // silently and forever. The window-title detector feeds the widget.
+    if (freeAccountPollingDisabled.has(row.userId)) continue;
+
     let accessToken = row.accessToken;
 
     // Refresh if expired (60s margin already baked into expiresAt).
@@ -180,6 +195,13 @@ async function pollOnce(): Promise<void> {
     }
 
     const np = await fetchNowPlaying(accessToken);
+    if (np === 'forbidden') {
+      // First (and only) 403 for this user: mark and go silent. No retry,
+      // no more logs — Spotify answered definitively (Premium required).
+      freeAccountPollingDisabled.add(row.userId);
+      console.log(`[spotify-poller] 403 for ${row.userId.slice(0, 6)}*** — free account, now-playing polling disabled for this user (window-title detection continues)`);
+      continue;
+    }
     if (np === null) continue; // transient error — keep previous state
 
     const wasActive = lastActiveAt.has(row.userId);
