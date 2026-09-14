@@ -67,6 +67,21 @@ export const useActivityStore = create<ActivityState>((set, get) => ({
 
   pushActivities: (activities) => {
     if (!get().showActivity) return;
+    // ── COVER REGRESSION GUARD ─────────────────────────────────────────
+    // The poll chain is async: an early push can carry NO cover while the
+    // cover resolves downstream (server merge, search-cover round-trip).
+    // If a later push for the SAME track arrives still coverless it must
+    // NOT erase the rich activity already in the store — otherwise the
+    // widget flips back to the fallback logo even though the cover exists.
+    const prevSpotify = get().myActivities?.find(
+      (a) => a.type === 'spotify' && a.spotify,
+    )?.spotify;
+    if (prevSpotify?.albumCover) {
+      const incoming = activities.find((a) => a.type === 'spotify' && a.spotify && !a.spotify.albumCover);
+      if (incoming && incoming.spotify) {
+        incoming.spotify = { ...incoming.spotify, albumCover: prevSpotify.albumCover };
+      }
+    }
     // [TEMP-TRACE b] what the bridge actually put in the store
     for (const a of activities) {
       if (a.type === 'spotify' || /spotify/i.test(a.name)) {
