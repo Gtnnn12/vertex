@@ -112,10 +112,12 @@ export function Avatar({ src, name, size = 40, status, className = '', onClick, 
           {initials}
         </div>
       </div>
-      {/* Status dot — outside the masked div so it isn't clipped */}
+      {/* Status dot — outside the masked div so it isn't clipped. A
+          surface-colored border keeps it visually attached to the avatar
+          instead of floating detached over whatever is behind it. */}
       {status && (
         <div
-          className={`absolute rounded-full ${statusColors[status] ?? 'bg-status-offline'}`}
+          className={`absolute rounded-full border-2 border-[var(--surface-channel)] ${statusColors[status] ?? 'bg-status-offline'}`}
           style={{
             width: dotDiameter,
             height: dotDiameter,
