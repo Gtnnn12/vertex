@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 import type { Activity, ActivitySpotify } from '@backspace/shared';
 import { getPrimaryActivity } from '@backspace/shared/src/activities.js';
@@ -8,6 +8,8 @@ import { useMusicStyleForSelf } from '../../stores/musicWidgetStore';
 import { resolveMusicStyle } from '../../spotify/musicStyles';
 import { SpotifyCard } from './SpotifyVinyl';
 import { MatchCard } from './MatchCard';
+import { useReducedMotion } from 'framer-motion';
+import type { MusicStyleId } from '../../spotify/musicStyles';
 
 interface SpotifyVinylBlockProps {
   /** Canonical lookup id — the same key the activity panels use: `homeUserId ?? id`. */
@@ -51,6 +53,57 @@ function rememberCover(spotify: ActivitySpotify): ActivitySpotify {
   }
   const cached = coverCache.get(coverKey(spotify));
   return cached ? { ...spotify, albumCover: cached } : spotify;
+}
+
+/**
+ * Game card with the Discord-style hover reveal: by default the minimal
+ * Match Card (icon + "Jugando a X"); on mouse-over it crossfades — slowly,
+ * elegantly — to the Spotify box when music is playing at the same time.
+ * Nothing playing → no hover, just the game card. Reduced-motion: instant
+ * swap, no transition.
+ */
+function GameCardWithHover({
+  game,
+  spotify,
+  compact,
+  style,
+}: {
+  game: Activity;
+  spotify: ActivitySpotify | null;
+  compact: boolean;
+  style: MusicStyleId;
+}) {
+  const prefersReduced = useReducedMotion();
+  const [hovered, setHovered] = useState(false);
+  const showMusic = hovered && !!spotify;
+
+  if (!spotify) {
+    return <MatchCard game={game} compact={compact} />;
+  }
+
+  return (
+    <div
+      className="relative"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      data-game-hover
+    >
+      <div
+        className="game-hover-layer transition-opacity duration-[350ms] ease-in-out"
+        style={{ opacity: showMusic ? 1 : 0, pointerEvents: showMusic ? 'auto' : 'none', transitionDuration: prefersReduced ? '0ms' : '350ms' }}
+      aria-hidden={!showMusic}
+    >
+      <SpotifyCard spotify={spotify} compact={compact ?? false} style={style} />
+      </div>
+      <div
+        className="game-hover-layer transition-opacity duration-[350ms] ease-in-out"
+        style={{ opacity: showMusic ? 0 : 1, pointerEvents: showMusic ? 'none' : 'auto', transitionDuration: prefersReduced ? '0ms' : '350ms' }}
+        aria-hidden={showMusic}
+      >
+        <MatchCard game={game} compact={compact ?? false} />
+      </div>
+    </div>
+  );
 }
 
 /**
@@ -144,8 +197,17 @@ export function SpotifyVinylBlock({ lookupUserId, isSelf, compact }: SpotifyViny
   if (!cardData) return null;
 
   // Match Card while a game is detected (already Netrex-gated above).
+  // Minimal card: icon + "Jugando a X". When Spotify plays too, remember it
+  // so the compact popout can crossfade to the music box on hover (FIX 2).
   if (cardData.kind === 'game') {
-    return <MatchCard game={cardData.game} spotifyLine={cardData.spotify} compact={compact} />;
+    return (
+      <GameCardWithHover
+        game={cardData.game}
+        spotify={cardData.spotify}
+        compact={compact ?? false}
+        style={style}
+      />
+    );
   }
 
   return <SpotifyCard spotify={cardData.spotify} compact={compact} style={style} />;
