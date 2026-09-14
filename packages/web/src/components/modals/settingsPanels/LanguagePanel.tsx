@@ -1,5 +1,8 @@
 import { useLanguage } from '../../../contexts/LanguageContext';
 
+// [TEMP-TRACE] valor leído al montar — lo que un reload aplicará.
+console.log(`[lang-panel mount] localStorage.lang=${localStorage.getItem('lang')}`);
+
 export function LanguagePanel() {
   const { language, setLanguage, t } = useLanguage();
 
@@ -18,7 +21,12 @@ export function LanguagePanel() {
             <button
               key={opt.value}
               type="button"
-              onClick={() => setLanguage(opt.value)}
+              onClick={() => {
+                // [TEMP-TRACE] valor guardado al click.
+                console.log(`[lang-panel click] → ${opt.value}`);
+                setLanguage(opt.value);
+                console.log(`[lang-panel click] stored=${localStorage.getItem('lang')} context=${language}`);
+              }}
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors ${
                 selected
                   ? 'bg-interactive-selected text-txt-primary'
