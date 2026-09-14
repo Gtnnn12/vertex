@@ -57,14 +57,22 @@ export function VertexAIChat({ scope, title, subtitle, onClose }: VertexAIChatPr
     setSending(true);
     try {
       const result = scope === 'support' ? await api.ai.support(message) : await api.ai.chat(message);
-      if (result.ok) {
-        setBubbles((prev) => [...prev, { role: 'ai', text: result.text }]);
+      const replyText = result.ok ? result.text : undefined;
+      if (replyText) {
+        setBubbles((prev) => [...prev, { role: 'ai', text: replyText }]);
         setRemaining(result.remaining);
       } else {
         setBubbles((prev) => [...prev, { role: 'ai', text: (result as { message?: string }).message ?? 'No pude responder ahora mismo.', error: true }]);
+        const r = (result as { remaining?: number | null }).remaining;
+        if (typeof r === 'number') setRemaining(r);
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error de conexión';
+      // NetworkError = the request never reached the server (down / refused).
+      // Every other error has its own honest message (timeout, 4xx...).
+      const netDown = err instanceof Error && err.name === 'NetworkError';
+      const msg = netDown
+        ? 'No hay conexión con el servidor. Comprueba tu red e inténtalo de nuevo.'
+        : err instanceof Error ? err.message : 'Error de conexión';
       setBubbles((prev) => [...prev, { role: 'ai', text: msg, error: true }]);
     } finally {
       setSending(false);

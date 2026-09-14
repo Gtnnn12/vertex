@@ -117,6 +117,16 @@ export class HttpError extends Error {
   }
 }
 
+/** Vertex AI chat reply: success carries text; failures carry an honest message. */
+export interface AIChatClientResult {
+  ok: boolean;
+  text?: string;
+  model?: string;
+  netrex?: boolean;
+  remaining: number | null;
+  message?: string;
+}
+
 export class BackspaceApiClient {
   readonly auth: {
     register: (data: RegisterRequest) => Promise<AuthResponse>;
@@ -337,8 +347,8 @@ export class BackspaceApiClient {
 
   readonly ai: {
     status: () => Promise<{ configured: boolean; remaining: number }>;
-    chat: (message: string) => Promise<{ ok: boolean; text: string; model: string; netrex: boolean; remaining: number }>;
-    support: (message: string) => Promise<{ ok: boolean; text: string; model: string; netrex: boolean; remaining: number }>;
+    chat: (message: string) => Promise<AIChatClientResult>;
+    support: (message: string) => Promise<AIChatClientResult>;
     reset: (scope?: 'assistant' | 'support') => Promise<{ ok: boolean }>;
   };
 
@@ -401,8 +411,11 @@ export class BackspaceApiClient {
         }
       }
 
+      // AI endpoints can take >30s (PRO model, chain fallbacks) — give them
+      // a longer window. Everything else keeps the 30s default.
+      const isAI = path.startsWith('/ai/');
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      const timeoutId = setTimeout(() => controller.abort(), isAI ? 90000 : 30000);
 
       let response: Response;
       try {
@@ -438,8 +451,21 @@ export class BackspaceApiClient {
         // 5xx (typically the dev proxy failing to reach the backend) or a body
         // without any error text means the server itself is unreachable —
         // surface NetworkError so UIs show "cannot reach the server".
+        // 5xx means the server WAS reached (a real network failure throws
+        // before this line). Only treat it as "unreachable" when the body
+        // carries no JSON error (dev proxy down, raw HTML crash page). With a
+        // structured body (e.g. Vertex AI "saturated" 503) surface the
+        // server's honest message instead of the lying "Cannot reach the
+        // server".
         if (response.status >= 500) {
-          throw new NetworkError();
+          const errObj = error as { error?: unknown; message?: unknown };
+          const hasErrorBody = typeof errObj.error === 'string' || typeof errObj.message === 'string';
+          if (!hasErrorBody) throw new NetworkError();
+          throw new HttpError(
+            response.status,
+            typeof errObj.message === 'string' ? errObj.message : (errObj.error as string),
+            error,
+          );
         }
         throw new HttpError(response.status, (error as { error?: string }).error || `HTTP ${response.status}`, error);
       }
@@ -852,10 +878,25 @@ export class BackspaceApiClient {
         request<{ redemptions: InviteRedemption[] }>('GET', `/admin/invites/${id}/redemptions`),
     };
 
+    // AI endpoints: the server replies with honest messages for quota/limit/
+    // saturation (429/503) — unwrap them so the chat shows "estoy saturado,
+    // prueba en un minuto" instead of a raw error class name.
+    const aiChat = async (path: string, message: string): Promise<AIChatClientResult> => {
+      try {
+        return await request<{ ok: true; text: string; model: string; netrex: boolean; remaining: number }>('POST', path, { message });
+      } catch (err) {
+        const body = err instanceof HttpError ? (err.body as { message?: unknown } | undefined) : undefined;
+        if (err instanceof HttpError && typeof body?.message === 'string') {
+          return { ok: false, message: body.message, remaining: null };
+        }
+        throw err;
+      }
+    };
+
     this.ai = {
       status: () => request<{ configured: boolean; remaining: number }>('GET', '/ai/status'),
-      chat: (message: string) => request<{ ok: boolean; text: string; model: string; netrex: boolean; remaining: number }>('POST', '/ai/chat', { message }),
-      support: (message: string) => request<{ ok: boolean; text: string; model: string; netrex: boolean; remaining: number }>('POST', '/ai/support', { message }),
+      chat: (message: string) => aiChat('/ai/chat', message),
+      support: (message: string) => aiChat('/ai/support', message),
       reset: (scope = 'assistant') => request<{ ok: boolean }>('POST', '/ai/reset', { scope }),
     };
 
