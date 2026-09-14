@@ -15,8 +15,10 @@ import crypto from 'crypto';
 
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY ?? '';
 
-const MODEL_FLASH = 'gemini-2.0-flash';
-const MODEL_PRO = 'gemini-2.5-pro';
+// "latest" aliases: pinned model names (gemini-2.x) 404 for new keys —
+// Google rotates them out; the alias always points at a live model.
+const MODEL_FLASH = 'gemini-flash-latest';
+const MODEL_PRO = 'gemini-pro-latest';
 
 const DAILY_LIMIT_FREE = 20;
 const DAILY_LIMIT_NETREX = 100;
@@ -43,14 +45,18 @@ export function isAIConfigured(): boolean {
 }
 
 // ── Netrex entitlement (same gate the rest of the server uses) ─────────────
-// Local copy of the users.netrex computation to avoid a route-module import
-// cycle; mirrors routes/users.ts computeNetrexEntitlement.
+// Local copy of routes/users.ts computeNetrexEntitlement to avoid a
+// route-module import cycle. Same fallback chain: purchased plan (netrexUntil
+// in the future) wins; legacy admin-grant (netrexEnabled=1, unexpired via
+// netrexExpiresAt) backs it up. A grant without expiry never lapses.
 function isNetrexUser(userId: string): boolean {
   try {
     const row = getDb().select().from(schema.users).where(eq(schema.users.id, userId)).get();
     if (!row) return false;
-    const grantActive = !!row.netrexUntil && row.netrexUntil > Date.now();
-    return !!row.netrexEnabled || grantActive;
+    const until = row.netrexUntil ?? row.netrexExpiresAt ?? null;
+    const granted = row.netrexEnabled === 1 && (until === null || until > Date.now());
+    const purchased = row.netrexUntil != null && row.netrexUntil > Date.now();
+    return granted || purchased;
   } catch {
     return false;
   }
