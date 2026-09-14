@@ -55,7 +55,8 @@ export async function registerSuggestionRoutes(app: FastifyInstance): Promise<vo
   });
 
   // ── Admin triage ──
-  app.get('/api/admin/suggestions', { preHandler: requireStaff }, async () => {
+  // NOTE: authenticate must run first — requireStaff reads request.userId.
+  app.get('/api/admin/suggestions', { preHandler: [authenticate, requireStaff] }, async () => {
     const rows = getDb()
       .select()
       .from(schema.userSuggestions)
@@ -64,7 +65,7 @@ export async function registerSuggestionRoutes(app: FastifyInstance): Promise<vo
     return { suggestions: rows.map(toSuggestion) };
   });
 
-  app.patch('/api/admin/suggestions/:id', { preHandler: requireStaff }, async (request, reply) => {
+  app.patch('/api/admin/suggestions/:id', { preHandler: [authenticate, requireStaff] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const body = (request.body ?? {}) as { status?: unknown };
     const status = typeof body.status === 'string' ? body.status : '';
