@@ -18,6 +18,7 @@ import { hasPermissionBit, PermissionBits } from '../../utils/permissions';
 import { joinVoiceChannel, broadcastVoiceStatus, broadcastDeafenViaLiveKit } from '../../utils/voice';
 import { useContextMenuStore, type ContextMenuItem } from '../../stores/contextMenuStore';
 import { usePresenceMenuItems } from './PresenceMenu';
+import { UserPanel } from '../ui/UserPanel';
 import { NetrexNavChip } from './NetrexNavChip';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { DmSearchBar } from './DmSearchBar';
@@ -1120,6 +1121,7 @@ function UserAreaPanel({
   const [openPanel, setOpenPanel] = useState<'input' | 'output' | null>(null);
   const openContextMenu = useContextMenuStore((s) => s.open);
   const presenceMenuItems = usePresenceMenuItems(user);
+  const [userPanelAnchor, setUserPanelAnchor] = useState<{ x: number; y: number } | null>(null);
   const inputDeviceId = useVoiceStore((s) => s.inputDeviceId);
   const outputDeviceId = useVoiceStore((s) => s.outputDeviceId);
   const setInputDevice = useVoiceStore((s) => s.setInputDevice);
@@ -1414,20 +1416,9 @@ function UserAreaPanel({
           onClick={(e) => {
             e.stopPropagation();
             const rect = e.currentTarget.getBoundingClientRect();
-            openContextMenu(
-              { x: rect.left, y: rect.top - 8 },
-              [
-                ...presenceMenuItems,
-                { type: 'separator' as const, key: 'presence-sep' },
-                {
-                  type: 'action' as const,
-                  key: 'user-area-settings',
-                  label: 'Settings',
-                  onClick: () => onSettingsClick(),
-                },
-              ],
-            );
+            setUserPanelAnchor({ x: rect.left, y: rect.top - 8 });
           }}
+          data-user-area-trigger
           className="px-1.5 py-1.5 rounded-[9px] flex items-center gap-2.5 min-w-0 w-full cursor-pointer transition-colors group hover:bg-white/[0.03]"
         >
           <ProfileAvatar src={user.avatar} name={user.displayName ?? user.username} size={32} status={user.status} user={user} />
@@ -1513,6 +1504,19 @@ function UserAreaPanel({
           </button>
         </div>
       </div>
+
+      {/* Discord-style user panel, anchored above the avatar. */}
+      {userPanelAnchor && (
+        <UserPanel
+          user={user}
+          anchor={userPanelAnchor}
+          onClose={() => setUserPanelAnchor(null)}
+          onEditProfile={() => {
+            setUserPanelAnchor(null);
+            onSettingsClick('profile');
+          }}
+        />
+      )}
     </div>
   );
 }
