@@ -23,7 +23,7 @@ import { ProfileBoardTab } from '../profile/board/ProfileBoardTab';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { profileTint } from '../../utils/profileTint';
 
-type Tab = 'board' | 'friends' | 'spaces';
+type Tab = 'board' | 'activity' | 'friends' | 'spaces';
 
 /**
  * Sliding tab indicator: measures the active tab button and positions the
@@ -320,6 +320,7 @@ export function UserProfileModal() {
 
   const tabs: { key: Tab; label: string; count?: number; disabled?: boolean }[] = [
     { key: 'board', label: boardTabLabel },
+    { key: 'activity', label: t('board_tab_activity') },
     { key: 'friends', label: t('board_tab_mutual_friends'), count: mutualFriends.length },
     { key: 'spaces', label: t('board_tab_mutual_spaces'), count: mutualSpaces.length },
   ];
@@ -689,6 +690,32 @@ export function UserProfileModal() {
                       })}
                     </div>
                   )}
+                </div>
+              )}
+
+              {activeTab === 'activity' && (
+                <div>
+                  {/* CURRENT ACTIVITY — the same renderers every other surface
+                      uses (MatchCard / Spotify box via SpotifyVinylBlock, which
+                      applies its own Netrex gating); zero new data components. */}
+                  <span className="block text-[11px] uppercase tracking-wide font-semibold text-txt-tertiary mb-2">
+                    {t('activity')}
+                  </span>
+                  <div className="max-w-[420px]">
+                    <SpotifyVinylBlock
+                      lookupUserId={user.homeUserId ?? user.id}
+                      isSelf={isSelfProfile}
+                    />
+                  </div>
+
+                  {/* RECENT ACTIVITY — no history is stored yet; honest empty
+                      state instead of an invented feed. */}
+                  <span className="block text-[11px] uppercase tracking-wide font-semibold text-txt-tertiary mt-6 mb-2">
+                    {t('activity_recent')}
+                  </span>
+                  <div className="rounded-lg border border-white/[0.05] bg-white/[0.02] py-8 text-center text-txt-tertiary text-[13px]">
+                    {t('coming_soon')}
+                  </div>
                 </div>
               )}
             </div>
