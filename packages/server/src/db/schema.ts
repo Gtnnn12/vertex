@@ -689,3 +689,14 @@ export const spotifyTokens = sqliteTable('spotify_tokens', {
   /** Epoch ms of the last successful currently-playing poll. */
   lastPolledAt: integer('last_polled_at'),
 });
+
+/** User-submitted improvement proposals, triaged in the Admin Center. */
+export const userSuggestions = sqliteTable('user_suggestions', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
+  /** Author snapshot — survives user deletion. */
+  username: text('username'),
+  text: text('text').notNull(),
+  createdAt: integer('created_at').notNull(),
+  status: text('status').notNull().default('pending'),
+});

@@ -178,6 +178,17 @@ export function ensureDefaults(db: Database.Database): void {
   try { db.prepare('CREATE INDEX IF NOT EXISTS idx_web_thread_messages_thread_id ON web_support_thread_messages(thread_id)').run(); } catch {}
   try { db.prepare('CREATE INDEX IF NOT EXISTS idx_web_thread_messages_created_at ON web_support_thread_messages(created_at)').run(); } catch {}
 
+  // User suggestions (feature requests triaged in the Admin Center).
+  ensureTable(`CREATE TABLE IF NOT EXISTS user_suggestions (
+    id TEXT PRIMARY KEY,
+    user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+    username TEXT,
+    text TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending'
+  )`);
+  try { db.prepare('CREATE INDEX IF NOT EXISTS idx_user_suggestions_created_at ON user_suggestions(created_at)').run(); } catch {}
+
   // 4. Owner bootstrap (backend source of truth for the OWNER rank).
   // If OWNER_EMAIL is configured, the matching account is promoted to
   // staffRole='owner' (+ is_admin=1) on every boot. Idempotent: an account that
