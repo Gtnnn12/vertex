@@ -83,7 +83,7 @@ function GameCardWithHover({
 
   return (
     <div
-      className="relative"
+      className="relative grid"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       data-game-hover
@@ -151,13 +151,20 @@ export function SpotifyVinylBlock({ lookupUserId, isSelf, compact }: SpotifyViny
   // optimistic in-flight selection → saved value, with vinyl fallback when a
   // premium style lost its entitlement.
   const selfStyle = useMusicStyleForSelf();
-  const isNetrex = useAuthStore((s) => s.user?.netrexEnabled ?? false);
 
   // Other users ALWAYS render the classic vinyl; self renders the chosen style.
   const style = isSelf ? selfStyle : resolveMusicStyle('vinyl', false);
 
   // Derive ONCE per (activities, myActivities) change — not per render.
   const cardData = useMemo(() => {
+    // [TEMP-TRACE] what the widget receives at mount and on every store
+    // update — proves whether a late cover reaches the card or not.
+    const tracePool = activities && activities.length > 0 ? activities : (isSelf ? myActivities ?? [] : []);
+    const traceSp = tracePool.find((a) => a.type === 'spotify' && a.spotify)?.spotify;
+    if (traceSp) {
+      // eslint-disable-next-line no-console
+      console.log(`[vinyl-cover widget] song="${traceSp.song}" cover=${traceSp.albumCover ? traceSp.albumCover.slice(0, 60) : 'NULL'}`);
+    }
     const pool = activities && activities.length > 0 ? activities : (isSelf ? myActivities ?? [] : []);
     if (pool.length === 0) return null;
 
@@ -165,8 +172,10 @@ export function SpotifyVinylBlock({ lookupUserId, isSelf, compact }: SpotifyViny
     const primary = getPrimaryActivity(pool);
 
     // ── MATCH CARD branch: playing a detected game → match card wins. ──
-    // Netrex-gated: without the entitlement the widget stays the music box.
-    if (isSelf && isNetrex) {
+    // Presence info, NOT a premium style: every user gets it (the Netrex
+    // gate here used to blank the widget for non-Netrex players — the card
+    // is the same for everyone; only the music STYLE is entitlement-based). 
+    {
       const playing = findGamePlaying(pool);
       if (playing) return { kind: 'game' as const, ...playing };
     }
