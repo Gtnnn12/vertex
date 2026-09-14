@@ -1746,6 +1746,16 @@ export interface InviteRedemption {
   redeemedAt: number;
 }
 
+/** A user-submitted improvement proposal for VERTEX (Admin Center queue). */
+export interface UserSuggestion {
+  id: string;
+  userId: string;
+  username: string | null;
+  text: string;
+  createdAt: number;
+  status: 'pending' | 'read' | 'approved' | 'rejected';
+}
+
 export interface CreateInviteRequest {
   name: string;
   maxUses: number | null;

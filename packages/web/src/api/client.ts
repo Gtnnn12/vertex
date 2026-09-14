@@ -85,6 +85,7 @@ import type {
   AttachProofResponse,
   ReattachRequest,
   ReattachResponse,
+  UserSuggestion,
 } from '@backspace/shared';
 import { getApiForOrigin, getOwnerInstanceForDm } from '../utils/crossStoreResolvers';
 
@@ -96,7 +97,7 @@ export class NetworkError extends Error {
   }
 }
 
-export class RateLimitError extends Error {
+export class RateLimitError extends Error {
   readonly retryAfter: number;
   constructor(retryAfter: number) {
     super('Rate limit exceeded');
@@ -332,6 +333,21 @@ export class BackspaceApiClient {
     reinstate: (id: string, body: ReinstateInviteRequest) => Promise<ReinstateInviteResponse>;
     delete: (id: string) => Promise<{ success: boolean }>;
     redemptions: (id: string) => Promise<{ redemptions: InviteRedemption[] }>;
+  };
+
+  readonly ai: {
+    status: () => Promise<{ configured: boolean; remaining: number }>;
+    chat: (message: string) => Promise<{ ok: boolean; text: string; model: string; netrex: boolean; remaining: number }>;
+    support: (message: string) => Promise<{ ok: boolean; text: string; model: string; netrex: boolean; remaining: number }>;
+    reset: (scope?: 'assistant' | 'support') => Promise<{ ok: boolean }>;
+  };
+
+  readonly suggestions: {
+    create: (text: string) => Promise<{ suggestion: UserSuggestion }>;
+    mine: () => Promise<{ suggestions: UserSuggestion[] }>;
+    // Admin
+    list: () => Promise<{ suggestions: UserSuggestion[] }>;
+    updateStatus: (id: string, status: 'read' | 'approved' | 'rejected') => Promise<{ suggestion: UserSuggestion }>;
   };
 
   readonly admin: {
@@ -834,6 +850,20 @@ export class BackspaceApiClient {
         request<{ success: boolean }>('DELETE', `/admin/invites/${id}`),
       redemptions: (id: string) =>
         request<{ redemptions: InviteRedemption[] }>('GET', `/admin/invites/${id}/redemptions`),
+    };
+
+    this.ai = {
+      status: () => request<{ configured: boolean; remaining: number }>('GET', '/ai/status'),
+      chat: (message: string) => request<{ ok: boolean; text: string; model: string; netrex: boolean; remaining: number }>('POST', '/ai/chat', { message }),
+      support: (message: string) => request<{ ok: boolean; text: string; model: string; netrex: boolean; remaining: number }>('POST', '/ai/support', { message }),
+      reset: (scope = 'assistant') => request<{ ok: boolean }>('POST', '/ai/reset', { scope }),
+    };
+
+    this.suggestions = {
+      create: (text: string) => request<{ suggestion: UserSuggestion }>('POST', '/suggestions', { text }),
+      mine: () => request<{ suggestions: UserSuggestion[] }>('GET', '/suggestions/mine'),
+      list: () => request<{ suggestions: UserSuggestion[] }>('GET', '/admin/suggestions'),
+      updateStatus: (id, status) => request<{ suggestion: UserSuggestion }>('PATCH', `/admin/suggestions/${id}`, { status }),
     };
 
     this.admin = {

@@ -33,6 +33,7 @@ import { useAudioDevices } from '../../hooks/useAudioDevices';
 import { DropdownItem } from '../modals/settingsPanels/_shared/SettingsPickerPrimitives';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { Tooltip } from '../ui/Tooltip';
+import { VertexAIButtons } from '../ai/VertexAIButtons';
 
 export function ChannelSidebar() {
   const spaces = useSpaceStore((s) => s.spaces);
@@ -1407,6 +1408,9 @@ function UserAreaPanel({
           </button>
         </div>
       )}
+
+      {/* Vertex AI access — assistant + app-doubts, above the user panel. */}
+      <VertexAIButtons />
 
       {/* User area module — user first, controls recede until hover */}
       <div className="flex flex-col p-1.5 select-none group/user">
