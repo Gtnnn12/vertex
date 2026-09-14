@@ -17,8 +17,10 @@ const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY ?? '';
 
 // "latest" aliases: pinned model names (gemini-2.x) 404 for new keys —
 // Google rotates them out; the alias always points at a live model.
-const MODEL_FLASH = 'gemini-flash-latest';
-const MODEL_PRO = 'gemini-pro-latest';
+// Fallback chains: Google's free tier regularly answers 503 "high demand"
+// for a model, so every generation walks the chain until one answers.
+const MODEL_CHAIN_FLASH = ['gemini-3.6-flash', 'gemini-flash-lite-latest', 'gemini-flash-latest'];
+const MODEL_CHAIN_PRO = ['gemini-pro-latest', 'gemini-3.6-flash', 'gemini-flash-lite-latest'];
 
 const DAILY_LIMIT_FREE = 20;
 const DAILY_LIMIT_NETREX = 100;
@@ -134,6 +136,12 @@ function isQuotaError(err: unknown): boolean {
   return /429|quota|rate|exhaust|resource/i.test(msg);
 }
 
+/** Retryable upstream failures: quota AND capacity (503 high demand, 5xx, overload). */
+function isRetryableUpstreamError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return /429|quota|rate|exhaust|resource|50\d|overload|high demand|unavailable/i.test(msg);
+}
+
 async function generate(
   systemPrompt: string,
   history: ChatTurn[],
@@ -142,27 +150,24 @@ async function generate(
 ): Promise<{ text: string; model: string }> {
   if (!genAI) throw new Error('not_configured');
 
-  const attempt = async (modelName: string): Promise<{ text: string; model: string }> => {
-    const model = genAI.getGenerativeModel({
-      model: modelName,
-      systemInstruction: systemPrompt,
-    });
-    const chat = model.startChat({ history: history.map((h) => ({ role: h.role, parts: [{ text: h.text }] })) });
-    const result = await chat.sendMessage(userText);
-    const text = result.response.text();
-    return { text, model: modelName };
-  };
-
-  if (netrex) {
-    // PRO first; flash fallback on quota — never a dry error.
+  const chain = netrex ? MODEL_CHAIN_PRO : MODEL_CHAIN_FLASH;
+  let lastErr: unknown;
+  for (const modelName of chain) {
     try {
-      return await attempt(MODEL_PRO);
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        systemInstruction: systemPrompt,
+      });
+      const chat = model.startChat({ history: history.map((h) => ({ role: h.role, parts: [{ text: h.text }] })) });
+      const result = await chat.sendMessage(userText);
+      return { text: result.response.text(), model: modelName };
     } catch (err) {
-      if (isQuotaError(err)) return attempt(MODEL_FLASH);
-      throw err;
+      lastErr = err;
+      console.error(`[vertex-ai] ${modelName} failed:`, err instanceof Error ? err.message : err);
+      if (!isRetryableUpstreamError(err)) throw err; // non-retryable: abort the chain
     }
   }
-  return attempt(MODEL_FLASH);
+  throw lastErr;
 }
 
 /** Shared pipeline for the assistant and the app-support channel. */
@@ -187,8 +192,17 @@ export async function runAIChat(
     appendHistory(userId, scope, { role: 'user', text: userText });
     appendHistory(userId, scope, { role: 'model', text });
     return { ok: true, text, model, netrex, remaining: remainingToday(userId) };
-  } catch {
-    return { ok: false, error: 'upstream', message: 'Vertex AI no pudo responder ahora mismo. Inténtalo de nuevo.' };
+  } catch (err) {
+    const saturated = isRetryableUpstreamError(err);
+    console.error('[vertex-ai] generate failed:', err instanceof Error ? err.message : err);
+    return {
+      ok: false,
+      error: 'upstream',
+      // Honest message: the server WAS reached; it's Google's side that failed.
+      message: saturated
+        ? 'Vertex AI está saturado ahora mismo (demanda alta en los modelos). Prueba de nuevo en un minuto.'
+        : 'Vertex AI no pudo responder ahora mismo. Inténtalo de nuevo.',
+    };
   }
 }
 
