@@ -12,6 +12,7 @@ import { AdminSpaces } from './AdminSpaces';
 import { AdminActivity } from './AdminActivity';
 import { AdminAuditLog } from './AdminAuditLog';
 import { AdminSettings } from './AdminSettings';
+import { AdminSuggestions } from './AdminSuggestions';
 
 export type AdminTab =
   | 'overview'
@@ -22,6 +23,7 @@ export type AdminTab =
   | 'spaces'
   | 'activity'
   | 'audit'
+  | 'suggestions'
   | 'settings';
 
 export function AdminCenter() {
@@ -98,6 +100,7 @@ export function AdminCenter() {
         {navItem('spaces', t('admin_spaces'))}
         {navItem('activity', t('admin_activity'))}
         {navItem('audit', t('admin_audit'))}
+        {navItem('suggestions', t('suggestions_admin_title'))}
         {navItem('settings', t('admin_settings'), !canManage)}
       </div>
 
@@ -110,6 +113,7 @@ export function AdminCenter() {
         {tab === 'spaces' && <AdminSpaces />}
         {tab === 'activity' && <AdminActivity />}
         {tab === 'audit' && <AdminAuditLog />}
+        {tab === 'suggestions' && <AdminSuggestions />}
         {tab === 'settings' && <AdminSettings />}
       </div>
     </div>

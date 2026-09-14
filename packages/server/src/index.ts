@@ -32,6 +32,7 @@ import { federationRoutes } from './routes/federation.js';
 import { netrexRoutes } from './routes/netrex.js';
 import { spotifyRoutes } from './routes/spotify.js';
 import { registerAIRoutes } from './routes/ai.js';
+import { registerSuggestionRoutes } from './routes/suggestions.js';
 import { startFederationWorkers, stopFederationWorkers } from './utils/federationWorker.js';
 import { startBackupWorker, stopBackupWorker } from './utils/backupWorker.js';
 import { startNetrexExpiryWorker } from './utils/netrexWorker.js';
@@ -152,6 +153,7 @@ async function main(): Promise<void> {
   await app.register(netrexRoutes);
   await app.register(spotifyRoutes);
   await registerAIRoutes(app);
+  await registerSuggestionRoutes(app);
   await app.register(registerWebSocket);
 
   app.get('/api/health', async () => {
