@@ -20,9 +20,15 @@ export function AdminSuggestions() {
   const { t } = useLanguage();
   const [suggestions, setSuggestions] = useState<UserSuggestion[] | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = () => {
-    api.suggestions.list().then((r) => setSuggestions(r.suggestions)).catch(() => setSuggestions([]));
+    setLoadError(null);
+    api.suggestions.list().then((r) => setSuggestions(r.suggestions)).catch((err) => {
+      // Surface the failure instead of showing a fake "empty" queue.
+      setSuggestions([]);
+      setLoadError(err instanceof Error ? err.message : 'Error');
+    });
   };
 
   useEffect(load, []);
@@ -39,6 +45,10 @@ export function AdminSuggestions() {
 
   if (suggestions === null) {
     return <div className="text-sm text-txt-tertiary py-6">…</div>;
+  }
+
+  if (loadError) {
+    return <div className="text-sm text-red-400 py-6">⚠ {loadError}</div>;
   }
 
   if (suggestions.length === 0) {
