@@ -93,4 +93,4 @@ pnpm dev
 
 Hecho a mano — diseño, código y mascota incluidos.
 
-© 2026 Gtnnn12 · [LICENSE](LICENSE) (MIT; partes heredadas de Backspace permanecen bajo AGPL-3.0 — ver [NOTICE](NOTICE))
+© 2026 Gtnnn12 · [LICENSE](LICENSE) (MIT — ver [NOTICE](NOTICE) para las partes heredadas bajo AGPL-3.0)
