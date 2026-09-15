@@ -31,7 +31,7 @@
         "cheerio": "^1.0.0",
         "dotenv": "^16.4.5",
         "drizzle-orm": "^0.33.0",
-        "fastify": "^4.28.1",
+        "fastify": "^5.12.4",
         "jsonwebtoken": "^9.0.2",
         "libsql": "^0.5.29",
         "livekit-server-sdk": "^2.6.1",
