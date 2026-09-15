@@ -23,6 +23,7 @@
   "board_locked_desc": "Personaliza tu perfil con widgets: juego favorito, canción del momento, metas y más. Exclusivo de Netrex.",
   "board_unlock_netrex": "Desbloquear Netrex",
   "board_save_failed": "No se pudo guardar el tablero. Se restauró el anterior.",
+  "board_save_offline": "Sin conexión con el servidor. El tablero no se ha guardado — inténtalo cuando vuelva la conexión.",
   "board_save_invalid": "El tablero contiene datos no válidos.",
   "board_save_netrex_denied": "Necesitas Netrex activo para guardar el tablero.",
   "board_empty_default": "Sin contenido todavía",

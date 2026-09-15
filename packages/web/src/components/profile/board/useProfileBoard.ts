@@ -3,6 +3,7 @@ import type { BoardWidget } from '@vertex/shared';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { useUIStore } from '../../../stores/uiStore';
 import { getApiForOrigin } from '../../../stores/spaceStore';
+import { HttpError, NetworkError } from '../../../api/client';
 import { validateBoardWidgets } from './boardUtils';
 
 type SaveState = 'idle' | 'saving' | 'error';
@@ -52,9 +53,19 @@ export function useProfileBoard(): UseProfileBoardResult {
       return true;
     } catch (err) {
       setSaveError(true);
-      const message = err instanceof Error && /403|netrex/i.test(err.message)
-        ? t('board_save_netrex_denied')
-        : t('board_save_failed');
+      // Honest messages: "no connection" ONLY when the request never reached
+      // the server (NetworkError) or the dev proxy answered with a bare 5xx;
+      // the Netrex text for the 403 gate; the server's own text otherwise.
+      let message: string;
+      if (err instanceof NetworkError) {
+        message = t('board_save_offline');
+      } else if (err instanceof HttpError && err.status === 403) {
+        message = t('board_save_netrex_denied');
+      } else if (err instanceof HttpError && err.status >= 500) {
+        message = t('board_save_offline');
+      } else {
+        message = t('board_save_failed');
+      }
       addToast(message, 'warning');
       return false;
     } finally {

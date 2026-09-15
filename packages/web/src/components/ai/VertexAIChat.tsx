@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { api } from '../../api/client';
+import { api, HttpError, NetworkError, RateLimitError } from '../../api/client';
 import { useAuthStore } from '../../stores/authStore';
 
 /**
@@ -67,12 +67,31 @@ export function VertexAIChat({ scope, title, subtitle, onClose }: VertexAIChatPr
         if (typeof r === 'number') setRemaining(r);
       }
     } catch (err) {
-      // NetworkError = the request never reached the server (down / refused).
-      // Every other error has its own honest message (timeout, 4xx...).
-      const netDown = err instanceof Error && err.name === 'NetworkError';
-      const msg = netDown
-        ? 'No hay conexión con el servidor. Comprueba tu red e inténtalo de nuevo.'
-        : err instanceof Error ? err.message : 'Error de conexión';
+      // Honest error mapping. "No hay conexión" ONLY when the request never
+      // reached the server (NetworkError) or the answer came from a bare 5xx
+      // proxy with no JSON body (dev proxy down / backend crashed). Every
+      // other case has its own specific, truthful message.
+      let msg: string;
+      if (err instanceof NetworkError) {
+        msg = 'No hay conexión con el servidor. Comprueba tu red e inténtalo de nuevo.';
+      } else if (err instanceof RateLimitError) {
+        msg = 'Has llegado al límite de hoy. Vuelve mañana para seguir chateando.';
+      } else if (err instanceof HttpError && err.status >= 500) {
+        msg = typeof (err.body as { message?: unknown } | null)?.message === 'string'
+          ? (err.body as { message: string }).message
+          : 'Vertex AI no pudo responder ahora mismo (error del servidor). Inténtalo de nuevo.';
+      } else if (err instanceof HttpError) {
+        const bodyMsg = (err.body as { message?: unknown; error?: unknown } | null);
+        msg = typeof bodyMsg?.message === 'string'
+          ? bodyMsg.message
+          : typeof bodyMsg?.error === 'string' && bodyMsg.error !== 'invalid_body'
+            ? bodyMsg.error
+            : 'No se pudo enviar el mensaje. Inténtalo de nuevo.';
+      } else if (err instanceof Error && err.message === 'Request timed out') {
+        msg = 'Vertex AI ha tardado demasiado en responder. Inténtalo de nuevo.';
+      } else {
+        msg = err instanceof Error ? err.message : 'Error de conexión';
+      }
       setBubbles((prev) => [...prev, { role: 'ai', text: msg, error: true }]);
     } finally {
       setSending(false);

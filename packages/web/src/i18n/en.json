@@ -23,6 +23,7 @@
   "board_locked_desc": "Customize your profile with widgets: favorite game, now playing, goals and more. Exclusive to Netrex.",
   "board_unlock_netrex": "Unlock Netrex",
   "board_save_failed": "Couldn't save the board. The previous one was restored.",
+  "board_save_offline": "No connection to the server. The board was not saved — try again when you're back online.",
   "board_save_invalid": "The board contains invalid data.",
   "board_save_netrex_denied": "You need an active Netrex subscription to save the board.",
   "board_empty_default": "Nothing here yet",
