@@ -91,7 +91,19 @@ function UpdateSettings() {
     <div className="flex items-center justify-between py-1">
       <div className="flex-1 mr-4">
         <div className="text-sm text-txt-primary">
-          {version ? `${t('version')} ${version}` : t('desktop_app_name')}
+          {version ? (
+            <a
+              href="https://github.com/Gtnnn12/vertex"
+              target="_blank"
+              rel="noreferrer noopener"
+              className="hover:text-txt-secondary transition-colors"
+              title={t('view_source_code_title')}
+            >
+              {t('version')} {version}
+            </a>
+          ) : (
+            t('desktop_app_name')
+          )}
         </div>
         <div className="text-xs text-txt-tertiary mt-0.5">
           {t('check_for_updates_description')}
