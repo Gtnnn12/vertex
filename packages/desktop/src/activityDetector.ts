@@ -133,8 +133,9 @@ function getMockActivities(): Activity[] | null {
 // ─── Module state ───────────────────────────────────────────────────────────
 
 /** Shared real-game scan: first dictionary match in the running process set. */
-function matchRealGame(runningProcesses: Set<string>): GameEntry | null {
+function matchRealGame(runningProcesses: Set<string>, excludeId?: string): GameEntry | null {
   for (const entry of gameEntries) {
+    if (excludeId && entry.id === excludeId) continue;
     for (const proc of entry.processes) {
       if (runningProcesses.has(proc.toLowerCase())) {
         return entry;
@@ -147,13 +148,32 @@ function matchRealGame(runningProcesses: Set<string>): GameEntry | null {
 let processMap: Map<string, GameEntry> = new Map();
 let gameEntries: GameEntry[] = [];
 let currentGameId: string | null = null;
+/** The GAME (or mock) activity — Spotify is tracked separately so a game
+ * match can never erase it (regression: playing + listening must coexist). */
 let currentActivity: Activity | null = null;
-/** Serialized current activity — dedupes async Spotify re-emits. */
+let currentSpotifyActivity: Activity | null = null;
+/** Serialized current combined state — dedupes async Spotify/game re-emits. */
 let activityKey: string | null = null;
 let intervalId: NodeJS.Timeout | null = null;
 let isPolling = false;
 let hasErrored = false;
-let onChangeCallback: ((activity: Activity | null) => void) | null = null;
+let onChangeCallback: ((activities: Activity[] | null) => void) | null = null;
+
+/**
+ * Emit the combined state: game activity FIRST (primary), Spotify second
+ * (secondary). Order defines primarity downstream — never an overwrite.
+ * A single-activity state emits a 1-element array; nothing emits null.
+ */
+function emitCombined(): void {
+  const combined: Activity[] = [
+    ...(currentActivity ? [currentActivity] : []),
+    ...(currentSpotifyActivity ? [currentSpotifyActivity] : []),
+  ];
+  const key = combined.length > 0 ? JSON.stringify(combined) : null;
+  if (key === activityKey) return; // nothing changed
+  activityKey = key;
+  onChangeCallback?.(combined.length > 0 ? combined : null);
+}
 
 /**
  * Spotify enrichment state: the last track parsed from Spotify's window
@@ -162,6 +182,10 @@ let onChangeCallback: ((activity: Activity | null) => void) | null = null;
  * 15s polls.
  */
 let enrichmentJobId = 0;
+/** Independent job id for the Spotify enrichment — a Riot-enrichment tick
+ * must not supersede an in-flight Spotify track parse (they now run in
+ * parallel when a game and music coexist). */
+let spotifyJobId = 0;
 
 /**
  * Riot (VALORANT) enrichment state: last known real match info from the
@@ -589,35 +613,46 @@ function poll(): void {
 
     const runningProcesses = parseProcessList(stdout);
 
+    // Spotify is tracked INDEPENDENTLY of the game scan: its window-title
+    // track is parsed even while a game is the primary activity (regression
+    // fix — a game match used to erase the music activity entirely).
+    const spotifyRunning = runningProcesses.has('spotify.exe') || runningProcesses.has('spotify');
+    const spotifyJob = ++spotifyJobId;
+    if (spotifyRunning) {
+      void getSpotifyEnrichment().then((enrichment) => {
+        if (spotifyJob !== spotifyJobId) return; // newer poll superseded
+        const next: Activity | null = enrichment
+          ? {
+              type: 'listening',
+              name: 'Spotify',
+              timestamps: { start: currentSpotifyActivity?.timestamps?.start ?? Date.now() },
+              spotify: { song: enrichment.song, artist: enrichment.artist, albumCover: enrichment.albumCover },
+            }
+          : { type: 'listening', name: 'Spotify', timestamps: { start: currentSpotifyActivity?.timestamps?.start ?? Date.now() } };
+        currentSpotifyActivity = next;
+        emitCombined();
+      });
+    } else if (currentSpotifyActivity !== null) {
+      currentSpotifyActivity = null;
+      emitCombined();
+    }
+
     // Find first matching game (dictionary order = priority)
     const matchedEntry = matchRealGame(runningProcesses);
 
     if (matchedEntry) {
       const isSpotify = matchedEntry.id === 'spotify';
       if (isSpotify) {
-        // ── Spotify: enrich with the window-title track (Vía A) ──
-        // Title read + cover lookup are async; build the activity when they
-        // resolve. Unparseable titles (ads, menus) clear any previous track
-        // and fall back to the generic "Spotify" activity.
-        const jobId = ++enrichmentJobId;
-        void getSpotifyEnrichment().then((enrichment) => {
-          if (jobId !== enrichmentJobId) return; // A newer poll superseded this one
-          const nextActivity: Activity = {
-            type: 'listening',
-            name: 'Spotify',
-            timestamps: { start: currentActivity?.timestamps?.start ?? Date.now() },
-            ...(enrichment
-              ? { spotify: { song: enrichment.song, artist: enrichment.artist, albumCover: enrichment.albumCover } }
-              : {}),
-          };
-          const nextKey = JSON.stringify(nextActivity);
-          if (nextKey !== activityKey) {
-            activityKey = nextKey;
-            currentGameId = matchedEntry!.id;
-            currentActivity = nextActivity;
-            onChangeCallback?.(nextActivity);
-          }
-        });
+        // Spotify as the PRIMARY dictionary match (no other game running):
+        // the independent tracker above already owns the Spotify activity —
+        // nothing else to emit here.
+        if (currentGameId !== null) {
+          // A previous non-Spotify game just exited while Spotify keeps playing.
+          currentGameId = null;
+          currentActivity = null;
+          riotInfo = null;
+          emitCombined();
+        }
         return; // Async path owns Spotify change-detection this poll
       }
 
@@ -630,8 +665,7 @@ function poll(): void {
           name: matchedEntry.name,
           timestamps: { start: Date.now() },
         };
-        activityKey = JSON.stringify(currentActivity);
-        onChangeCallback?.(currentActivity);
+        emitCombined();
       } else if (RIOT_ENRICHED_GAME_IDS.has(matchedEntry.id)) {
         // Same game still running — try the local Riot session for real
         // match state. Async: emits on its own when the state changes.
@@ -678,8 +712,7 @@ function poll(): void {
               timestamps: { start: currentActivity?.timestamps?.start ?? Date.now() },
             };
           }
-          activityKey = JSON.stringify(currentActivity);
-          onChangeCallback?.(currentActivity);
+          emitCombined();
         });
       }
       // Same non-Riot game still running — no change, skip IPC
@@ -690,23 +723,18 @@ function poll(): void {
       // mock. Requires explicit dev env — parseMockGames returns [] without it.
       const mocks = getMockActivities();
       if (mocks && mocks.length > 0) {
-        const nextKey = JSON.stringify(mocks);
-        if (nextKey !== activityKey) {
-          activityKey = nextKey;
-          currentGameId = mocks[0] ? `mock:${mocks[0].name}` : null;
-          currentActivity = mocks[0] ?? null;
-          riotInfo = null;
-          onChangeCallback?.(currentActivity);
-        }
+        currentGameId = mocks[0] ? `mock:${mocks[0].name}` : null;
+        currentActivity = mocks[0] ?? null;
+        riotInfo = null;
+        emitCombined();
         return;
       }
       if (currentGameId !== null) {
-        // Game exited
+        // Game exited — Spotify (if still playing) survives via emitCombined.
         currentGameId = null;
         currentActivity = null;
-        activityKey = null;
         riotInfo = null;
-        onChangeCallback?.(null);
+        emitCombined();
       }
       // No game was running before either — skip
     }
@@ -716,7 +744,7 @@ function poll(): void {
 // ─── Public API ─────────────────────────────────────────────────────────────
 
 export function startActivityDetection(
-  onActivityChange: (activity: Activity | null) => void,
+  onActivityChange: (activities: Activity[] | null) => void,
 ): void {
   if (intervalId) return; // Already running
 
@@ -757,6 +785,11 @@ export function stopActivityDetection(): void {
   onChangeCallback = null;
 }
 
-export function getCurrentActivity(): Activity | null {
-  return currentActivity;
+/** Combined current state: game (primary) + Spotify (secondary). */
+export function getCurrentActivity(): Activity[] | null {
+  const combined: Activity[] = [
+    ...(currentActivity ? [currentActivity] : []),
+    ...(currentSpotifyActivity ? [currentSpotifyActivity] : []),
+  ];
+  return combined.length > 0 ? combined : null;
 }
