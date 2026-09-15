@@ -634,7 +634,7 @@ function registerIpcHandlers(): void {
   ipcMain.on('install-update', () => {
     try {
       const { autoUpdater } = require('electron-updater');
-      autoUpdater.quitAndInstall();
+      autoUpdater.quitAndInstall(true, true);
     } catch {
       // Auto-updater not available
     }
@@ -826,15 +826,13 @@ function initAutoUpdater(): void {
       recoveryStore.update({ updateState: 'downloaded', updateVersion: version });
       mainWindow?.webContents.send('update-downloaded', { version });
 
-      // Symmetric focus-based suppression: if the user is looking at the
-      // window, the in-app banner (normal mode) or recovery Restart button
-      // (recovery mode) is visible — no need to also fire a native toast.
+      // Silent installation: if the user is NOT looking at the window,
+      // auto-install immediately without interaction. If the window is focused,
+      // the in-app banner (normal mode) or recovery Restart button
+      // (recovery mode) is visible — the user installs when they choose.
       if (!mainWindow?.isFocused()) {
-        showNotification(
-          'VERTEX update ready',
-          `Click to restart and install version ${version}.`,
-          () => autoUpdater.quitAndInstall(),
-        );
+        console.log(`[update] auto-installing v${version} (window not focused)`);
+        autoUpdater.quitAndInstall(true, true);
       }
     });
 

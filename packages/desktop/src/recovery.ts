@@ -419,7 +419,7 @@ export function handleRecoveryAction(action: RecoveryAction): void {
       // Direct quitAndInstall — does NOT rely on autoInstallOnAppQuit.
       // Force-kill-fix: if user reaches recovery and clicks here, install
       // happens cleanly even if the on-quit hook would otherwise be bypassed.
-      autoUpdaterRef?.quitAndInstall();
+      autoUpdaterRef?.quitAndInstall(true, true);
       return;
     }
     case 'change-instance': {
