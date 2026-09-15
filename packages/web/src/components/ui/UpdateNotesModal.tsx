@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface ReleaseNotes {
   tag_name: string;
@@ -20,6 +21,7 @@ interface UpdateNotesModalProps {
  * Fetches release notes from GitHub and renders them with formatted sections.
  */
 export function UpdateNotesModal({ isOpen, onClose, version, onInstall }: UpdateNotesModalProps) {
+  const { t } = useLanguage();
   const [notes, setNotes] = useState<ReleaseNotes | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +58,7 @@ export function UpdateNotesModal({ isOpen, onClose, version, onInstall }: Update
             setLoading(false);
           })
           .catch(() => {
-            setError('Could not load release notes');
+            setError(t('update_notes_error'));
             setLoading(false);
           });
       });
@@ -88,7 +90,7 @@ export function UpdateNotesModal({ isOpen, onClose, version, onInstall }: Update
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="What's New" maxWidth="max-w-lg">
+    <Modal isOpen={isOpen} onClose={onClose} title={t('update_notes_title')} maxWidth="max-w-lg">
       <div className="space-y-4">
         {/* Version badge */}
         <div className="flex items-center gap-3">
@@ -115,16 +117,7 @@ export function UpdateNotesModal({ isOpen, onClose, version, onInstall }: Update
             <div className="text-center py-8">
               <p className="text-txt-tertiary text-sm">{error}</p>
               <p className="text-txt-tertiary text-xs mt-2">
-                Check{' '}
-                <a
-                  href="https://github.com/gtnn12/VERTEX/releases/latest"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-accent-primary hover:underline"
-                >
-                  GitHub Releases
-                </a>{' '}
-                for details
+                {t('update_notes_github_hint')}
               </p>
             </div>
           )}
@@ -150,7 +143,7 @@ export function UpdateNotesModal({ isOpen, onClose, version, onInstall }: Update
             }}
             className="text-sm text-txt-tertiary hover:text-txt-secondary transition-colors"
           >
-            View on GitHub
+            {t('update_notes_view_github')}
           </button>
 
           <div className="flex items-center gap-2">
@@ -158,13 +151,13 @@ export function UpdateNotesModal({ isOpen, onClose, version, onInstall }: Update
               onClick={onClose}
               className="px-4 py-2 text-sm text-txt-tertiary hover:text-txt-secondary transition-colors"
             >
-              Later
+              {t('update_toast_later')}
             </button>
             <button
               onClick={onInstall}
               className="px-4 py-2 bg-accent-primary hover:bg-accent-primary/80 text-white text-sm font-medium rounded-lg transition-colors"
             >
-              Restart & Install
+              {t('update_restart_install')}
             </button>
           </div>
         </div>
