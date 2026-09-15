@@ -23,31 +23,31 @@ datos y de las reglas — nadie más.
 
 <div align="center">
 
-<img src="docs/screenshots/voice-video-grid.webp" alt="Canal de voz con grid de cámaras y pantallas compartidas" width="900" />
+<img src="docs/hero.png" alt="Home de VERTEX: acceso rápido, música y mensajes recientes" width="100%" />
 
-<sub><em>Canal de voz en pleno: cámaras y streams en vivo, cada uno con su badge de resolución.</em></sub>
+<sub><em>La home de VERTEX: acceso rápido, música de Spotify y tus mensajes recientes.</em></sub>
 
 </div>
 
 <table>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/screenshots/chat.webp" alt="Canal de texto con mensajes" /><br/>
-      <sub><b>Canales de texto.</b> Markdown, respuestas, reacciones y typing en vivo.</sub>
+      <img src="docs/perfil.png" alt="Perfil de usuario con tablero de widgets" /><br/>
+      <sub><b>Perfiles con tablero.</b> Banner, bio y widgets personales.</sub>
     </td>
     <td width="50%" valign="top">
-      <img src="docs/screenshots/screen-share-settings.webp" alt="Ajustes de compartición de pantalla" /><br/>
-      <sub><b>Screen share.</b> Resolución, framerate, códec y bitrate a tu gusto.</sub>
+      <img src="docs/netrex.png" alt="Página de Netrex, la capa premium" /><br/>
+      <sub><b>Netrex.</b> La capa premium gestionada por tu instancia.</sub>
     </td>
   </tr>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/screenshots/friends.webp" alt="Vista de amigos" /><br/>
-      <sub><b>Amigos y social.</b> Presencia, actividades y descubrimiento de gente.</sub>
+      <img src="docs/ai.png" alt="Asistente Vertex AI en el chat" /><br/>
+      <sub><b>Vertex AI.</b> Tu asistente integrado, con tiering Netrex.</sub>
     </td>
     <td width="50%" valign="top">
-      <img src="docs/screenshots/group-dm.webp" alt="Grupo de DM federado" /><br/>
-      <sub><b>DMs y grupos.</b> 1-a-1 y grupos, incluso entre instancias federadas.</sub>
+      <!-- matchcard pendiente: añadir docs/matchcard.png cuando esté disponible -->
+      <em>Match Cards — captura en camino.</em>
     </td>
   </tr>
 </table>
