@@ -55,6 +55,11 @@ contextBridge.exposeInMainWorld('backspace', {
   setConnectedOrigins: (origins: string[]) => {
     ipcRenderer.send('set-connected-origins', origins);
   },
+
+  // Tray language sync (main-process menus)
+  setTrayLanguage: (lang: 'es' | 'en') => {
+    ipcRenderer.send('set-tray-language', lang);
+  },
   onOpenInternalRoute: (callback: (path: string) => void) => {
     const handler = (_evt: Electron.IpcRendererEvent, path: string) => callback(path);
     ipcRenderer.on('open-internal-route', handler);

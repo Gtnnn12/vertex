@@ -49,10 +49,25 @@ function changeLanguage(lang: Language): void {
   } catch {
     /* storage may be unavailable */
   }
+  syncTrayLanguage(lang);
   // Temporary diagnostic: confirms the toggle actually fires and persists.
   console.log(`[i18n] language → ${lang}`);
   languageListeners.forEach((fn) => fn(lang));
 }
+
+// Keep the desktop tray menus (main process) in the same language as the UI.
+function syncTrayLanguage(lang: Language): void {
+  try {
+    const bridge = (window as unknown as { backspace?: { setTrayLanguage?: (l: string) => void } }).backspace;
+    bridge?.setTrayLanguage?.(lang);
+  } catch {
+    /* not in Electron — ignore */
+  }
+}
+
+// Push the stored language on module load — covers app boot, when no
+// changeLanguage call ever fires.
+syncTrayLanguage(currentLanguage);
 
 function subscribeLanguage(fn: LanguageListener): () => void {
   languageListeners.add(fn);

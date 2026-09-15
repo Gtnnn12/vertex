@@ -166,10 +166,10 @@ describe('buildTrayMenuTemplate', () => {
   it('includes Show/Hide/Source code/Quit base items (no Change Instance)', () => {
     const items = buildTrayMenuTemplate(defaultState());
     const labels = items.map((i) => i.label);
-    expect(labels).toContain('Show VERTEX');
-    expect(labels).toContain('Hide');
-    expect(labels).toContain('Source code');
-    expect(labels).toContain('Quit');
+    expect(labels).toContain('Mostrar VERTEX');
+    expect(labels).toContain('Ocultar');
+    expect(labels).toContain('Código fuente');
+    expect(labels).toContain('Salir');
     expect(labels).not.toContain('Change Instance');
   });
 
@@ -177,35 +177,35 @@ describe('buildTrayMenuTemplate', () => {
     const items = buildTrayMenuTemplate(defaultState({ updateState: 'idle' }));
     const item = items.find((i) => i.id === 'check-for-updates');
     expect(item).toBeDefined();
-    expect(item!.label).toBe('Check for Updates…');
+    expect(item!.label).toBe('Buscar actualizaciones…');
     expect(item!.enabled).toBe(true);
   });
 
   it('disables Check for Updates while checking', () => {
     const items = buildTrayMenuTemplate(defaultState({ updateState: 'checking' }));
     const item = items.find((i) => i.id === 'check-for-updates');
-    expect(item!.label).toBe('Checking for Updates…');
+    expect(item!.label).toBe('Buscando actualizaciones…');
     expect(item!.enabled).toBe(false);
   });
 
   it('disables Check for Updates while downloading', () => {
     const items = buildTrayMenuTemplate(defaultState({ updateState: 'downloading' }));
     const item = items.find((i) => i.id === 'check-for-updates');
-    expect(item!.label).toBe('Downloading Update…');
+    expect(item!.label).toBe('Descargando actualización…');
     expect(item!.enabled).toBe(false);
   });
 
   it('shows Update Ready label when downloaded, with Check disabled (Restart is the action)', () => {
     const items = buildTrayMenuTemplate(defaultState({ updateState: 'downloaded' }));
     const item = items.find((i) => i.id === 'check-for-updates');
-    expect(item!.label).toBe('Update Ready');
+    expect(item!.label).toBe('Actualización lista');
     expect(item!.enabled).toBe(false);
   });
 
   it('shows error suffix on Check for Updates label when updateState=error', () => {
     const items = buildTrayMenuTemplate(defaultState({ updateState: 'error' }));
     const item = items.find((i) => i.id === 'check-for-updates');
-    expect(item!.label).toBe('Check for Updates… (last attempt failed)');
+    expect(item!.label).toBe('Buscar actualizaciones… (falló el último intento)');
     expect(item!.enabled).toBe(true);
   });
 
@@ -219,7 +219,7 @@ describe('buildTrayMenuTemplate', () => {
     const downloadedItem = buildTrayMenuTemplate(defaultState({ updateState: 'downloaded' }))
       .find((i) => i.id === 'restart-to-install');
     expect(downloadedItem).toBeDefined();
-    expect(downloadedItem!.label).toBe('Restart to Install Update');
+    expect(downloadedItem!.label).toBe('Reiniciar para actualizar');
     expect(downloadedItem!.enabled).toBe(true);
   });
 });
@@ -240,7 +240,7 @@ describe('buildAppMenuTemplate', () => {
     const appSub = appMenu!.submenu as MenuItemConstructorOptions[];
     const labels = appSub.map((i) => i.label).filter(Boolean);
     expect(appSub.find((i) => i.role === 'about')).toBeDefined();
-    expect(labels).toContain('Source code');
+    expect(labels).toContain('Código fuente');
     expect(labels).not.toContain('Change Instance');
     expect(appSub.find((i) => i.role === 'quit')).toBeDefined();
   });
@@ -251,7 +251,7 @@ describe('buildAppMenuTemplate', () => {
     const appSub = appMenu!.submenu as MenuItemConstructorOptions[];
     const item = appSub.find((i) => i.id === 'check-for-updates');
     expect(item).toBeDefined();
-    expect(item!.label).toBe('Check for Updates…');
+    expect(item!.label).toBe('Buscar actualizaciones…');
   });
 
   it('App submenu inserts Restart to Install Update only when downloaded', () => {
@@ -263,7 +263,7 @@ describe('buildAppMenuTemplate', () => {
     const dlSub = dlAppMenu!.submenu as MenuItemConstructorOptions[];
     const restartItem = dlSub.find((i) => i.id === 'restart-to-install');
     expect(restartItem).toBeDefined();
-    expect(restartItem!.label).toBe('Restart to Install Update');
+    expect(restartItem!.label).toBe('Reiniciar para actualizar');
   });
 });
 

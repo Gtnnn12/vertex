@@ -528,6 +528,40 @@ function createWindow(): void {
   });
 }
 
+// ─── Tray language ───────────────────────────────────────────────────────────
+// The tray lives in the main process; the renderer owns the app language
+// (localStorage 'lang'). Seed from the system locale and let the renderer
+// override via 'set-tray-language' (sent on boot and on every change).
+let trayLang: 'es' | 'en' = app.getLocale().toLowerCase().startsWith('en') ? 'en' : 'es';
+
+// Tray + macOS app-menu actions. Module-level so both the recoveryStore
+// subscriber and the 'set-tray-language' IPC handler rebuild from one set.
+const trayActions = {
+  onShow: () => { mainWindow?.show(); mainWindow?.focus(); },
+  onHide: () => mainWindow?.hide(),
+  // Delegate to handleRecoveryAction so both the tray and the recovery
+  // surface share one implementation path (avoids drift and ensures
+  // recovery state is always cleared on a Change Instance action).
+  onChangeInstance: () => handleRecoveryAction('change-instance'),
+  onCheckForUpdates: () => handleRecoveryAction('check-update'),
+  onRestartToInstall: () => handleRecoveryAction('install-update'),
+  onOpenSource: () => openSourceCode(),
+  onQuit: () => requestQuit(),
+};
+
+const applyMenusForState = (state: RecoveryState): void => {
+  if (tray) {
+    tray.setContextMenu(Menu.buildFromTemplate(buildTrayMenuTemplate(state, trayActions, trayLang)));
+  }
+  if (process.platform === 'darwin') {
+    Menu.setApplicationMenu(Menu.buildFromTemplate(buildAppMenuTemplate(app.name, state, trayActions, trayLang)));
+  }
+  // Mode-gated push to renderer (recovery.html subscribes to this).
+  if (state.mode === 'recovery' && mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('recovery-state-changed', state);
+  }
+};
+
 function createTray(): void {
   const icon = loadTrayIcon();
   tray = new Tray(icon);
@@ -595,6 +629,15 @@ function registerIpcHandlers(): void {
     for (const o of origins) {
       if (typeof o === 'string' && o.length > 0) knownInstanceOrigins.add(o);
     }
+  });
+
+  // Tray language — renderer reports the active app language so the tray
+  // menu matches the UI. Rebuild the menus on change.
+  ipcMain.on('set-tray-language', (_evt, lang: unknown) => {
+    if (lang !== 'es' && lang !== 'en') return;
+    if (lang === trayLang) return;
+    trayLang = lang;
+    applyMenusForState(recoveryStore.get());
   });
 
   // Instance URL management
@@ -1085,34 +1128,8 @@ if (!gotTheLock) {
       website: UPSTREAM_SOURCE_URL,
     });
 
-    // Tray + macOS app-menu actions. Defined once so the subscriber and the
-    // initial-fire share one implementation (no drift on future menu changes).
-    const trayActions = {
-      onShow: () => { mainWindow?.show(); mainWindow?.focus(); },
-      onHide: () => mainWindow?.hide(),
-      // Delegate to handleRecoveryAction so both the tray and the recovery
-      // surface share one implementation path (avoids drift and ensures
-      // recovery state is always cleared on a Change Instance action).
-      onChangeInstance: () => handleRecoveryAction('change-instance'),
-      onCheckForUpdates: () => handleRecoveryAction('check-update'),
-      onRestartToInstall: () => handleRecoveryAction('install-update'),
-      onOpenSource: () => openSourceCode(),
-      onQuit: () => requestQuit(),
-    };
-
-    const applyMenusForState = (state: RecoveryState): void => {
-      if (tray) {
-        tray.setContextMenu(Menu.buildFromTemplate(buildTrayMenuTemplate(state, trayActions)));
-      }
-      if (process.platform === 'darwin') {
-        Menu.setApplicationMenu(Menu.buildFromTemplate(buildAppMenuTemplate(app.name, state, trayActions)));
-      }
-      // Mode-gated push to renderer (recovery.html subscribes to this).
-      if (state.mode === 'recovery' && mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('recovery-state-changed', state);
-      }
-    };
-
+    // Tray menus are rebuilt by the module-level applyMenusForState —
+    // subscribe it and fire once so the initial state is reflected.
     recoveryStore.subscribe(applyMenusForState);
     applyMenusForState(recoveryStore.get());  // initial fire — subscribers don't auto-fire on subscribe
 

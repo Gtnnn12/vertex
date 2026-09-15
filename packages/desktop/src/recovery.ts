@@ -101,37 +101,71 @@ interface MenuActions {
   onQuit: () => void;
 }
 
-function checkForUpdatesItem(state: RecoveryState, click: () => void): MenuItemConstructorOptions {
+export type TrayLang = 'es' | 'en';
+
+// Tray/menu labels — the menu is built in the main process, which has no
+// access to the renderer's i18n, so the renderer pushes the active language
+// over IPC ('set-tray-language') and we translate from this table.
+const TRAY_LABELS: Record<TrayLang, Record<string, string>> = {
+  es: {
+    'checking': 'Buscando actualizaciones…',
+    'downloading': 'Descargando actualización…',
+    'updateReady': 'Actualización lista',
+    'checkForUpdates': 'Buscar actualizaciones…',
+    'checkForUpdatesFailed': 'Buscar actualizaciones… (falló el último intento)',
+    'restartToInstall': 'Reiniciar para actualizar',
+    'show': 'Mostrar VERTEX',
+    'hide': 'Ocultar',
+    'sourceCode': 'Código fuente',
+    'quit': 'Salir',
+  },
+  en: {
+    'checking': 'Checking for Updates…',
+    'downloading': 'Downloading Update…',
+    'updateReady': 'Update Ready',
+    'checkForUpdates': 'Check for Updates…',
+    'checkForUpdatesFailed': 'Check for Updates… (last attempt failed)',
+    'restartToInstall': 'Restart to Install Update',
+    'show': 'Show VERTEX',
+    'hide': 'Hide',
+    'sourceCode': 'Source code',
+    'quit': 'Quit',
+  },
+};
+
+function checkForUpdatesItem(state: RecoveryState, click: () => void, L: Record<string, string>): MenuItemConstructorOptions {
   switch (state.updateState) {
     case 'checking':
-      return { id: 'check-for-updates', label: 'Checking for Updates…', enabled: false };
+      return { id: 'check-for-updates', label: L.checking, enabled: false };
     case 'downloading':
-      return { id: 'check-for-updates', label: 'Downloading Update…', enabled: false };
+      return { id: 'check-for-updates', label: L.downloading, enabled: false };
     case 'downloaded':
-      return { id: 'check-for-updates', label: 'Update Ready', enabled: false };
+      return { id: 'check-for-updates', label: L.updateReady, enabled: false };
     case 'error':
-      return { id: 'check-for-updates', label: 'Check for Updates… (last attempt failed)', enabled: true, click };
+      return { id: 'check-for-updates', label: L.checkForUpdatesFailed, enabled: true, click };
     case 'idle':
     default:
-      return { id: 'check-for-updates', label: 'Check for Updates…', enabled: true, click };
+      return { id: 'check-for-updates', label: L.checkForUpdates, enabled: true, click };
   }
 }
 
 export function buildTrayMenuTemplate(
   state: RecoveryState,
   actions?: Partial<MenuActions>,
+  lang: TrayLang = 'es',
 ): MenuItemConstructorOptions[] {
+  const L = TRAY_LABELS[lang];
   const items: MenuItemConstructorOptions[] = [
-    { label: 'Show VERTEX', click: actions?.onShow },
-    { label: 'Hide', click: actions?.onHide },
+    { label: L.show, click: actions?.onShow },
+    { label: L.hide, click: actions?.onHide },
     { type: 'separator' },
-    checkForUpdatesItem(state, () => actions?.onCheckForUpdates?.()),
+    checkForUpdatesItem(state, () => actions?.onCheckForUpdates?.(), L),
   ];
 
   if (state.updateState === 'downloaded') {
     items.push({
       id: 'restart-to-install',
-      label: 'Restart to Install Update',
+      label: L.restartToInstall,
       enabled: true,
       click: actions?.onRestartToInstall,
     });
@@ -139,9 +173,9 @@ export function buildTrayMenuTemplate(
 
   items.push(
     { type: 'separator' },
-    { label: 'Source code', click: actions?.onOpenSource },
+    { label: L.sourceCode, click: actions?.onOpenSource },
     { type: 'separator' },
-    { label: 'Quit', click: actions?.onQuit },
+    { label: L.quit, click: actions?.onQuit },
   );
 
   return items;
@@ -151,18 +185,20 @@ export function buildAppMenuTemplate(
   appName: string,
   state: RecoveryState,
   actions?: Partial<MenuActions>,
+  lang: TrayLang = 'es',
 ): MenuItemConstructorOptions[] {
+  const L = TRAY_LABELS[lang];
   const appSubmenu: MenuItemConstructorOptions[] = [
     { role: 'about' },
-    { label: 'Source code', click: () => actions?.onOpenSource?.() },
+    { label: L.sourceCode, click: () => actions?.onOpenSource?.() },
     { type: 'separator' },
-    checkForUpdatesItem(state, () => actions?.onCheckForUpdates?.()),
+    checkForUpdatesItem(state, () => actions?.onCheckForUpdates?.(), L),
   ];
 
   if (state.updateState === 'downloaded') {
     appSubmenu.push({
       id: 'restart-to-install',
-      label: 'Restart to Install Update',
+      label: L.restartToInstall,
       enabled: true,
       click: actions?.onRestartToInstall,
     });
