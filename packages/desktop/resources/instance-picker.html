@@ -361,6 +361,10 @@
         // first-run "welcome" framing.
         document.querySelector('.header h1').textContent = 'Switch instance';
         document.querySelector('.header p').textContent = 'Connect to a different VERTEX instance, or cancel to stay.';
+      } else {
+        // First run — prefill the official VERTEX instance so Connect is
+        // the only step needed.
+        input.value = 'https://vertex-tp46.onrender.com';
       }
     }
     init();
