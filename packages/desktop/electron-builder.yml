@@ -18,10 +18,8 @@ asarUnpack:
   - "**/*.node"
 npmRebuild: false
 afterPack: ./scripts/afterPack.js
-publish:
-  - provider: github
-    owner: gtnn12
-    repo: VERTEX
+# Local build only — never publish from here.
+publish: null
 protocols:
   - name: VERTEX
     schemes:
@@ -46,5 +44,28 @@ linux:
     - deb
   category: Network
 nsis:
+  # Assisted installer: Language → Welcome → License → Destination →
+  # Progress → Finish (with "run VERTEX" checkbox).
   oneClick: false
+  perMachine: false
   allowToChangeInstallationDirectory: true
+  allowElevation: true
+  installerLanguages:
+    - es_ES
+    - en_US
+  displayLanguageSelector: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: VERTEX
+  # Keep user data (SQLite DB, settings) when uninstalling.
+  deleteAppDataOnUninstall: false
+  # Branded installer/uninstaller: VERTEX icon + dark sidebar art.
+  installerIcon: build/installer-icon.ico
+  uninstallerIcon: build/installer-icon.ico
+  installerHeaderIcon: build/installer-icon.ico
+  installerSidebar: build/installer-sidebar.bmp
+  uninstallerSidebar: build/installer-sidebar.bmp
+  # MIT license (+ AGPL notice for inherited code) as the assistant's
+  # license page. Plain text — NSIS license pages are RTF/txt.
+  license: build/license-installer.txt
+  include: build/installer.nsh
