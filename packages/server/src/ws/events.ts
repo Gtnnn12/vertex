@@ -490,8 +490,6 @@ function validateActivities(raw: unknown): Activity[] | null {
       const s = obj.spotify as Record<string, unknown>;
       const song = typeof s.song === 'string' ? s.song.trim() : '';
       const artist = typeof s.artist === 'string' ? s.artist.trim() : '';
-      // [TEMP-TRACE c] did the spotify payload reach the validator?
-      console.log(`[activity-validate] incoming spotify payload: song="${song}" artist="${artist}" cover=${typeof s.albumCover === 'string' && s.albumCover ? 'yes' : 'no'}`);
       if (
         song.length > 0 && song.length <= ACTIVITY_LIMITS.MAX_NAME_LENGTH &&
         artist.length > 0 && artist.length <= ACTIVITY_LIMITS.MAX_NAME_LENGTH
@@ -622,9 +620,6 @@ function handleActivityUpdate(event: Record<string, unknown>, userId: string): v
   }
 
   connectionManager.setUserActivities(userId, merged);
-  // [TEMP-TRACE c] what the server stored + broadcasts after the merge
-  const mergedSpotify = merged.find((a) => a.type === 'spotify');
-  console.log(`[activity-validate] stored for ${userId}: ${mergedSpotify?.spotify ? `song="${mergedSpotify.spotify.song}" artist="${mergedSpotify.spotify.artist}"` : 'no rich spotify activity'}`);
   const status = connectionManager.getUserStatus(userId);
 
   const payload = { type: 'presence_update' as const, userId, status, activities: merged };

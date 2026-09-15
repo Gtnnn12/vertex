@@ -266,9 +266,9 @@ function handleEvent(origin: string, event: ServerEvent): void {
       if (isHome && window.backspace?.getCurrentActivity) {
         window.backspace.getCurrentActivity().then(async (activity: unknown) => {
           if (!activity) return;
-          const promoted = await promoteDesktopActivity(activity as Activity | null);
-          if (promoted) {
-            useActivityStore.getState().pushActivities([promoted]);
+          const promoted = await promoteDesktopActivity(activity as Activity | Activity[] | null);
+          if (promoted && promoted.length > 0) {
+            useActivityStore.getState().pushActivities(promoted);
           }
         }).catch(() => {});
       }
