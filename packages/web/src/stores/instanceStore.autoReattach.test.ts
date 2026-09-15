@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import type { User } from '@backspace/shared';
+import type { User } from '@vertex/shared';
 import type { BackspaceApiClient } from '../api/client';
 
 // ── Module mocks (mirror instanceStore.failover.test.ts) ─────────────────────

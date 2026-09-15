@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useLanguage } from '../../contexts/LanguageContext';
-import type { ActivitySpotify } from '@backspace/shared';
+import type { ActivitySpotify } from '@vertex/shared';
 import { useDominantColor } from '../../spotify/useDominantColor';
 import { MusicDisc } from '../../spotify/MusicDisc';
 import type { MusicStyleId } from '../../spotify/musicStyles';

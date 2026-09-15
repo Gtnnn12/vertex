@@ -5,7 +5,7 @@ import { Avatar } from '../ui/Avatar';
 import { useUIStore } from '../../stores/uiStore';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { api } from '../../api/client';
-import type { User } from '@backspace/shared';
+import type { User } from '@vertex/shared';
 import { parseFederatedUsername } from '../../utils/identity';
 import { useCanonicalUserView } from '../../utils/userViewLookup';
 

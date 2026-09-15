@@ -13,7 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import { parseFederatedUsername, isFederationGlobeApplicable, isSelf } from '../../utils/identity';
 import { useCanonicalUserView } from '../../utils/userViewLookup';
 import { formatDmSidebarPreview, formatDmHeaderName } from '../../utils/dmFormatters';
-import type { DmChannel, User } from '@backspace/shared';
+import type { DmChannel, User } from '@vertex/shared';
 import type { TaggedFriend } from '../../stores/socialStore';
 import { useLanguage } from '../../contexts/LanguageContext';
 

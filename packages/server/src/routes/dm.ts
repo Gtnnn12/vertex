@@ -21,7 +21,7 @@ import {
   type SpaceInviteRequest,
   type SpaceInviteResponse,
   type SpaceInviteSystemPayload,
-} from '@backspace/shared';
+} from '@vertex/shared';
 import { fetchSpaceInviteSnapshot, getLocalInviteSnapshot } from '../utils/spaceInviteSnapshot.js';
 import { sanitizeUser } from '../utils/sanitize.js';
 import { deleteAttachmentFiles, deleteUploadFile, deleteAttachmentByFilename } from '../utils/fileCleanup.js';
@@ -31,7 +31,7 @@ import {
   GROUP_DM_NAME_MAX_LENGTH,
   GROUP_DM_ICON_MAX_BYTES,
   GROUP_DM_ICON_MIME_PREFIX,
-} from '@backspace/shared/src/constants.js';
+} from '@vertex/shared/src/constants.js';
 import { fetchDmEmbedsForMessages, resolveEmbeds, reResolveEmbeds, embedRowToEmbed } from '../utils/embedResolver.js';
 import {
   appendMutationLog,
@@ -48,7 +48,7 @@ import {
 } from '../utils/federationOutbox.js';
 import { getOurOrigin, canonicalizeHomeInstance } from '../utils/federationAuth.js';
 import { resolveOriginFromHostname } from '../utils/federationOriginResolve.js';
-import type { FederationRelayEvent } from '@backspace/shared';
+import type { FederationRelayEvent } from '@vertex/shared';
 import { resolveLocalUser, resolveOrCreateReplicatedUser } from './federation.js';
 
 /**

@@ -1,6 +1,6 @@
 import React from 'react';
 import type { ContextMenuItem } from '../../stores/contextMenuStore';
-import type { User } from '@backspace/shared';
+import type { User } from '@vertex/shared';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useSetPresence } from '../../hooks/usePresence';
 import { PRESENCE_META, PRESENCE_ORDER, type PresenceStatus } from '../../utils/presence';

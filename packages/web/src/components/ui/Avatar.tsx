@@ -1,5 +1,5 @@
 import React from 'react';
-import type { User } from '@backspace/shared';
+import type { User } from '@vertex/shared';
 import { getAvatarGradient } from '../../utils/gradients';
 import { PRESENCE_META, type PresenceStatus } from '../../utils/presence';
 

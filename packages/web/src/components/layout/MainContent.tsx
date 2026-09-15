@@ -23,7 +23,7 @@ import { isSelf, parseFederatedUsername, isFederationGlobeApplicable } from '../
 import { formatDmHeaderName, formatDmInputLabel, isDeletedPartnerDm } from '../../utils/dmFormatters';
 import { DmDeletedNotice } from '../chat/DmDeletedNotice';
 import { useCanonicalUserView } from '../../utils/userViewLookup';
-import type { User } from '@backspace/shared';
+import type { User } from '@vertex/shared';
 import { Tooltip } from '../ui/Tooltip';
 import { joinVoiceChannel } from '../../utils/voice';
 import { SearchPopover } from '../chat/SearchPopover';

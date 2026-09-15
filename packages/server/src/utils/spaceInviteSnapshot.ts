@@ -1,4 +1,4 @@
-import type { AvatarColor } from '@backspace/shared';
+import type { AvatarColor } from '@vertex/shared';
 import { eq } from 'drizzle-orm';
 import { getDb, schema } from '../db/index.js';
 import { safeFetch } from './ssrf.js';

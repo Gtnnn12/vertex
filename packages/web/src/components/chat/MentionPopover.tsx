@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import type { MemberWithUser } from '@backspace/shared';
+import type { MemberWithUser } from '@vertex/shared';
 import { Avatar } from '../ui/Avatar';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { useFloatingPosition } from '../../hooks/useFloatingPosition';

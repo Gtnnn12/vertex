@@ -6,7 +6,7 @@ import { hasPermission, getChannelSpaceId, PermissionBits, isDmMember } from '..
 import { fetchReactionsForMessages, fetchReplyToMessages, buildMessageWithUser } from './messages.js';
 import { fetchDmReactionsForMessages, buildDmMessageWithUser } from './dm.js';
 import { sanitizeUser } from '../utils/sanitize.js';
-import type { MessageWithUser, DmMessageWithUser } from '@backspace/shared';
+import type { MessageWithUser, DmMessageWithUser } from '@vertex/shared';
 import { fetchEmbedsForMessages, fetchDmEmbedsForMessages } from '../utils/embedResolver.js';
 
 interface SearchQuery {

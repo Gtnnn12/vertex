@@ -1,6 +1,6 @@
 import React from 'react';
 import type { ContextMenuItem } from '../../stores/contextMenuStore';
-import type { MessageWithUser } from '@backspace/shared';
+import type { MessageWithUser } from '@vertex/shared';
 import { saveImage, copyImageToClipboard } from '../../utils/imageActions';
 import { useUIStore } from '../../stores/uiStore';
 import { useTransferStore } from '../../stores/transferStore';

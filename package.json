@@ -3,12 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "description": "Open, self-hosted communication platform — text, voice, video, and federation",
-  "license": "AGPL-3.0-only",
-  "author": "gtnn12",
-  "homepage": "https://github.com/gtnn12/VERTEX",
+  "license": "MIT",
+  "author": "Gtnnn12",
+  "homepage": "https://github.com/Gtnnn12/vertex",
   "repository": {
     "type": "git",
-    "url": "https://github.com/gtnn12/VERTEX.git"
+    "url": "https://github.com/Gtnnn12/vertex.git"
   },
   "scripts": {
     "dev:server": "pnpm --filter @vertex/server dev",

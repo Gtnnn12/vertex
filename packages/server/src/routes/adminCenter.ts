@@ -23,7 +23,7 @@ import {
   type StaffAssignResult,
   type StaffMember,
   type StaffRole,
-} from '@backspace/shared';
+} from '@vertex/shared';
 import { authenticate } from '../utils/auth.js';
 import {
   STAFF_BAN_MIN_RANK,

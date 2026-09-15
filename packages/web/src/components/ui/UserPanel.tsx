@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import type { User } from '@backspace/shared';
+import type { User } from '@vertex/shared';
 import { useSetPresence } from '../../hooks/usePresence';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { PRESENCE_META, PRESENCE_ORDER } from '../../utils/presence';

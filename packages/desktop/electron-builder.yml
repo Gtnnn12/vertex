@@ -25,6 +25,7 @@ publish:
 protocols:
   - name: VERTEX
     schemes:
+      - vertex
       - backspace
 mac:
   category: public.app-category.social-networking

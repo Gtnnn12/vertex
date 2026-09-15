@@ -4,7 +4,7 @@ import { Avatar } from '../ui/Avatar';
 import { getApiForOrigin } from '../../stores/spaceStore';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { useUIStore } from '../../stores/uiStore';
-import type { SpaceInviteSystemPayload } from '@backspace/shared';
+import type { SpaceInviteSystemPayload } from '@vertex/shared';
 import { useLanguage } from '../../contexts/LanguageContext';
 
 type LiveState =

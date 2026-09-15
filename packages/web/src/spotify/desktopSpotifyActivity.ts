@@ -1,4 +1,4 @@
-import type { Activity, ActivitySpotify } from '@backspace/shared';
+import type { Activity, ActivitySpotify } from '@vertex/shared';
 import { useAuthStore } from '../stores/authStore';
 
 /**

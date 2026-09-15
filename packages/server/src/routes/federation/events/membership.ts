@@ -5,9 +5,9 @@ import { deleteUploadFile } from '../../../utils/fileCleanup.js';
 import { sanitizeUser } from '../../../utils/sanitize.js';
 import { generateSnowflake } from '../../../utils/snowflake.js';
 import { connectionManager } from '../../../ws/handler.js';
-import { GROUP_DM_NAME_MAX_LENGTH, GROUP_DM_NAME_MIN_LENGTH } from '@backspace/shared/src/constants.js';
+import { GROUP_DM_NAME_MAX_LENGTH, GROUP_DM_NAME_MIN_LENGTH } from '@vertex/shared/src/constants.js';
 import { and, eq, inArray, or } from 'drizzle-orm';
-import type { DmChannel, DmMessageWithUser, FederationRelayEvent } from '@backspace/shared';
+import type { DmChannel, DmMessageWithUser, FederationRelayEvent } from '@vertex/shared';
 import { extractDomain, resolveLocalUser, resolveOrCreateReplicatedUser, verifyAttribution } from '../identity.js';
 import { downloadProfileAsset, processProfileUpdateEvent } from '../profile.js';
 

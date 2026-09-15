@@ -5,7 +5,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { api } from '../../../api/client';
 import { hasPermissionBit, PermissionBits, stringToPermissions, permissionsToString } from '../../../utils/permissions';
-import type { Role } from '@backspace/shared';
+import type { Role } from '@vertex/shared';
 
 // ─── Permission display groups ─────────────────────────────────────────────
 

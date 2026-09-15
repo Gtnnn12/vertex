@@ -12,7 +12,7 @@ import type {
   MemberWithUser,
   SpaceWithChannelsAndMembers,
   Channel,
-} from '@backspace/shared';
+} from '@vertex/shared';
 
 function rowToJoinRequest(
   row: typeof schema.joinRequests.$inferSelect,

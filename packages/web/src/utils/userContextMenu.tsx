@@ -6,7 +6,7 @@
 // BLOCK: the server has NO block endpoint/table today, so no block items
 // here. When one lands, add it in this builder only.
 import React from 'react';
-import type { User } from '@backspace/shared';
+import type { User } from '@vertex/shared';
 import type { ContextMenuItem } from '../stores/contextMenuStore';
 import type { TaggedFriend, TaggedFriendRequest } from '../stores/socialStore';
 import { getFriendshipStatus } from './friendship';

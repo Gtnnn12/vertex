@@ -5,7 +5,7 @@ import { useChatStore } from '../stores/chatStore';
 import { useVoiceStore } from '../stores/voiceStore';
 import { useSocialStore } from '../stores/socialStore';
 import { useSettingsStore } from '../stores/settingsStore';
-import type { ServerEvent, ClientEvent, ActiveCallInfo, Activity, User } from '@backspace/shared';
+import type { ServerEvent, ClientEvent, ActiveCallInfo, Activity, User } from '@vertex/shared';
 import { resolveAssetUrl, normalizeUserAssets, normalizeMessageAssets } from '../utils/assetUrls';
 import { broadcastVoiceStatus, broadcastDeafenViaLiveKit } from '../utils/voice';
 import { applySpaceVoiceState } from '../utils/voiceStateSync';

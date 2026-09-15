@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useSettingsStore } from '../../../stores/settingsStore';
 import { useUIStore } from '../../../stores/uiStore';
 import { useLanguage } from '../../../contexts/LanguageContext';
-import type { InstanceStreamingLimits } from '@backspace/shared';
+import type { InstanceStreamingLimits } from '@vertex/shared';
 import { Toggle } from '../../ui/Toggle';
 import {
   STANDARD_RESOLUTIONS, STANDARD_FRAMERATES,
@@ -10,7 +10,7 @@ import {
   HIGH_END_RESOLUTION_THRESHOLD, HIGH_END_FRAMERATE_THRESHOLD,
   BITRATE_MATRIX_KBPS,
   type Resolution,
-} from '@backspace/shared/src/constants';
+} from '@vertex/shared/src/constants';
 
 function formatKbps(kbps: number): string {
   return kbps >= 1000

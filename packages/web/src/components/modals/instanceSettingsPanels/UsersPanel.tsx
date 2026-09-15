@@ -3,7 +3,7 @@ import { api } from '../../../api/client';
 import { Avatar } from '../../ui/Avatar';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { useAuthStore } from '../../../stores/authStore';
-import type { AdminUser, AdminUserListResponse } from '@backspace/shared';
+import type { AdminUser, AdminUserListResponse } from '@vertex/shared';
 
 export function UsersPanel() {
   const currentUser = useAuthStore((s) => s.user);

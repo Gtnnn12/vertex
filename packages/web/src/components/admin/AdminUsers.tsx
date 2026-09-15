@@ -6,7 +6,7 @@ import { Avatar } from '../ui/Avatar';
 import { StaffBadge } from '../ui/StaffBadge';
 import { ErrorBanner, LoadingHint, EmptyHint, PaginationRow, SelectInput } from './adminShared';
 import { AdminUserDetail } from './AdminUserDetail';
-import type { AdminCenterUserRow, AdminCenterViewerCapabilities } from '@backspace/shared';
+import type { AdminCenterUserRow, AdminCenterViewerCapabilities } from '@vertex/shared';
 
 const PAGE_SIZE = 12;
 

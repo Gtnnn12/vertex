@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { ActivityType } from '@backspace/shared';
+import type { ActivityType } from '@vertex/shared';
 import { useManualActivityStore } from '../../activity';
 import { useLanguage } from '../../contexts/LanguageContext';
 

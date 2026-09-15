@@ -21,7 +21,7 @@ import { hasPermissionBit, PermissionBits } from '../../utils/permissions';
 import { isSelf, parseFederatedUsername } from '../../utils/identity';
 import { formatDmHeaderName } from '../../utils/dmFormatters';
 import { useDelayedLoading } from '../../hooks/useDelayedLoading';
-import type { MessageWithUser } from '@backspace/shared';
+import type { MessageWithUser } from '@vertex/shared';
 import { SystemMessage } from './SystemMessage';
 import { useLanguage } from '../../contexts/LanguageContext';
 

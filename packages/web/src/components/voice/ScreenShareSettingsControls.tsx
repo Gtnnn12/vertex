@@ -5,7 +5,7 @@ import { useSettingsStore } from '../../stores/settingsStore';
 import { buildScreenShareOptions } from '../../utils/screenShare';
 import { Toggle } from '../ui/Toggle';
 import { isElectron } from '../../platform/platform';
-import { RESOLUTION_LABELS } from '@backspace/shared/src/constants';
+import { RESOLUTION_LABELS } from '@vertex/shared/src/constants';
 import { useLanguage } from '../../contexts/LanguageContext';
 
 const MODES: { value: ScreenShareConfig['mode'] }[] = [

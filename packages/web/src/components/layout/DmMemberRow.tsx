@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import type { User } from '@backspace/shared';
+import type { User } from '@vertex/shared';
 import { ProfileAvatar } from '../ui/ProfileAvatar';
 import { Username } from '../ui/Username';
 import { Tooltip } from '../ui/Tooltip';

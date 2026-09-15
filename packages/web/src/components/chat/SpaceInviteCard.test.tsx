@@ -33,7 +33,7 @@ const basePayload = {
     avatarColor: 'mint' as const,
     memberCount: 12,
     description: 'A place',
-    instanceName: 'Backspace',
+    instanceName: 'VERTEX',
   },
 };
 

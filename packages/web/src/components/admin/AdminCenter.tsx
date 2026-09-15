@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
 import { useLanguage } from '../../contexts/LanguageContext';
-import type { AdminCenterSummary } from '@backspace/shared';
+import type { AdminCenterSummary } from '@vertex/shared';
 import { StaffBadge } from '../ui/StaffBadge';
 import { AdminOverview } from './AdminOverview';
 import { AdminUsers } from './AdminUsers';

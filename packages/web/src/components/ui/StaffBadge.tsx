@@ -1,5 +1,5 @@
 import React from 'react';
-import type { StaffRole } from '@backspace/shared';
+import type { StaffRole } from '@vertex/shared';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { Tooltip } from './Tooltip';
 

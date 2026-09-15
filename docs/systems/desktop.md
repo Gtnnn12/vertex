@@ -240,7 +240,7 @@ Powered by `electron-updater`. Loaded via `require()` (not import) for graceful 
 ```
 autoDownload: true
 autoInstallOnAppQuit: true
-Publish: GitHub (gtnn12/VERTEX)
+Publish: GitHub (Gtnnn12/vertex)
 ```
 
 **Signing status (as of v1.0.0):** all builds are unsigned. Consequences:
@@ -614,7 +614,7 @@ interface GameEntry {
 
 ### Remote Sync (`syncDictionary()`)
 
-**Remote URL:** `https://raw.githubusercontent.com/gtnn12/VERTEX/main/packages/desktop/resources/games.json`
+**Remote URL:** `https://raw.githubusercontent.com/Gtnnn12/vertex/main/packages/desktop/resources/games.json`
 
 ```
 Step 1: Determine best local version (cache vs seed, whichever has higher version)

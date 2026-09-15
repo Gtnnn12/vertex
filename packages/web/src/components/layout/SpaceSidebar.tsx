@@ -10,7 +10,7 @@ import { useContextMenuStore, type ContextMenuItem } from '../../stores/contextM
 import { Tooltip } from '../ui/Tooltip';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { TransferOwnershipModal } from '../modals/TransferOwnershipModal';
-import type { SpaceLayoutItem, SpaceFolder } from '@backspace/shared';
+import type { SpaceLayoutItem, SpaceFolder } from '@vertex/shared';
 
 import { getSpaceGradient } from '../../utils/gradients';
 import { isElectron } from '../../platform/platform';

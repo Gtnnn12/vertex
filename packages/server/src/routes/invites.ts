@@ -16,7 +16,7 @@ import type {
   CreateInviteRequest,
   UpdateInviteRequest,
   ReinstateInviteRequest,
-} from '@backspace/shared';
+} from '@vertex/shared';
 
 /**
  * Admin CRUD routes for invite links. All endpoints sit behind the

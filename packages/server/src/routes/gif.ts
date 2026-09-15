@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { eq } from 'drizzle-orm';
 import { getDb, schema } from '../db/index.js';
 import { authenticate } from '../utils/auth.js';
-import type { GifResult } from '@backspace/shared';
+import type { GifResult } from '@vertex/shared';
 
 interface KlipyGifFile {
   url: string;

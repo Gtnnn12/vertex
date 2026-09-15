@@ -3,7 +3,7 @@ import { api } from '../../api/client';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { Avatar } from '../ui/Avatar';
 import { Card, EmptyHint, ErrorBanner, LoadingHint, PaginationRow, SelectInput, formatDateTime } from './adminShared';
-import type { AdminCenterSpaceDetail, AdminCenterSpaceRow } from '@backspace/shared';
+import type { AdminCenterSpaceDetail, AdminCenterSpaceRow } from '@vertex/shared';
 
 const PAGE_SIZE = 12;
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { Attachment } from '@backspace/shared';
+import type { Attachment } from '@vertex/shared';
 import { useUIStore } from '../../stores/uiStore';
 import { useTransferStore } from '../../stores/transferStore';
 import { Tooltip } from '../ui/Tooltip';

@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { eq } from 'drizzle-orm';
-import { STAFF_RANK, STAFF_ROLES, type StaffRole } from '@backspace/shared';
+import { STAFF_RANK, STAFF_ROLES, type StaffRole } from '@vertex/shared';
 import { config } from '../config.js';
 import { getDb, schema } from '../db/index.js';
 import type { FastifyRequest, FastifyReply } from 'fastify';

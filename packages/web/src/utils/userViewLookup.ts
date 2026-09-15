@@ -1,4 +1,4 @@
-import type { User } from '@backspace/shared';
+import type { User } from '@vertex/shared';
 import { useSpaceStore } from '../stores/spaceStore';
 import { canonicalUserKey } from './identity';
 

@@ -4,741 +4,93 @@
 
 # VERTEX
 
-**Your own communication platform. Text, voice, video, federation — designed, not assembled.**
+### **Tu comunidad, tus reglas.**
 
-[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-3da639.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6.svg)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/node-20_LTS-339933.svg)](https://nodejs.org/)
-[![Version](https://img.shields.io/badge/version-1.0-16a34a.svg)](#project-status)
 
 </div>
 
 ---
 
-VERTEX is a self-hosted communication platform you run on your own hardware —
-and a design project first. Every surface, from the login mascot to the compact
-member grid, was drawn, animated, and tuned by hand. Underneath the design sits
-a complete platform: spaces, channels, roles, voice and video, screen sharing,
-direct messages, friends, file sharing, and message search. Server-to-server
-**federation** lets independent VERTEX instances talk to each other while each
-stays under its own control.
+**VERTEX** es una plataforma de comunicación self-hosted que ejecutas en tu propio
+hardware: espacios, canales de texto, voz y video, compartición de pantalla, mensajes
+directos, amigos y federación entre instancias. Tú eres el dueño del servidor, de los
+datos y de las reglas — nadie más.
 
-It is **free and open source** under the **GNU AGPL-3.0**, and dual-licensed: a
-commercial license is available if the AGPL doesn't fit your use. See
-[License](#license) for the details.
-
-> **Project status** <a name="project-status"></a>
-> VERTEX 1.0. Stable, self-hostable, and actively developed.
-
-## What makes VERTEX different
-
-VERTEX is built around a simple bet: a chat platform should feel like *your*
-place, not like a rented template. So it ships with a design language of its own
-— motion-first, mascot-branded, endlessly personalizable — and refuses to trade
-that polish for capability.
-
-- **Complete personalization.** Themes and accent colors, custom profile
-  banners, bios, and per-user effects, customizable sidebar layouts with
-  personal color-coded folders — the interface bends to the person using it,
-  not the other way around.
-- **Netrex, the built-in premium layer.** An opt-in membership with its own
-  admin-managed subscription system: premium profile effects, extended
-  personalization, and priority features — controlled by the instance owner,
-  not an external billing service.
-- **A home screen that is actually a home.** An animated landing for returning
-  users: quick access, recent DMs, social feed, and your live activity —
-  rendered as a compact, glanceable grid instead of an empty channel list.
-- **Compact member grid.** The member sidebar becomes a dense, animated grid
-  with per-tile activity, presence, and stream badges — built for servers that
-  want people, not whitespace.
-- **A redesigned DM experience.** Conversations are the first-class citizen:
-  a dedicated roster, activity-aware DM rows, live typing and call state, and
-  group DMs with their own info surface.
-- **Profiles with effects.** User popouts carry banner art, accent color, and
-  motion effects — including the premium set for Netrex members.
-- **An animated home and login.** The login greets you with the VERTEX mascot
-  (who covers her eyes while you type your password), and the first sign-in
-  deals a six-card shuffle that reveals where you've landed.
-- **Voice and video with a real control surface.** Choose resolution, frame
-  rate, codec (VP9 or hardware H.264), and bitrate; set independent 0-200%
-  volume for every person and every screen-share; RNNoise noise suppression; a
-  live connection inspector; and per-tile stream quality badges. Screen sharing
-  goes up to 4K/120fps within admin-set bounds.
-- **Federation, not a walled garden.** Peer your instance with others for
-  cross-instance friends, DMs, calls, and presence. Each server stays
-  independently owned, and requests are HMAC-authenticated.
-
-You own the server, the data, the network it federates into — and the look of
-the whole thing.
-
-## Screenshots
+## Capturas
 
 <div align="center">
 
-<img src="docs/screenshots/voice-video-grid.webp" alt="A voice channel with a grid of camera and screen-share tiles" width="900" />
+<img src="docs/screenshots/voice-video-grid.webp" alt="Canal de voz con grid de cámaras y pantallas compartidas" width="900" />
 
-<sub><em>A voice channel in full swing. Camera tiles alongside live screen-shares, each with its own resolution and frame-rate label.</em></sub>
+<sub><em>Canal de voz en pleno: cámaras y streams en vivo, cada uno con su badge de resolución.</em></sub>
 
 </div>
 
 <table>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/screenshots/chat.webp" alt="A text channel with messages and a typing indicator" /><br/>
-      <sub><b>Text channels.</b> Markdown, replies, reactions, and live typing indicators.</sub>
+      <img src="docs/screenshots/chat.webp" alt="Canal de texto con mensajes" /><br/>
+      <sub><b>Canales de texto.</b> Markdown, respuestas, reacciones y typing en vivo.</sub>
     </td>
     <td width="50%" valign="top">
-      <img src="docs/screenshots/screen-share-settings.webp" alt="The screen-share settings popover" /><br/>
-      <sub><b>Screen-share controls.</b> Resolution, frame rate, codec, and bitrate, within admin-set bounds.</sub>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top">
-      <img src="docs/screenshots/space-discovery.webp" alt="The space discovery / Explore view" /><br/>
-      <sub><b>Spaces and discovery.</b> Browse public, request-to-join, and joined spaces.</sub>
-    </td>
-    <td width="50%" valign="top">
-      <img src="docs/screenshots/group-dm.webp" alt="A federated group direct message" /><br/>
-      <sub><b>Direct messages.</b> 1-on-1 and group DMs, including members on peer instances.</sub>
+      <img src="docs/screenshots/screen-share-settings.webp" alt="Ajustes de compartición de pantalla" /><br/>
+      <sub><b>Screen share.</b> Resolución, framerate, códec y bitrate a tu gusto.</sub>
     </td>
   </tr>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/screenshots/user-discovery.webp" alt="The find-people / user discovery view" /><br/>
-      <sub><b>Friends and social.</b> Find people across instances with mutual friends and spaces.</sub>
+      <img src="docs/screenshots/friends.webp" alt="Vista de amigos" /><br/>
+      <sub><b>Amigos y social.</b> Presencia, actividades y descubrimiento de gente.</sub>
     </td>
     <td width="50%" valign="top">
-      <img src="docs/screenshots/admin-federation.webp" alt="The federation admin panel showing peered instances" /><br/>
-      <sub><b>Federation admin.</b> Manage peered instances, relay, and secret rotation.</sub>
+      <img src="docs/screenshots/group-dm.webp" alt="Grupo de DM federado" /><br/>
+      <sub><b>DMs y grupos.</b> 1-a-1 y grupos, incluso entre instancias federadas.</sub>
     </td>
   </tr>
 </table>
 
-<div align="center"><a href="docs/screenshots.md"><b>→ See all screenshots</b></a></div>
-
 ## Features
 
-### Design & personalization
-- Mascot-branded login with the eye-covering password animation
-- Six-card post-login shuffle ritual (Framer Motion)
-- Animated home screen with quick access, recent DMs, social feed, and live activity
-- Themes, accent colors, and a warm, calm "Aether Drift" design system
-- User profiles with banner, bio, accent color, and motion effects
-- Netrex premium tier: admin-managed memberships with premium profile effects
-- Compact member grid with per-tile activity and presence
-- Customizable user sidebar layout with personal color-coded space folders
+- **Netrex** — la capa premium integrada, gestionada por el admin de tu instancia:
+  efectos de perfil premium, personalización extendida y prioridad de features. Sin
+  servicios de facturación externos: el dueño de la instancia controla todo.
+- **Vertex AI** — asistente con IA integrada en el chat y en el portal web, con tiering
+  para miembros de Netrex. Configuras tu propia API key en tu instancia y listo.
+- **Spotify** — actividad musical en vivo: lo que escuchas aparece en tu perfil y en las
+  tarjetas de actividad, con embeds de Spotify en el chat.
+- **Match Cards** — descubrimiento social con tarjetas: gustos musicales, estilos y
+  afinidades entre miembros de tu comunidad.
+- **Voz y video de verdad** — hasta 4K/120fps en screen share, VP9 o H.264 por hardware,
+  volumen independiente 0-200% por persona y por stream, supresión de ruido RNNoise e
+  inspector de conexión en vivo.
+- **Personalización total** — temas, colores de acento, banners, bios, efectos de perfil
+  y un tablero de perfil (board) con widgets tuyos.
+- **Federación** — conecta tu instancia con otras para amigos, DMs y llamadas entre
+  servidores, sin walled gardens. Cada instancia sigue siendo independiente.
+- **Desktop app** — Electron para Windows, macOS y Linux, con keybinds globales
+  (push-to-talk, mute, deafen) y detección de actividad.
 
-### Communication
-- Real-time text channels over WebSocket, with `@mention` autocomplete and mention highlighting
-- Markdown formatting with syntax highlighting
-- Message reactions, replies, editing, deletion, and per-message mark-as-unread
-- Rich link embeds (YouTube, Vimeo, Spotify, and generic OpenGraph) with SSRF-protected scraping, plus GIF search (Klipy)
-- Typing indicators, unread badges, and presence
-- Direct messages: 1-on-1 and group DMs (up to 10 people), with voice/video calls (ring, accept, reject)
+## Download
 
-**Voice, video, and screen sharing** (via [LiveKit](https://livekit.io/)):
-- Screen sharing up to 4K/120fps: VP9 by default, an optional hardware-accelerated H.264 mode, and a VP8 simulcast fallback
-- Per-stream quality controls: resolution, frame rate, codec, and bitrate, within admin-set bounds
-- Independent 0-200% volume for every participant and every screen-share
-- RNNoise noise suppression (on by default), plus echo-cancellation and auto-gain toggles and mic/speaker device selection
-- Live connection inspector for per-participant bitrate, codec, ping, packet loss, and jitter, plus a per-tile badge showing each stream's measured resolution and frame-rate
-- Screen-share viewer detection ("who's watching") and auto-ducking that lowers stream audio when someone speaks
-- Selective subscription: mute or stop watching any camera or stream to save bandwidth
-- Push-to-talk and fully customizable keybinds (including mouse buttons), in the browser and the desktop app
-- Picture-in-Picture for voice and video
+Los instaladores (Windows `.exe`, macOS `.dmg`, Linux `.AppImage`/`.deb`) se publican en
+**[GitHub Releases](https://github.com/Gtnnn12/vertex/releases)** — la sección está en
+preparación y se rellenará en las próximas fases del proyecto.
 
-### Organization
-- Spaces with channel categories
-- Role-based permissions: bitwise RBAC with category- and channel-level overrides
-- Space discovery (public, request-to-join, and private)
-- Shareable invite codes
-
-### Social
-- Friend requests and friendships
-- User search and discovery
-- Mutual friends and mutual spaces
-- Presence and rich activities (playing, listening, watching, streaming, custom)
-- Manual status (Online, Idle, or Do Not Disturb) with a custom status message
-- Privacy controls: toggle discoverability and activity-status sharing
-
-### Moderation
-- Bans with reason and moderator attribution (who, why, and when)
-- Voice restrictions (space-level mute/deafen, persisted)
-- Member move and force-disconnect
-- Join-request approval for gated spaces
-- Admin center with audit log and moderation events
-
-### Federation
-- Multi-instance peering with HMAC-signed server-to-server requests
-- Federated identity resolution (`username@instance`)
-- Cross-instance DMs: messages, reactions, and membership relay
-- Cross-instance friends and presence
-- File replication with size validation
-- Background workers for outbox delivery, file download, peer health, and cleanup
-
-### Platform
-- File uploads with image thumbnails (via `sharp`), drag-and-drop and paste-to-upload, and in-app avatar/banner cropping
-- Message search with `from:`, `has:`, `before:`, and `after:` filters, plus jump-to-message
-- Admin panel: instance settings, user management, registration controls, storage management, and federation/peering, plus granular streaming controls (a per-resolution by per-frame-rate bitrate matrix, min/max caps, quality-slider step, and an optional user-set-bitrate mode)
-- Automatic SQLite backups (pre-migration, scheduled, and manual) with restore tooling
-- Electron desktop app (Windows, macOS, Linux) with global keybinds (push-to-talk, mute, deafen) and activity detection
-- Native desktop notifications and unread badge counts
-- Mobile-responsive web UI with a dedicated touch layout (bottom navigation, swipe gestures, full-screen views)
-- Installable PWA: add it to your phone's home screen to run it as a standalone app, with service-worker caching and an offline message queue (messages send once you reconnect)
-- Account management: password change and account deletion with safeguards
-
-## Installation
-
-The intended way to deploy VERTEX is the **interactive installer**. It
-configures everything (`.env`, secrets, HTTPS, optional voice) and brings the
-stack up for you. It **auto-detects your environment** and picks one of three
-deployment modes. The default "All-in-One" (below) needs nothing but a host and
-a domain, but if ports 80/443 are already taken (an existing reverse proxy, a
-tunnel, another app) the installer steers you to the right mode instead of
-dead-ending. See [Deployment modes](#deployment-modes) for the full picture.
-
-By default the installer **pulls a prebuilt multi-architecture image** from the
-GitHub Container Registry (`linux/amd64` + `linux/arm64`), so weak or ARM boxes
-(a Raspberry Pi) skip the heavy local build. It falls back to building from
-source automatically if the image can't be pulled.
-
-### Requirements
-
-- A **Linux host** (VPS, VM, or home server) with **Docker** and **Docker Compose**.
-- A **domain name** for your instance. In the default All-in-One mode it must
-  point at the host's public IP (Caddy obtains HTTPS certificates for it
-  automatically); behind your own reverse proxy or a tunnel it points at that
-  edge instead. See [Deployment modes](#deployment-modes).
-- The ability to open the firewall ports in step 2 (All-in-One), or a reverse
-  proxy / tunnel already terminating HTTPS for you.
-
-### 1. Run the installer
+Mientras tanto, puedes construirlo tú mismo:
 
 ```bash
-git clone https://github.com/gtnn12/VERTEX.git
-cd VERTEX
-./install.sh
-```
-
-The installer walks you through everything interactively:
-
-- asks for your domain,
-- generates a secure `JWT_SECRET`,
-- optionally enables voice/video (sets up the bundled LiveKit server),
-- writes `.env` (and `livekit.yaml` if voice is enabled),
-- starts all services with Docker and configures automatic HTTPS via Caddy.
-
-### 2. Open the firewall ports
-
-Open these on the host (and, if it's behind a router, port-forward them to the host):
-
-| Port | Proto | When | Purpose |
-|------|-------|------|---------|
-| `80` | TCP | **Always** | HTTP. Caddy's automatic-HTTPS (ACME) challenge + redirect to HTTPS |
-| `443` | TCP | **Always** | HTTPS. Web app, REST API, WebSocket, and LiveKit signaling (proxied) |
-| `3478` | UDP | If voice enabled | TURN. NAT traversal for WebRTC |
-| `7881` | TCP | If voice enabled | WebRTC TCP fallback (clients that can't use UDP) |
-| `50000–60000` | UDP | If voice enabled | WebRTC media (voice / video / screen-share streams) |
-
-Without voice, you only need `80` and `443`. The voice ports are required only
-when you enable LiveKit. LiveKit's own signaling port (`7880`) stays internal.
-It's reverse-proxied through Caddy on `443`, so you do **not** forward it.
-
-> **Do this together with DNS, ideally before (or right after) running the
-> installer.** Caddy gets your HTTPS certificate from Let's Encrypt the first
-> time the stack starts, which requires your domain to resolve to this host
-> **and** ports `80`/`443` reachable from the internet. If they aren't ready
-> yet, that's fine. Caddy keeps retrying, and HTTPS comes up automatically once
-> DNS and the ports are in place.
-
-### 3. Create your admin account
-
-Open `https://your-domain` and register. **The first account created becomes the
-instance admin**. There is no default username or password.
-
-If the page doesn't load over HTTPS, it's almost always DNS or ports `80`/`443`
-not being reachable from outside. Check `docker compose logs caddy` for
-certificate errors. (The installer's health check confirms the app is up
-internally, not that the certificate was issued.)
-
-### Backups & restore
-
-The app takes automatic SQLite snapshots (before every migration, on a schedule,
-and on demand via `./backup.sh`). Restore from a snapshot with `./restore.sh`.
-See [`docs/systems/deployment.md`](docs/systems/deployment.md) for the full
-backup/restore and image-pinning guide.
-
-### Manual setup (advanced, optional)
-
-The installer above is the supported path. If you'd rather configure everything
-by hand, you can skip it and drive Docker Compose directly, but then DNS,
-`.env`, secrets, voice config, and the same firewall ports from step 2 are your
-responsibility:
-
-```bash
-git clone https://github.com/gtnn12/VERTEX.git
-cd VERTEX
-
-cp .env.example .env
-# Set DOMAIN, and generate a secret:
-echo "JWT_SECRET=$(openssl rand -hex 32)" >> .env
-
-docker compose up -d
-```
-
-The stack runs three services via Docker Compose:
-
-| Service     | Role                                              |
-|-------------|---------------------------------------------------|
-| `vertex`    | The app (API + WebSocket + built web client) on internal port `3000` |
-| `caddy`     | Reverse proxy with automatic HTTPS for your `DOMAIN` (ports `80`/`443`) |
-| `livekit`   | Voice/video server; optional, enabled with `COMPOSE_PROFILES=voice` |
-
-## Deployment modes
-
-Homelabs differ. VERTEX supports three deployment modes from **one installer**,
-which auto-detects which one fits and, in non-obvious cases, asks. The mode is
-recorded as `DEPLOY_MODE` in `.env`; you can also set it up front for a
-non-interactive install (`DEPLOY_MODE=proxy ./install.sh`).
-
-| Mode | When | HTTPS handled by | Voice |
-|------|------|------------------|-------|
-| **`allinone`** (default) | Ports 80/443 are free and you have a domain | The bundled **Caddy** (automatic Let's Encrypt) | Yes, with UDP media ports open |
-| **`proxy`** | You already run a reverse proxy (nginx, Traefik, Caddy, Nginx Proxy Manager, SWAG…) | **Your** reverse proxy | Yes, if you also proxy `/livekit` and open the media ports |
-| **`tunnel`** | You expose the box through a tunnel (Cloudflare Tunnel, Tailscale…) | The **tunnel** provider | No, WebRTC/UDP can't traverse a tunnel |
-
-In `proxy` and `tunnel` mode the bundled Caddy is **not** started; instead the app
-is published on **`127.0.0.1:APP_PORT`** (loopback only, never exposed directly)
-for your proxy or tunnel to forward to. This is driven by a small overlay,
-`docker-compose.proxy.yml`, which the installer wires in for you by setting
-`COMPOSE_FILE=docker-compose.yml:docker-compose.proxy.yml` in `.env`, so every
-later `docker compose …` command in the directory keeps working with no `-f`
-flags. The installer auto-picks a free `APP_PORT` (3000/8080 are often taken);
-override it with `APP_PORT=…`.
-
-The installer prints ready-to-paste config for your mode at the end. The
-canonical snippets are below.
-
-### Mode 2: behind your own reverse proxy
-
-The app answers plain HTTP on `127.0.0.1:APP_PORT`; your proxy terminates TLS and
-forwards to it. Every snippet already includes the three things people get wrong:
-**WebSocket upgrade** (chat and live events won't work without it),
-**`X-Forwarded-*`** (the server runs with `trustProxy` and needs the real client
-scheme/IP), and a **body-size limit** matching `MAX_UPLOAD_SIZE` (default 100 MB).
-
-Replace `chat.example.com` and `8080` with your domain and `APP_PORT`.
-
-**nginx.** The `map` goes in `http { }` once; the `server` block per site:
-
-```nginx
-map $http_upgrade $connection_upgrade { default upgrade; '' close; }
-
-server {
-    listen 443 ssl;
-    server_name chat.example.com;
-
-    # ssl_certificate     /etc/letsencrypt/live/chat.example.com/fullchain.pem;
-    # ssl_certificate_key /etc/letsencrypt/live/chat.example.com/privkey.pem;
-
-    client_max_body_size 100m;        # match MAX_UPLOAD_SIZE
-
-    location / {
-        proxy_pass http://127.0.0.1:8080;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-Host  $host;
-        proxy_set_header Upgrade    $http_upgrade;        # WebSocket
-        proxy_set_header Connection $connection_upgrade;  # WebSocket
-        proxy_read_timeout 3600s;
-        proxy_send_timeout 3600s;
-    }
-
-    # Voice only: forward LiveKit signaling (strips the /livekit prefix):
-    # location /livekit/ {
-    #     proxy_pass http://127.0.0.1:7880/;
-    #     proxy_http_version 1.1;
-    #     proxy_set_header Host       $host;
-    #     proxy_set_header Upgrade    $http_upgrade;
-    #     proxy_set_header Connection $connection_upgrade;
-    # }
-}
-```
-
-**Caddy** (if you run your own; it handles WebSocket and `X-Forwarded-*` itself):
-
-```caddy
-chat.example.com {
-    reverse_proxy 127.0.0.1:8080
-    request_body { max_size 100MB }
-
-    # Voice only:
-    # handle_path /livekit/* { reverse_proxy 127.0.0.1:7880 }
-    # handle           { reverse_proxy 127.0.0.1:8080 }
-}
-```
-
-**Traefik** (file provider; Traefik handles WebSocket automatically):
-
-```yaml
-http:
-  routers:
-    vertex:
-      rule: "Host(`chat.example.com`)"
-      entryPoints: [websecure]
-      service: vertex
-      tls: { certResolver: letsencrypt }
-  services:
-    vertex:
-      loadBalancer:
-        servers:
-          - url: "http://127.0.0.1:8080"
-  # Voice only: add a higher-priority router + stripPrefix middleware for
-  # PathPrefix(`/livekit`) → http://127.0.0.1:7880.
-```
-
-#### GUI proxies (Nginx Proxy Manager, SWAG, etc.)
-
-You can't paste a config file into a point-and-click proxy, so set these fields
-by hand. In **Nginx Proxy Manager**, add a **Proxy Host**:
-
-| Field | Value |
-|-------|-------|
-| **Domain Names** | `chat.example.com` |
-| **Scheme** | `http` |
-| **Forward Hostname / IP** | `127.0.0.1`, but **if NPM runs in Docker**, `127.0.0.1` is NPM's *own* container. Use the host's LAN IP, or `host.docker.internal` with `extra_hosts: ["host.docker.internal:host-gateway"]` on the NPM container. |
-| **Forward Port** | your `APP_PORT` (e.g. `8080`) |
-| **Websockets Support** | **ON** (required; chat/live events break without it) |
-| **Block Common Exploits** | fine to leave on |
-| **SSL tab** | request a Let's Encrypt cert and enable **Force SSL** |
-| **Advanced tab** | add `client_max_body_size 100m;` (match `MAX_UPLOAD_SIZE`) |
-
-The same three ideas apply to any GUI proxy: forward to the app's host+port,
-enable WebSocket support, and raise the request-body limit.
-
-### Mode 3: behind a tunnel (Cloudflare, Tailscale)
-
-Same loopback publish as Mode 2, but the tunnel daemon on the host reaches
-`127.0.0.1:APP_PORT` and no inbound ports are opened at all. For **Cloudflare
-Tunnel** (`cloudflared`):
-
-```yaml
-# ~/.cloudflared/config.yml
-tunnel: <YOUR-TUNNEL-ID>
-credentials-file: /root/.cloudflared/<YOUR-TUNNEL-ID>.json
-
-ingress:
-  - hostname: chat.example.com
-    service: http://127.0.0.1:8080
-  - service: http_status:404
-```
-
-```bash
-cloudflared tunnel route dns <YOUR-TUNNEL-ID> chat.example.com
-```
-
-Two tunnel-specific caveats, both handled by the installer:
-
-- **Upload cap.** Cloudflare (free/pro) hard-caps request bodies at **100 MB**, so
-  the 100 MB default would let large uploads fail *at the edge*. In `tunnel` mode
-  the installer sets `MAX_UPLOAD_SIZE=94371840` (90 MB) with headroom. Don't raise
-  it back above ~100 MB behind Cloudflare.
-- **No voice.** Voice/video is **WebRTC over UDP**, which a tunnel can't carry, so
-  it's disabled in `tunnel` mode. If you need voice, use Mode 2 (reverse proxy)
-  with the media ports opened, or All-in-One.
-
-### Voice per mode
-
-Voice/video (LiveKit) needs its **UDP media ports** reachable from clients.
-These carry the actual audio/video and never pass through your HTTP proxy or
-tunnel:
-
-| Port | Proto | Purpose |
-|------|-------|---------|
-| `3478` | UDP | TURN. WebRTC NAT traversal |
-| `7881` | TCP | WebRTC TCP fallback |
-| `50000–60000` | UDP | WebRTC media (voice / video / screen-share) |
-
-- **All-in-One.** Voice works once those ports are open/forwarded. LiveKit
-  *signaling* is proxied through Caddy on 443 (`/livekit`); port `7880` stays
-  internal, never forwarded.
-- **Reverse proxy.** You must **also** route `/livekit` to `127.0.0.1:7880` (see
-  the commented lines in the snippets) **and** open the media ports above.
-- **Tunnel.** Voice does **not** work (UDP can't traverse the tunnel). This is a
-  known, unavoidable limitation, not a misconfiguration.
-
-### Updating a running instance
-
-Back up first. The app auto-snapshots the SQLite DB, and you can take one on
-demand with `./backup.sh` (see [`docs/systems/deployment.md`](docs/systems/deployment.md)).
-Then, from the install directory:
-
-```bash
-git pull                              # refresh compose files / install.sh / docs
-
-# Prebuilt-image installs (the default):
-docker compose pull && docker compose up -d
-
-# From-source installs (a fork, or VERTEX_BUILD=true):
-docker compose up -d --build
-```
-
-Because `COMPOSE_FILE` lives in `.env`, these commands automatically use the
-right compose files in every mode, with no `-f` flags to remember. A redeploy
-briefly restarts the `vertex` container (clients reconnect automatically).
-
-## Development
-
-Requirements: **Node.js 20 or newer** and **pnpm 10**. The `.nvmrc` file keeps
-Node 20 as the default development and production baseline; CI additionally
-exercises Node 24, and newer majors generally work but are not part of the test
-matrix. The Docker image continues to build on Node 20 regardless of your host.
-
-```bash
+git clone https://github.com/Gtnnn12/vertex.git
+cd vertex
 pnpm install
-cp .env.example .env          # set JWT_SECRET (openssl rand -hex 32)
-pnpm dev                       # API server on :3005, Vite dev server on :5173
+cp .env.example .env    # pon tu JWT_SECRET (openssl rand -hex 32)
+pnpm dev
 ```
 
-On Windows PowerShell, confirm Node 20 or newer and use the native copy command:
+## Created by Gtnn
 
-```powershell
-node --version
-pnpm install
-Copy-Item .env.example .env
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-```
+Hecho a mano — diseño, código y mascota incluidos.
 
-Paste the generated value after `JWT_SECRET=` in `.env`, then start both
-development servers with `pnpm dev`. Use `node --version` to confirm the active
-version if pnpm reports an engine warning. This covers the server and web dev
-servers; building the Electron desktop app still expects a POSIX shell (macOS or
-Linux).
-
-> **Server/web only?** `pnpm install` also builds the desktop app's native
-> keyboard-hook module (`uiohook-napi`), which needs a C++ toolchain
-> (`make`, `g++`, `python3`). If those are missing it now **warns and continues**,
-> and the server and web client don't need it. Install a build toolchain
-> (Debian/Ubuntu: `sudo apt install build-essential python3`) only if you're
-> building the **desktop** app. And to *self-host*, use the Docker installer
-> above; it never touches the desktop package.
-
-Run the halves separately if you prefer:
-
-```bash
-pnpm dev:server   # API + WebSocket on :3005
-pnpm dev:web      # Vite dev server on :5173
-```
-
-Build everything for production (shared types → server → web):
-
-```bash
-pnpm build
-```
-
-In production the server serves the built web client directly.
-
-## Configuration
-
-All configuration is via environment variables (see [`.env.example`](.env.example)).
-The most important:
-
-| Variable             | Required | Default     | Description |
-|----------------------|----------|-------------|-------------|
-| `DOMAIN`             | yes      | none        | Public domain name of your instance |
-| `JWT_SECRET`         | yes      | none        | Auth signing secret, **min 32 chars** (`openssl rand -hex 32`) |
-| `DEPLOY_MODE`        | no       | `allinone`  | `allinone` \| `proxy` \| `tunnel`, see [Deployment modes](#deployment-modes) |
-| `APP_PORT`           | no       | auto        | `proxy`/`tunnel` only: host loopback port the app is published on |
-| `PORT`               | no       | `3000`      | App listen port (behind Caddy in Docker) |
-| `HOST`               | no       | `0.0.0.0`   | Bind address |
-| `REGISTRATION_OPEN`  | no       | `true`      | Set `false` to close signups after setup |
-| `MAX_UPLOAD_SIZE`    | no       | `104857600` | Max upload size in bytes (100 MB; 90 MB in `tunnel` mode) |
-| `VERTEX_IMAGE` / `VERTEX_IMAGE_TAG` | no | `ghcr.io/gtnn12/vertex` / `latest` | Prebuilt image to pull; pin a tag or point at your fork's registry |
-| `LIVEKIT_URL` / `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` | no | none | Enable voice/video |
-| `COMPOSE_PROFILES`   | no       | none        | Set to `voice` to start the bundled LiveKit service |
-
-## Voice & Video
-
-Voice, video, and screen sharing require a [LiveKit](https://livekit.io/) server.
-The Docker Compose file bundles one. Enable it by setting these in `.env`:
-
-```bash
-COMPOSE_PROFILES=voice
-LIVEKIT_URL=wss://your-domain
-LIVEKIT_API_KEY=your-api-key
-LIVEKIT_API_SECRET=your-api-secret
-```
-
-Enabling voice also requires opening the WebRTC ports (`3478/UDP`, `7881/TCP`,
-`50000–60000/UDP`). See [Open the firewall ports](#2-open-the-firewall-ports).
-
-Without LiveKit configured, everything else works fully (text, federation, DMs,
-uploads, search); only voice/video channels won't connect.
-
-## Federation
-
-VERTEX instances can peer with each other so users on different servers can
-become friends, DM, and call across instances, while each instance stays
-independently owned and operated. Peering is mutual and authenticated with
-HMAC-signed requests; identities are addressed as `username@instance`. Manage
-peers from the **Connections** panel in settings. The protocol is documented in
-[`docs/systems/federation.md`](docs/systems/federation.md) and
-[`docs/systems/client-federation.md`](docs/systems/client-federation.md).
-
-## Desktop App
-
-The Electron desktop app wraps the web client and adds a system tray, native
-notifications, global keybinds, and activity detection.
-
-### Download
-
-Grab the installer for your platform from the
-[**latest release**](https://github.com/gtnn12/VERTEX/releases/latest):
-
-| Platform | File | Notes |
-|----------|------|-------|
-| Windows | `VERTEX-<version>.exe` | Universal installer (x64 + arm64). SmartScreen may warn on first run; choose "More info" → "Run anyway". Auto-updates. |
-| macOS | `VERTEX-<version>-arm64.dmg` (Apple Silicon) / `VERTEX-<version>-x64.dmg` (Intel) | Builds are currently **unsigned**: on first launch, right-click the app → **Open** → **Open**. Auto-update is not available on macOS yet, so check the releases page for new versions. |
-| Linux | `VERTEX-<version>-x86_64.AppImage` / `-arm64.AppImage`, or `.deb` (`amd64` / `arm64`) | AppImage auto-updates; `.deb` installs update via new releases. |
-
-On first launch the app asks for your instance URL. Enter the address of the
-VERTEX server you use (e.g. `https://chat.example.com`).
-
-### Building from source
-
-```bash
-cd packages/desktop
-pnpm build:ts    # compile TypeScript
-pnpm dev         # run in development
-pnpm build       # package for distribution
-```
-
-Cross-platform builds are produced for Windows, macOS, and Linux. See
-[`docs/systems/desktop.md`](docs/systems/desktop.md).
-
-## Mobile
-
-VERTEX works on mobile today. Just open your instance in a phone browser.
-The UI has a dedicated touch layout (bottom navigation, swipe gestures, and
-full-screen views), and because it ships as an installable **PWA** you can use
-your browser's **Add to Home Screen** to install it as a standalone app: its own
-icon, no browser chrome, and an offline message queue that flushes when you
-reconnect.
-
-Native **iOS and Android app-store apps are planned**, once the project gains
-traction and the funding for the developer-program licenses is secured. Until
-then, the installable PWA is the supported way to run VERTEX on a phone.
-
-## Architecture
-
-VERTEX is a TypeScript monorepo managed with pnpm workspaces.
-
-```
-packages/
-  shared/   - Shared types, permission bits, constants
-  server/   - Fastify API + WebSocket server, Drizzle/SQLite, federation
-  web/      - React 18 SPA (Vite, Tailwind, Zustand)
-  desktop/  - Electron wrapper
-```
-
-| Layer        | Technology |
-|--------------|------------|
-| Server       | Node.js 20+, Fastify 4, TypeScript (strict) |
-| Database     | SQLite (better-sqlite3) + Drizzle ORM |
-| Auth         | JWT + bcrypt |
-| Frontend     | React 18, Vite 6, Tailwind CSS 3, Zustand 5, Framer Motion |
-| Voice/Video  | LiveKit |
-| Media        | sharp (thumbnails), Cheerio (embeds) |
-| Desktop      | Electron 40 |
-| Deployment   | Docker Compose + Caddy (auto-HTTPS) |
-
-Every subsystem has a dedicated specification under
-[`docs/systems/`](docs/systems/): database schema, REST API, WebSocket
-protocol, federation, permissions, voice, the design system, and more. **These
-are the reference for how VERTEX works**; start there if you want to
-understand or extend a subsystem.
-
-## FAQ
-
-**Is VERTEX a self-hosted chat platform?**
-Yes. It gives you a modern chat experience (spaces, channels, roles, voice,
-video, screen sharing, DMs, friends) that you run entirely on your own server, so
-you own the data and set the rules.
-
-**Can I make my instance look different?**
-That's the point. Themes, accents, profiles with effects, sidebar layouts,
-folders — plus the Netrex tier if you want a premium layer on your community.
-
-**Does it have screen sharing and high-quality video?**
-Yes. Screen sharing goes up to 4K/120fps within admin-set bounds, with per-stream
-codec, bitrate, and resolution controls, RNNoise noise suppression, and a live
-connection inspector. Voice and video use [LiveKit](https://livekit.io/) and are
-optional; text, federation, DMs, and everything else run fully without them.
-
-**Can I self-host it on a Raspberry Pi?**
-Yes. The installer pulls a prebuilt multi-architecture image (amd64 and arm64), so
-low-power and ARM boxes skip the heavy local build.
-
-**Is it really open source?**
-Yes, under the GNU AGPL-3.0. A separate commercial license is available for cases
-the AGPL does not fit. Every released version stays available under the AGPL.
-
-**Does it work on mobile?**
-Yes, as an installable PWA with a dedicated touch layout. Native iOS and Android
-apps are planned.
-
-**What does "federation" mean here?**
-Independent VERTEX instances can peer with each other so users on different
-servers can be friends, DM, and call across instances, while each server stays
-independently owned. Requests between servers are HMAC-authenticated.
-
-## Contributing
-
-Contributions are welcome. Please read [`CONTRIBUTING.md`](CONTRIBUTING.md)
-first.
-
-## Security
-
-If you discover a security vulnerability, please **do not** open a public issue.
-Report it privately via a GitHub security advisory on this repository. See
-[`SECURITY.md`](SECURITY.md). We'll work with you on a fix and coordinated
-disclosure.
-
-## License
-
-VERTEX is **free and open source software**, licensed under the
-**[GNU Affero General Public License v3.0](LICENSE)** (`AGPL-3.0-only`).
-
-In plain terms:
-
-- Yes: self-host, run, study, and modify it, including commercially and inside a business.
-- Yes: redistribute it and your changes under the same AGPL-3.0 license.
-- Note: if you run a **modified** version as a network service, you must offer your
-  users its complete corresponding source (AGPL § 13). VERTEX makes this easy:
-  set `VERTEX_SOURCE_URL` to your fork so the in-app footer link points
-  at what you actually run.
-- Note: preserve the copyright and license notices.
-
-**Commercial license.** If the AGPL doesn't fit (embedding VERTEX in a
-closed-source product, offering it as a managed service without publishing your
-modifications, or an organization that can't use AGPL software), a separate
-commercial license is available on request. See
-[`LICENSE-COMMERCIAL.md`](LICENSE-COMMERCIAL.md).
-
-Copyright © 2026 VERTEX.
-
-"VERTEX", the VERTEX logo, and app icons are trademarks of the project and
-are not licensed under either the AGPL or the commercial license. Bundled
-third-party components retain their own licenses; see [`NOTICE`](NOTICE).
-
-## Acknowledgements
-
-Built on the shoulders of [Fastify](https://fastify.dev/),
-[Drizzle ORM](https://orm.drizzle.team/), [React](https://react.dev/),
-[LiveKit](https://livekit.io/), [Tailwind CSS](https://tailwindcss.com/),
-[Framer Motion](https://motion.dev/), [Electron](https://www.electronjs.org/),
-and the broader open-source ecosystem. The interface uses the
-[DM Sans](https://github.com/googlefonts/dm-fonts) font (SIL Open Font License 1.1).
+© 2026 Gtnnn12 · [LICENSE](LICENSE) (MIT; partes heredadas de Backspace permanecen bajo AGPL-3.0 — ver [NOTICE](NOTICE))

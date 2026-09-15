@@ -2,12 +2,12 @@
   "name": "@vertex/desktop",
   "version": "1.0.0",
   "private": true,
-  "license": "AGPL-3.0-only",
+  "license": "MIT",
   "description": "VERTEX",
   "author": {
-    "name": "gtnn12"
+    "name": "Gtnnn12"
   },
-  "homepage": "https://github.com/gtnn12/VERTEX",
+  "homepage": "https://github.com/Gtnnn12/vertex",
   "main": "dist/main.js",
   "scripts": {
     "build:ts": "tsc",

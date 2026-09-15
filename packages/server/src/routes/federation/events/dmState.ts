@@ -4,7 +4,7 @@ import { collectProfileBroadcastTargetIds } from '../../../utils/userDeletion.js
 import { connectionManager } from '../../../ws/handler.js';
 import { getDmMessageWithUser } from '../../dm.js';
 import { and, eq, isNull } from 'drizzle-orm';
-import type { FederationRelayEvent } from '@backspace/shared';
+import type { FederationRelayEvent } from '@vertex/shared';
 import { buildDmChannelPayload } from '../dmChannels.js';
 import { extractDomain, resolveLocalUser } from '../identity.js';
 

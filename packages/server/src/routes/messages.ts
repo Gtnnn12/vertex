@@ -13,7 +13,7 @@ import {
   type MessageWithUser,
   type Reaction,
   type Embed,
-} from '@backspace/shared';
+} from '@vertex/shared';
 import { sanitizeUser } from '../utils/sanitize.js';
 import { deleteAttachmentFiles } from '../utils/fileCleanup.js';
 import { fetchEmbedsForMessages, resolveEmbeds, reResolveEmbeds, embedRowToEmbed } from '../utils/embedResolver.js';

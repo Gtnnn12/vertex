@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Activity, ActivityType } from '@backspace/shared';
+import type { Activity, ActivityType } from '@vertex/shared';
 import {
   useActivityProviderRegistry,
   resolveCurrentActivity,

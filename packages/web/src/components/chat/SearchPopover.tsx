@@ -4,7 +4,7 @@ import { useFloatingPosition } from '../../hooks/useFloatingPosition';
 import { isDmChannel, getChannelOrigin, getApiForOrigin } from '../../stores/spaceStore';
 import { Avatar } from '../ui/Avatar';
 import { useCanonicalUserView } from '../../utils/userViewLookup';
-import type { MessageWithUser, DmMessageWithUser, User } from '@backspace/shared';
+import type { MessageWithUser, DmMessageWithUser, User } from '@vertex/shared';
 import { useLanguage } from '../../contexts/LanguageContext';
 
 type AnyMessage = MessageWithUser | DmMessageWithUser;

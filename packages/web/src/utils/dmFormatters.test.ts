@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { formatDmTimestamp, formatDmPreview, formatDmSidebarPreview, formatDmHeaderName, formatDmInputLabel, isDeletedPartnerDm } from './dmFormatters';
-import type { DmChannel, DmLastMessagePreview, User } from '@backspace/shared';
+import type { DmChannel, DmLastMessagePreview, User } from '@vertex/shared';
 
 /** Build a local-time Date: new Date(year, month-1, day, hour, minute) as a timestamp. */
 function localTs(year: number, month: number, day: number, hour = 12, minute = 0): number {

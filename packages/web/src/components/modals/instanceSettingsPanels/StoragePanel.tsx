@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../../../api/client';
-import type { StorageStats, CleanupResult } from '@backspace/shared';
+import type { StorageStats, CleanupResult } from '@vertex/shared';
 import { useSettingsStore } from '../../../stores/settingsStore';
 import { useUIStore } from '../../../stores/uiStore';
 import { useLanguage } from '../../../contexts/LanguageContext';

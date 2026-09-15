@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { MessageWithUser, Reaction, ReadState } from '@backspace/shared';
+import type { MessageWithUser, Reaction, ReadState } from '@vertex/shared';
 import { wsSend } from '../hooks/useWebSocket';
 import { isDmChannel, getChannelOrigin, getApiForOrigin, useSpaceStore } from './spaceStore';
 import { getOwnerInstanceForDm } from '../utils/crossStoreResolvers';

@@ -2,8 +2,8 @@
   "name": "@vertex/web",
   "version": "1.0.0",
   "private": true,
-  "license": "AGPL-3.0-only",
-  "author": "gtnn12",
+  "license": "MIT",
+  "author": "Gtnnn12",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -15,7 +15,7 @@
     "e2e:identity-deletion": "playwright test e2e/identity-deletion.spec.ts"
   },
   "dependencies": {
-    "@backspace/shared": "workspace:*",
+    "@vertex/shared": "workspace:*",
     "@emoji-mart/data": "^1.2.1",
     "@emoji-mart/react": "^1.1.1",
     "@livekit/components-react": "^2.7.4",

@@ -7,7 +7,7 @@ import { useLanguage } from '../../../contexts/LanguageContext';
 import { parseFederatedUsername, isFederationGlobeApplicable } from '../../../utils/identity';
 import { useCanonicalUserView } from '../../../utils/userViewLookup';
 import { hasPermissionBit, PermissionBits } from '../../../utils/permissions';
-import type { MemberWithUser, Role } from '@backspace/shared';
+import type { MemberWithUser, Role } from '@vertex/shared';
 
 function MembersPanelRow({
   member,

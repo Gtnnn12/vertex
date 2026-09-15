@@ -10,7 +10,7 @@ import { OverviewPanel } from './spaceSettingsPanels/OverviewPanel';
 import { MembersPanel } from './spaceSettingsPanels/MembersPanel';
 import { RolesPanel } from './spaceSettingsPanels/RolesPanel';
 import { BansPanel } from './spaceSettingsPanels/BansPanel';
-import type { SpaceVisibility, JoinRequest } from '@backspace/shared';
+import type { SpaceVisibility, JoinRequest } from '@vertex/shared';
 
 function DiscoveryPanel({ spaceId }: { spaceId: string }) {
   const spaces = useSpaceStore((s) => s.spaces);

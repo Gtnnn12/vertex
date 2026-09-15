@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import type { MessageWithUser, Embed, User } from '@backspace/shared';
+import type { MessageWithUser, Embed, User } from '@vertex/shared';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { MentionBadge } from './MentionBadge';
 import { Avatar } from '../ui/Avatar';

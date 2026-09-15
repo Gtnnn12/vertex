@@ -6,7 +6,7 @@ import { Toggle } from '../../ui/Toggle';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { api, HttpError } from '../../../api/client';
 import { onFederationPeersChanged, onFederationPeerResetDetected } from '../../../hooks/useWebSocket';
-import type { InstanceAdminSettings } from '@backspace/shared';
+import type { InstanceAdminSettings } from '@vertex/shared';
 import type { FederationPeer, ApprovalRequest, FederationResetEvent, FederationOrphanedAccount } from '../../../api/client';
 
 // ─── Global Settings ─────────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Embed } from '@backspace/shared';
+import type { Embed } from '@vertex/shared';
 import { useUIStore } from '../../../stores/uiStore';
 
 interface ImageEmbedProps {

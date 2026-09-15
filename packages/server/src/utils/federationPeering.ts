@@ -6,7 +6,7 @@ import { getOurOrigin, generateHmacSecret } from './federationAuth.js';
 import { validateOrigin } from '../routes/federation.js';
 import { onPeerActivated, onPeerDeactivated } from './federationPeerActivation.js';
 import { getInstanceId } from './federationEpoch.js';
-import type { EnsurePeeredCallerIntent } from '@backspace/shared';
+import type { EnsurePeeredCallerIntent } from '@vertex/shared';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

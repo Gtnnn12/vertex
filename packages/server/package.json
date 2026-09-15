@@ -2,8 +2,8 @@
     "name": "@vertex/server",
     "version": "1.0.0",
     "private": true,
-    "license": "AGPL-3.0-only",
-    "author": "gtnn12",
+    "license": "MIT",
+    "author": "Gtnnn12",
     "type": "module",
     "scripts": {
         "dev": "cross-env PORT=3005 tsx watch src/index.ts",
@@ -33,7 +33,7 @@
         "jsonwebtoken": "^9.0.2",
         "livekit-server-sdk": "^2.6.1",
         "sharp": "^0.33.0",
-        "@backspace/shared": "workspace:*"
+        "@vertex/shared": "workspace:*"
     },
     "devDependencies": {
         "@types/bcryptjs": "^2.4.6",

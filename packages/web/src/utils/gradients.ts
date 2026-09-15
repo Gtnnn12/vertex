@@ -3,7 +3,7 @@
  * Deterministic color assignment based on entity ID (snowflake) or name.
  */
 
-import type { AvatarColor } from '@backspace/shared';
+import type { AvatarColor } from '@vertex/shared';
 
 export interface GradientEntry {
   from: string;      // hex start color

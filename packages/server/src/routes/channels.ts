@@ -4,7 +4,7 @@ import { getDb, schema } from '../db/index.js';
 import { authenticate } from '../utils/auth.js';
 import { generateSnowflake } from '../utils/snowflake.js';
 import { isMember, hasPermission, getChannelSpaceId, PermissionBits, computePermissions } from '../utils/permissions.js';
-import { permissionsToString } from '@backspace/shared/src/permissions.js';
+import { permissionsToString } from '@vertex/shared/src/permissions.js';
 import { connectionManager } from '../ws/handler.js';
 import { checkVoicePermissions } from '../ws/events.js';
 import { deleteAttachmentFiles } from '../utils/fileCleanup.js';
@@ -13,7 +13,7 @@ import type {
   UpdateChannelRequest,
   Channel,
   ChannelCategory,
-} from '@backspace/shared';
+} from '@vertex/shared';
 
 function rowToChannel(row: typeof schema.channels.$inferSelect): Channel {
   return {

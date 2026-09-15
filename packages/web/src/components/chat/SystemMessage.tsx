@@ -1,4 +1,4 @@
-import type { DmChannel, MessageWithUser, SpaceInviteSystemPayload, User } from '@backspace/shared';
+import type { DmChannel, MessageWithUser, SpaceInviteSystemPayload, User } from '@vertex/shared';
 import { SpaceInviteCard } from './SpaceInviteCard';
 import { useLanguage } from '../../contexts/LanguageContext';
 

@@ -1,5 +1,5 @@
 import { useMemo, useEffect, useState } from 'react';
-import type { Activity } from '@backspace/shared';
+import type { Activity } from '@vertex/shared';
 import { useActivityProviderRegistry, resolveCurrentActivity } from './activityProvider';
 
 /**

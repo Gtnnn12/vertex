@@ -7,7 +7,7 @@ import type {
   PeeringSubscription,
   PeeringNotification,
   PeeringTriggerReason,
-} from '@backspace/shared';
+} from '@vertex/shared';
 import { useInstanceStore, DifferentPasswordError, isSelfOrigin } from '../../stores/instanceStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useUIStore } from '../../stores/uiStore';

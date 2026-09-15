@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { User } from '@backspace/shared';
+import type { User } from '@vertex/shared';
 import { ProfileIdentityCard } from './ProfileIdentityCard';
 import { useSpaceStore, getApiForOrigin, resolveUserOrigin } from '../../stores/spaceStore';
 import { api } from '../../api/client';

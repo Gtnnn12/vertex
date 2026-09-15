@@ -1,12 +1,12 @@
 import React, { useMemo, useState } from 'react';
-import type { Activity, MemberWithUser } from '@backspace/shared';
+import type { Activity, MemberWithUser } from '@vertex/shared';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useActivityStore } from '../../stores/activityStore';
 import { Avatar } from '../ui/Avatar';
 import { Username } from '../ui/Username';
 import { hasRichActivity, getActivityAccentClass } from '../ui/ActivityCard';
-import { getPrimaryActivity } from '@backspace/shared/src/activities.js';
+import { getPrimaryActivity } from '@vertex/shared/src/activities.js';
 import { parseFederatedUsername } from '../../utils/identity';
 import { useCanonicalUserView } from '../../utils/userViewLookup';
 import { useDelayedLoading } from '../../hooks/useDelayedLoading';

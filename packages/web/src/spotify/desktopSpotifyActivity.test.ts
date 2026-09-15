@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { Activity, ActivitySpotify } from '@backspace/shared';
+import type { Activity, ActivitySpotify } from '@vertex/shared';
 import {
   desktopSpotifyToRichActivity,
   resolveCoverForDesktopSpotify,

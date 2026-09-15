@@ -9,7 +9,7 @@ import { collectProfileBroadcastTargetIds } from '../../../utils/userDeletion.js
 import { connectionManager } from '../../../ws/handler.js';
 import { and, eq, isNull, or } from 'drizzle-orm';
 import { randomBytes } from 'node:crypto';
-import type { DmChannel } from '@backspace/shared';
+import type { DmChannel } from '@vertex/shared';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { buildDmChannelPayload } from '../dmChannels.js';
 import { extractDomain } from '../identity.js';

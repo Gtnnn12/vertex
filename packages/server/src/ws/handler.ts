@@ -19,7 +19,7 @@ import type {
   ReadState,
   ActiveCallInfo,
   Activity,
-} from '@backspace/shared';
+} from '@vertex/shared';
 import { sanitizeUser } from '../utils/sanitize.js';
 import { collectProfileBroadcastTargetIds } from '../utils/userDeletion.js';
 

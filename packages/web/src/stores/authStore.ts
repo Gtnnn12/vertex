@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { User, UserStatus } from '@backspace/shared';
+import type { User, UserStatus } from '@vertex/shared';
 import { api } from '../api/client';
 import { useChatStore } from './chatStore';
 import { useSpaceStore } from './spaceStore';

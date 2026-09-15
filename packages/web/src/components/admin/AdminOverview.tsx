@@ -1,5 +1,5 @@
 import { useLanguage } from '../../contexts/LanguageContext';
-import type { AdminCenterSummary } from '@backspace/shared';
+import type { AdminCenterSummary } from '@vertex/shared';
 import { Stat } from './adminShared';
 
 export function AdminOverview({ summary }: { summary: AdminCenterSummary }) {

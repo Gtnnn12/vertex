@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { User, DmChannel } from '@backspace/shared';
+import type { User, DmChannel } from '@vertex/shared';
 import { useSocialStore, type TaggedFriend, type TaggedFriendRequest, type TaggedUser } from '../../stores/socialStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useDiscoverStore, type TaggedDiscoverUser } from '../../stores/discoverStore';
@@ -21,7 +21,7 @@ import { Mascot } from '../ui/Mascot';
 import { AvatarStack } from '../ui/AvatarStack';
 import { useActivityStore } from '../../stores/activityStore';
 import { ActivityCard, hasRichActivity, getActivityAccentClass } from '../ui/ActivityCard';
-import { getPrimaryActivity } from '@backspace/shared/src/activities.js';
+import { getPrimaryActivity } from '@vertex/shared/src/activities.js';
 import { parseFederatedUsername, isSelf, isFederationGlobeApplicable } from '../../utils/identity';
 import { formatDmTimestamp, formatDmHeaderName, formatDmSidebarPreview } from '../../utils/dmFormatters';
 import { useCanonicalUserView } from '../../utils/userViewLookup';
@@ -43,7 +43,7 @@ function ActivityFriendItem({
 }: {
   friend: TaggedFriend;
   isOffline: boolean;
-  activities: import('@backspace/shared').Activity[];
+  activities: import('@vertex/shared').Activity[];
   isRichActivity: boolean;
   accentClass: string;
   mobile?: boolean;

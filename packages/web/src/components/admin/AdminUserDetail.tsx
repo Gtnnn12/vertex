@@ -11,7 +11,7 @@ import type {
   AdminCenterViewerCapabilities,
   ModerationAction,
   StaffRole,
-} from '@backspace/shared';
+} from '@vertex/shared';
 
 const GRANT_PRESETS: { label: string; minutes: number | null }[] = [
   { label: '1h', minutes: 60 },

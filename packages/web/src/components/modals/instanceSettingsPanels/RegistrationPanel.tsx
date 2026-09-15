@@ -1,6 +1,6 @@
 import { createPortal } from 'react-dom';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { InviteLinkSummary, InviteRedemption, InviteStatus } from '@backspace/shared';
+import type { InviteLinkSummary, InviteRedemption, InviteStatus } from '@vertex/shared';
 import { api } from '../../../api/client';
 import { useSettingsStore } from '../../../stores/settingsStore';
 import { useUIStore } from '../../../stores/uiStore';

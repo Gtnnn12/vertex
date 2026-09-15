@@ -5,7 +5,7 @@ import { useUIStore } from '../../stores/uiStore';
 import { Avatar } from '../ui/Avatar';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { EmptyHint, ErrorBanner, LoadingHint, PaginationRow, SelectInput, formatRelative } from './adminShared';
-import type { AdminCenterUserRow } from '@backspace/shared';
+import type { AdminCenterUserRow } from '@vertex/shared';
 
 const PAGE_SIZE = 12;
 

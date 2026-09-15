@@ -1,5 +1,5 @@
 import React from 'react';
-import type { User } from '@backspace/shared';
+import type { User } from '@vertex/shared';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useCanonicalUserView } from '../../utils/userViewLookup';

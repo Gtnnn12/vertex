@@ -50,7 +50,7 @@ importers:
 
   packages/server:
     dependencies:
-      '@backspace/shared':
+      '@vertex/shared':
         specifier: workspace:*
         version: link:../shared
       '@fastify/cors':
@@ -144,7 +144,7 @@ importers:
 
   packages/web:
     dependencies:
-      '@backspace/shared':
+      '@vertex/shared':
         specifier: workspace:*
         version: link:../shared
       '@emoji-mart/data':

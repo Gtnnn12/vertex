@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import { spotifyTokens } from '../db/schema.js';
 import { connectionManager } from '../ws/handler.js';
-import type { Activity } from '@backspace/shared';
+import type { Activity } from '@vertex/shared';
 
 /**
  * Spotify "listening now" presence worker.

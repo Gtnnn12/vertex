@@ -10,7 +10,7 @@ import { parseFederatedUsername } from '../../utils/identity';
 import { formatDmHeaderName, formatDmInputLabel, isDeletedPartnerDm } from '../../utils/dmFormatters';
 import { DmDeletedNotice } from '../chat/DmDeletedNotice';
 import { useCanonicalUserView } from '../../utils/userViewLookup';
-import type { User } from '@backspace/shared';
+import type { User } from '@vertex/shared';
 import { useLanguage } from '../../contexts/LanguageContext';
 
 const FALLBACK_USER = { id: '', username: '', createdAt: 0, isAdmin: false, replicatedInstances: [] } as unknown as User;

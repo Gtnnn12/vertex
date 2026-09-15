@@ -33,7 +33,7 @@ vi.mock('./authStore', () => ({
 
 import { useSpaceStore } from './spaceStore';
 import { canonicalUserKey } from '../utils/identity';
-import type { User } from '@backspace/shared';
+import type { User } from '@vertex/shared';
 
 function makeUser(extras: Partial<User> & Pick<User, 'id' | 'username'>): User {
   return {

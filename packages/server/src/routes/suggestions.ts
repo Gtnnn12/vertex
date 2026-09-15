@@ -4,7 +4,7 @@ import { desc, eq } from 'drizzle-orm';
 import { authenticate } from '../utils/auth.js';
 import { requireStaff } from '../utils/staffAuth.js';
 import { getDb, schema } from '../db/index.js';
-import type { UserSuggestion } from '@backspace/shared';
+import type { UserSuggestion } from '@vertex/shared';
 
 const MAX_SUGGESTION_LENGTH = 2000;
 const VALID_STATUSES = new Set(['read', 'approved', 'rejected']);

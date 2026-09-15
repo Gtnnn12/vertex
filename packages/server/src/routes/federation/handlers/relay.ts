@@ -10,7 +10,7 @@ import { sanitizeUser } from '../../../utils/sanitize.js';
 import { collectDeletionBroadcastTargets, tombstoneUser } from '../../../utils/userDeletion.js';
 import { connectionManager } from '../../../ws/handler.js';
 import { and, eq, isNull, or } from 'drizzle-orm';
-import type { FederationIdentityDeleteS2SRequest, FederationRelayAttachment, FederationRelayEvent, FederationRelayRequest, FederationRelayResponse, FederationSyncRequest, FederationSyncResponse } from '@backspace/shared';
+import type { FederationIdentityDeleteS2SRequest, FederationRelayAttachment, FederationRelayEvent, FederationRelayRequest, FederationRelayResponse, FederationSyncRequest, FederationSyncResponse } from '@vertex/shared';
 import type { FastifyInstance } from 'fastify';
 import { processRelayEvents } from '../events/dispatch.js';
 import { extractDomain } from '../identity.js';

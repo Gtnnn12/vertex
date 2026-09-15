@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import type { BoardWidget, User } from '@backspace/shared';
+import type { BoardWidget, User } from '@vertex/shared';
 
 // Spotify block chain pulls the audio stack — stub it for jsdom.
 vi.mock('../../spotify/SpotifyVinylBlock', () => ({

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import type { Channel } from '@backspace/shared';
+import type { Channel } from '@vertex/shared';
 import { useSpaceStore, getChannelOrigin, getMyUserIdForOrigin, type TaggedSpace } from '../../stores/spaceStore';
 import { useChatStore } from '../../stores/chatStore';
 import { useUIStore } from '../../stores/uiStore';

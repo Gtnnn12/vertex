@@ -1,4 +1,4 @@
-import type { User } from '@backspace/shared';
+import type { User } from '@vertex/shared';
 import { api } from '../api/client';
 import { useInstanceStore } from '../stores/instanceStore';
 import { normalizeUserAssets, resolveAssetUrl } from './assetUrls';

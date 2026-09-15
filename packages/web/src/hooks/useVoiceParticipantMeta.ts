@@ -3,7 +3,7 @@ import { useSpaceStore } from '../stores/spaceStore';
 import { parseFederatedUsername } from '../utils/identity';
 import { getCanonicalUserView } from '../utils/userViewLookup';
 import type { ParticipantInfo } from './useLiveKit';
-import type { User } from '@backspace/shared';
+import type { User } from '@vertex/shared';
 
 /**
  * Resolves display metadata (displayName, avatar, user) for a voice participant

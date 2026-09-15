@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { api, RateLimitError, NetworkError } from '../../api/client';
-import type { InstanceInfoResponse } from '@backspace/shared';
+import type { InstanceInfoResponse } from '@vertex/shared';
 import { SourceCodeLink } from '../ui/SourceCodeLink';
 import { requestPostLoginCards } from './postLoginCardsHost';
 import { useLanguage } from '../../contexts/LanguageContext';

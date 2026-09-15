@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '../../api/client';
-import type { GifResult } from '@backspace/shared';
+import type { GifResult } from '@vertex/shared';
 import { useLanguage } from '../../contexts/LanguageContext';
 
 interface GifPickerProps {

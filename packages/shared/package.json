@@ -1,9 +1,9 @@
 {
-  "name": "@backspace/shared",
+  "name": "@vertex/shared",
   "version": "1.0.0",
   "private": true,
-  "license": "AGPL-3.0-only",
-  "author": "gtnn12",
+  "license": "MIT",
+  "author": "Gtnnn12",
   "type": "module",
   "main": "./src/types.ts",
   "types": "./src/types.ts",

@@ -23,8 +23,8 @@ import { Avatar } from '../ui/Avatar';
 import { AvatarStack } from '../ui/AvatarStack';
 import { Username } from '../ui/Username';
 import { ActivityCard, getActivityAccentClass } from '../ui/ActivityCard';
-import { getPrimaryActivity } from '@backspace/shared/src/activities.js';
-import type { Activity, DmChannel, Friend, FriendRequest, User } from '@backspace/shared';
+import { getPrimaryActivity } from '@vertex/shared/src/activities.js';
+import type { Activity, DmChannel, Friend, FriendRequest, User } from '@vertex/shared';
 
 type QuickKind = 'friends' | 'messages' | 'activity' | 'explore';
 

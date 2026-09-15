@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { STAFF_RANK, STAFF_ROLES, type StaffRole } from '@backspace/shared';
+import { STAFF_RANK, STAFF_ROLES, type StaffRole } from '@vertex/shared';
 import { getDb, schema } from '../db/index.js';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 

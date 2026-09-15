@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { eq, desc, and, isNull } from 'drizzle-orm';
 import { getDb, schema } from '../db/index.js';
 import { authenticate, requireAdmin, signJwt } from '../utils/auth.js';
-import { STAFF_RANK, STAFF_ROLES, type StaffRole } from '@backspace/shared';
+import { STAFF_RANK, STAFF_ROLES, type StaffRole } from '@vertex/shared';
 import { generateSnowflake } from '../utils/snowflake.js';
 
 const SUPPORT_CATEGORIES = new Set(['doubt', 'bug', 'report', 'other']);

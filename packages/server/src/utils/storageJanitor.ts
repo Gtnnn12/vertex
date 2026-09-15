@@ -6,7 +6,7 @@ import { config } from '../config.js';
 import { getDb, getRawDb, schema } from '../db/index.js';
 import { deleteUploadFile, deleteAttachmentFiles } from './fileCleanup.js';
 import { generateSnowflake } from './snowflake.js';
-import type { StorageStats, StorageBreakdown, OrphanedFile, CleanupResult } from '@backspace/shared';
+import type { StorageStats, StorageBreakdown, OrphanedFile, CleanupResult } from '@vertex/shared';
 
 const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.ico', '.bmp', '.avif']);
 const VIDEO_EXTS = new Set(['.mp4', '.webm', '.mov', '.avi', '.mkv']);

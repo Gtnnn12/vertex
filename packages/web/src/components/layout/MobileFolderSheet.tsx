@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { SpaceFolder } from '@backspace/shared';
+import type { SpaceFolder } from '@vertex/shared';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { useContextMenuStore } from '../../stores/contextMenuStore';
 import { useDragToClose } from '../../hooks/useDragToClose';

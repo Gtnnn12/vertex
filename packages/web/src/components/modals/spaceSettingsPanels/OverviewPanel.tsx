@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { ImageCropModal } from '../../ui/ImageCropModal';
 import { getSpaceGradient, SPACE_GRADIENT_MAP } from '../../../utils/gradients';
-import { AVATAR_COLORS } from '@backspace/shared';
-import type { AvatarColor } from '@backspace/shared';
+import { AVATAR_COLORS } from '@vertex/shared';
+import type { AvatarColor } from '@vertex/shared';
 import { useSpaceStore } from '../../../stores/spaceStore';
 import { useAuthStore } from '../../../stores/authStore';
 import { useUIStore } from '../../../stores/uiStore';

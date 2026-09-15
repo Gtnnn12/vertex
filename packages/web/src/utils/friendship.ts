@@ -1,7 +1,7 @@
 // packages/web/src/utils/friendship.ts
 // Federation-safe friendship status resolution, shared by the user profile
 // modal and the user context menu. Canonical matching via utils/identity.
-import type { User, Friend, FriendRequest } from '@backspace/shared';
+import type { User, Friend, FriendRequest } from '@vertex/shared';
 import { isSelf, canonicalUserMatch } from './identity';
 import type { TaggedFriend, TaggedFriendRequest } from '../stores/socialStore';
 

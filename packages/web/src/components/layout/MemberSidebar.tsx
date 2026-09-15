@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback } from 'react';
-import type { MemberWithUser, Activity } from '@backspace/shared';
+import type { MemberWithUser, Activity } from '@vertex/shared';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useActivityStore } from '../../stores/activityStore';
@@ -10,7 +10,7 @@ import { buildUserContextMenuItems } from '../../utils/userContextMenu';
 import { Avatar } from '../ui/Avatar';
 import { Username } from '../ui/Username';
 import { ActivityCard, hasRichActivity, getActivityAccentClass } from '../ui/ActivityCard';
-import { getPrimaryActivity } from '@backspace/shared/src/activities.js';
+import { getPrimaryActivity } from '@vertex/shared/src/activities.js';
 import { parseFederatedUsername, isFederationGlobeApplicable } from '../../utils/identity';
 import { useCanonicalUserView } from '../../utils/userViewLookup';
 import { useDelayedLoading } from '../../hooks/useDelayedLoading';

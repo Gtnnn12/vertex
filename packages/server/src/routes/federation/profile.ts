@@ -10,7 +10,7 @@ import { connectionManager } from '../../ws/handler.js';
 import { and, eq, or, sql } from 'drizzle-orm';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import type { FederationRelayEvent, FederationRelayProfileSnapshot } from '@backspace/shared';
+import type { FederationRelayEvent, FederationRelayProfileSnapshot } from '@vertex/shared';
 import { extractDomain } from './identity.js';
 
 /**

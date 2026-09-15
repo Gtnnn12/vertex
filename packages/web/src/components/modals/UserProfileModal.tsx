@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useLayoutEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
-import type { User } from '@backspace/shared';
+import type { User } from '@vertex/shared';
 import { Avatar } from '../ui/Avatar';
 import { Username } from '../ui/Username';
 import { CustomStatusBubble } from '../ui/CustomStatusBubble';

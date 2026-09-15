@@ -1,4 +1,4 @@
-import type { Activity } from '@backspace/shared';
+import type { Activity } from '@vertex/shared';
 import { useActivityStore } from '../stores/activityStore';
 import { desktopSpotifyToRichActivity, resolveCoverForDesktopSpotify } from '../spotify/desktopSpotifyActivity';
 

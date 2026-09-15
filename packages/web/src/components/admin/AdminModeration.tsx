@@ -5,7 +5,7 @@ import { useUIStore } from '../../stores/uiStore';
 import { Avatar } from '../ui/Avatar';
 import { EmptyHint, ErrorBanner, LoadingHint, formatDateTime } from './adminShared';
 import { AdminUserDetail } from './AdminUserDetail';
-import type { AdminCenterUserRow, AdminCenterViewerCapabilities, AuditLogEntry } from '@backspace/shared';
+import type { AdminCenterUserRow, AdminCenterViewerCapabilities, AuditLogEntry } from '@vertex/shared';
 
 export function AdminModeration({ viewer }: { viewer: AdminCenterViewerCapabilities }) {
   const { t, language } = useLanguage();

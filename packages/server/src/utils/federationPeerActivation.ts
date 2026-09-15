@@ -5,7 +5,7 @@ import { isFederationRelayEnabled } from './federationOutbox.js';
 import { buildFederationHeaders, getOurOrigin } from './federationAuth.js';
 import { generateSnowflake } from './snowflake.js';
 import { healResetIncarnation } from './federationReset.js';
-import type { FederationRelayEvent } from '@backspace/shared';
+import type { FederationRelayEvent } from '@vertex/shared';
 
 export type PeerActivationReason =
   | 'initiate_accepted'

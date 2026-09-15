@@ -8,7 +8,7 @@ import { useSocialStore } from '../../stores/socialStore';
 import { api } from '../../api/client';
 import { isSelf, parseFederatedUsername } from '../../utils/identity';
 import { useCanonicalUserView } from '../../utils/userViewLookup';
-import type { Friend, MemberWithUser, SpaceInviteRequest, User } from '@backspace/shared';
+import type { Friend, MemberWithUser, SpaceInviteRequest, User } from '@vertex/shared';
 
 type SendStatus =
   | { kind: 'pending' }

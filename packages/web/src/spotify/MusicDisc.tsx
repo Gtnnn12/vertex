@@ -1,5 +1,5 @@
 import React from 'react';
-import type { ActivitySpotify } from '@backspace/shared';
+import type { ActivitySpotify } from '@vertex/shared';
 import type { MusicStyleId } from './musicStyles';
 
 /**

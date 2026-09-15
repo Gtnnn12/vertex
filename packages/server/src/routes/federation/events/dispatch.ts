@@ -1,6 +1,6 @@
 import { getDb } from '../../../db/index.js';
 import { and } from 'drizzle-orm';
-import type { FederationRelayEvent } from '@backspace/shared';
+import type { FederationRelayEvent } from '@vertex/shared';
 import { processDmCallAcceptEvent, processDmCallEndEvent, processDmCallRejectEvent, processDmCallStartEvent, processDmTypingStartEvent, processDmTypingStopEvent } from './calls.js';
 import { processCreateEvent, processDeleteEvent, processReactionAddEvent, processReactionRemoveEvent, processUpdateEvent } from './dmMessages.js';
 import { processDmCloseEvent, processDmReopenEvent, processFileRejectedEvent, processPresenceUpdateEvent, processReadStateUpdateEvent } from './dmState.js';

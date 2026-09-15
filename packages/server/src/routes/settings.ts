@@ -3,8 +3,8 @@ import { eq } from 'drizzle-orm';
 import { getDb, schema } from '../db/index.js';
 import { authenticate, requireAdmin } from '../utils/auth.js';
 import { config } from '../config.js';
-import type { InstanceStreamingLimits, InstanceAdminSettings } from '@backspace/shared';
-import { STANDARD_RESOLUTIONS, STANDARD_FRAMERATES, BITRATE_MATRIX_KBPS } from '@backspace/shared/src/constants.js';
+import type { InstanceStreamingLimits, InstanceAdminSettings } from '@vertex/shared';
+import { STANDARD_RESOLUTIONS, STANDARD_FRAMERATES, BITRATE_MATRIX_KBPS } from '@vertex/shared/src/constants.js';
 
 function rowToLimits(row: typeof schema.instanceSettings.$inferSelect): InstanceStreamingLimits {
   return {

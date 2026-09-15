@@ -6,7 +6,7 @@ import { app } from 'electron';
 import { getSpotifyEnrichment } from './spotifyDesktop';
 import { getRiotMatchInfo, type RiotMatchInfo } from './riotSession';
 
-// ─── Local Activity type (structural match with @backspace/shared Activity) ─
+// ─── Local Activity type (structural match with @vertex/shared Activity) ─
 
 interface ActivityTimestamps {
   start?: number;
@@ -52,7 +52,7 @@ interface VersionedDictionary {
 
 const VALID_TYPES = new Set(['playing', 'listening', 'watching', 'streaming']);
 const POLL_INTERVAL_MS = 15_000;
-const REMOTE_URL = 'https://raw.githubusercontent.com/gtnn12/VERTEX/main/packages/desktop/resources/games.json';
+const REMOTE_URL = 'https://raw.githubusercontent.com/Gtnnn12/vertex/main/packages/desktop/resources/games.json';
 
 // ─── Dev game mock (VERTEX_MOCK_GAMES) ──────────────────────────────────────
 // Off by default. VERTEX_MOCK_GAMES=cs2[+valorant] injects a fully-populated

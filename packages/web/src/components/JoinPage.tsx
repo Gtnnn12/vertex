@@ -6,7 +6,7 @@ import { useInstanceStore, DifferentPasswordError } from '../stores/instanceStor
 import { api, createApiClient } from '../api/client';
 import { parseInviteInput } from '../utils/inviteParser';
 import { Avatar } from './ui/Avatar';
-import type { InvitePreview } from '@backspace/shared';
+import type { InvitePreview } from '@vertex/shared';
 import { useLanguage } from '../contexts/LanguageContext';
 
 type JoinPhase = 'preview' | 'connect' | 'fallback' | 'other-instance' | 'already-member';

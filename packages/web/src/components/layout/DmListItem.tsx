@@ -1,4 +1,4 @@
-import type { DmChannel, User } from '@backspace/shared';
+import type { DmChannel, User } from '@vertex/shared';
 import { Avatar } from '../ui/Avatar';
 import { AvatarStack } from '../ui/AvatarStack';
 import { Tooltip } from '../ui/Tooltip';

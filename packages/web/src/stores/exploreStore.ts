@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { ExploreSpace, JoinRequest, SpaceWithChannelsAndMembers } from '@backspace/shared';
+import type { ExploreSpace, JoinRequest, SpaceWithChannelsAndMembers } from '@vertex/shared';
 import { api } from '../api/client';
 import { resolveAssetUrl } from '../utils/assetUrls';
 import { useInstanceStore } from './instanceStore';

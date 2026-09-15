@@ -8,7 +8,7 @@ import { InputPopover, type InputPopoverTab } from './InputPopover';
 import { TypingIndicatorSettingsPopover } from './TypingIndicatorSettingsPopover';
 import { AttachmentProgress } from './AttachmentProgress';
 import { hasPermissionBit, PermissionBits } from '../../utils/permissions';
-import { MAX_MESSAGE_LENGTH, type MemberWithUser } from '@backspace/shared';
+import { MAX_MESSAGE_LENGTH, type MemberWithUser } from '@vertex/shared';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useComposerStore } from '../../stores/composerStore';

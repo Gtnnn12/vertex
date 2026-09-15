@@ -3,7 +3,7 @@ import * as schema from '../db/schema.js';
 import { eq, and, inArray } from 'drizzle-orm';
 import { generateSnowflake } from './snowflake.js';
 import crypto from 'node:crypto';
-import type { FederationRelayEvent, FederationRelayParticipant, FederationRelayAttachment, DmMessageWithUser, FederationRelayRequest, DmCallUndeliverableReason } from '@backspace/shared';
+import type { FederationRelayEvent, FederationRelayParticipant, FederationRelayAttachment, DmMessageWithUser, FederationRelayRequest, DmCallUndeliverableReason } from '@vertex/shared';
 import { getOurOrigin, buildFederationHeaders, generateHmacSecret } from './federationAuth.js';
 import { extractDomain } from '../routes/federation.js';
 import { racePeering, ensurePeered } from './federationPeering.js';

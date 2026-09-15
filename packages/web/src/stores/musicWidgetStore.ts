@@ -6,7 +6,7 @@ import {
   resolveMusicStyle,
   type MusicStyleId,
 } from '../spotify/musicStyles';
-import type { User } from '@backspace/shared';
+import type { User } from '@vertex/shared';
 
 /**
  * Client state for the user's music-widget (Spotify card) style.

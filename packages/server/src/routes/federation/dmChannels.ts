@@ -6,7 +6,7 @@ import { connectionManager } from '../../ws/handler.js';
 import { getDmMessageWithUser } from '../dm.js';
 import { and, desc, eq, inArray, isNull, or } from 'drizzle-orm';
 import type { FederatedCallEntry } from '../../ws/handler.js';
-import type { DmChannel, DmMessageWithUser } from '@backspace/shared';
+import type { DmChannel, DmMessageWithUser } from '@vertex/shared';
 
 /**
  * Build the full DM channel payload used by `dm_channel_created` events.

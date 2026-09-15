@@ -3,7 +3,7 @@ import { useSettingsStore } from '../../../stores/settingsStore';
 import { useUIStore } from '../../../stores/uiStore';
 import { Toggle } from '../../ui/Toggle';
 import { useLanguage } from '../../../contexts/LanguageContext';
-import type { InstanceAdminSettings } from '@backspace/shared';
+import type { InstanceAdminSettings } from '@vertex/shared';
 
 export function GeneralPanel() {
   const instanceSettings = useSettingsStore((s) => s.instanceSettings);

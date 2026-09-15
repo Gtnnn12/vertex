@@ -6,7 +6,7 @@ import { FriendsPage } from './FriendsPage';
 import { useSocialStore, type TaggedFriend, type TaggedFriendRequest } from '../../stores/socialStore';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { useUIStore } from '../../stores/uiStore';
-import type { Friend, FriendRequest } from '@backspace/shared';
+import type { Friend, FriendRequest } from '@vertex/shared';
 
 // Mock the mascot animation hook
 vi.mock('../../hooks/useMascotAnimation', () => ({

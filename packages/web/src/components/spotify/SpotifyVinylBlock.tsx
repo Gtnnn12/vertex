@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 
-import type { Activity, ActivitySpotify } from '@backspace/shared';
-import { getPrimaryActivity } from '@backspace/shared/src/activities.js';
+import type { Activity, ActivitySpotify } from '@vertex/shared';
+import { getPrimaryActivity } from '@vertex/shared/src/activities.js';
 import { useActivityStore } from '../../stores/activityStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useMusicStyleForSelf } from '../../stores/musicWidgetStore';

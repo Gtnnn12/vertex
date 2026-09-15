@@ -8,4 +8,4 @@ export {
   hasPermissionBit,
   permissionsToString,
   stringToPermissions,
-} from '@backspace/shared/src/permissions';
+} from '@vertex/shared/src/permissions';

@@ -1,4 +1,4 @@
-import type { DmChannel, DmMessageWithUser, DmLastMessagePreview, User, SpaceInviteSystemPayload } from '@backspace/shared';
+import type { DmChannel, DmMessageWithUser, DmLastMessagePreview, User, SpaceInviteSystemPayload } from '@vertex/shared';
 import { parseFederatedUsername, isSelf } from './identity';
 
 // ─── DM Preview Formatting ────────────────────────────────────────────────────

@@ -10,14 +10,14 @@ import { ensurePeered } from '../utils/federationPeering.js';
 import { lookupRemoteUser } from '../utils/federationLookup.js';
 import { resolveOriginFromHostname } from '../utils/federationOriginResolve.js';
 import { resolveOrCreateReplicatedUser, hydrateReplicatedUserProfile } from './federation.js';
-import type { FederationRelayEvent, FederationRelayProfileSnapshot } from '@backspace/shared';
+import type { FederationRelayEvent, FederationRelayProfileSnapshot } from '@vertex/shared';
 import type {
   Friend,
   FriendRequest,
   SendFriendRequest,
   UpdateFriendRequest,
   DiscoverUser,
-} from '@backspace/shared';
+} from '@vertex/shared';
 import { sanitizeUser } from '../utils/sanitize.js';
 
 export function buildProfileSnapshot(user: typeof schema.users.$inferSelect): FederationRelayProfileSnapshot {

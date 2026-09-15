@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useExploreStore, type TaggedExploreSpace } from '../stores/exploreStore';
-import type { SpaceWithChannelsAndMembers } from '@backspace/shared';
+import type { SpaceWithChannelsAndMembers } from '@vertex/shared';
 
 export interface SpaceJoinControls {
   isJoined: boolean;

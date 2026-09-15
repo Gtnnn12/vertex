@@ -3,7 +3,7 @@ import { api } from '../../api/client';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { Avatar } from '../ui/Avatar';
 import { EmptyHint, ErrorBanner, LoadingHint, formatRelative } from './adminShared';
-import type { AdminCenterActivityResponse, AdminCenterActivityRow } from '@backspace/shared';
+import type { AdminCenterActivityResponse, AdminCenterActivityRow } from '@vertex/shared';
 
 function ActivityUser({ u, status, lang }: { u: AdminCenterActivityRow; status: string; lang: 'es' | 'en' }) {
   return (

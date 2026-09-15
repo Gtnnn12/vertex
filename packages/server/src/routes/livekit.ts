@@ -3,7 +3,7 @@ import { AccessToken, TrackSource } from 'livekit-server-sdk';
 import { authenticate } from '../utils/auth.js';
 import { config } from '../config.js';
 import { getChannelSpaceId, hasPermission, computePermissions, isDmMember, PermissionBits } from '../utils/permissions.js';
-import type { LiveKitTokenRequest, LiveKitTokenResponse } from '@backspace/shared';
+import type { LiveKitTokenRequest, LiveKitTokenResponse } from '@vertex/shared';
 import { getDb, schema } from '../db/index.js';
 import { eq } from 'drizzle-orm';
 

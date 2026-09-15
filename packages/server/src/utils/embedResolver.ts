@@ -1,6 +1,6 @@
 import { eq, inArray } from 'drizzle-orm';
 import sharp from 'sharp';
-import type { Embed } from '@backspace/shared';
+import type { Embed } from '@vertex/shared';
 import { getDb, schema } from '../db/index.js';
 import { generateSnowflake } from './snowflake.js';
 import { classifyUrl } from './embedClassifier.js';

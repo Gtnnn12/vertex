@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Activity } from '@backspace/shared';
+import type { Activity } from '@vertex/shared';
 import { wsSendAll } from '../hooks/useWebSocket';
 
 let pushTimer: ReturnType<typeof setTimeout> | null = null;

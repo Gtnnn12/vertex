@@ -18,7 +18,7 @@ import { wsSend } from './useWebSocket';
 import { useVoiceStore } from '../stores/voiceStore';
 import { useAuthStore } from '../stores/authStore';
 import { useUIStore } from '../stores/uiStore';
-import type { User } from '@backspace/shared';
+import type { User } from '@vertex/shared';
 import { broadcastVoiceStatus } from '../utils/voice';
 import { consumeIntentionalCameraOff, markIntentionalCameraOff } from '../utils/voiceActions';
 import { AudioManager } from '../audio/AudioManager';

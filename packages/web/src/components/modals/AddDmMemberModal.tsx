@@ -9,7 +9,7 @@ import { useSocialStore, type TaggedFriend } from '../../stores/socialStore';
 import { api } from '../../api/client';
 import { isSelf, parseFederatedUsername } from '../../utils/identity';
 import { useCanonicalUserView } from '../../utils/userViewLookup';
-import type { User } from '@backspace/shared';
+import type { User } from '@vertex/shared';
 
 function AddDmFriendRow({
   friend,

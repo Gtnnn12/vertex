@@ -440,7 +440,7 @@ export function handleRecoveryAction(action: RecoveryAction): void {
       return;
     }
     case 'open-releases': {
-      shell.openExternal('https://github.com/gtnn12/VERTEX/releases/latest');
+      shell.openExternal('https://github.com/Gtnnn12/vertex/releases/latest');
       return;
     }
     case 'quit': {

@@ -1,4 +1,4 @@
-import type { User } from '@backspace/shared';
+import type { User } from '@vertex/shared';
 
 /**
  * Splits a potentially federated username into base name and domain.

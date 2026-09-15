@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useLanguage } from '../../contexts/LanguageContext';
-import type { Activity } from '@backspace/shared';
+import type { Activity } from '@vertex/shared';
 
 /**
  * MATCH CARD — the "playing a game" state of the profile music widget.

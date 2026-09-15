@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import type { BoardWidget, BoardWidgetType } from '@backspace/shared';
-import { MAX_BOARD_WIDGETS, BOARD_FIELD_LIMITS as L } from '@backspace/shared';
+import type { BoardWidget, BoardWidgetType } from '@vertex/shared';
+import { MAX_BOARD_WIDGETS, BOARD_FIELD_LIMITS as L } from '@vertex/shared';
 import { Reorder, DragControls, type DragControls as DragControlsType } from 'framer-motion';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { WIDGET_REGISTRY, WIDGET_CATALOG, WidgetCardShell } from './widgetRegistry';

@@ -8,7 +8,7 @@ import { generateSnowflake } from '../../../utils/snowflake.js';
 import { connectionManager } from '../../../ws/handler.js';
 import { and, desc, eq, inArray, isNull, or } from 'drizzle-orm';
 import { randomBytes } from 'node:crypto';
-import type { ApprovalRequestSubscriberSummary, PeeringTriggerReason } from '@backspace/shared';
+import type { ApprovalRequestSubscriberSummary, PeeringTriggerReason } from '@vertex/shared';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { resolveLocalOrigin, sanitizePeer } from '../origin.js';
 

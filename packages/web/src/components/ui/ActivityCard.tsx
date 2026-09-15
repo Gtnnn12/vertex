@@ -1,5 +1,5 @@
-import type { Activity } from '@backspace/shared';
-import { getPrimaryActivity } from '@backspace/shared/src/activities.js';
+import type { Activity } from '@vertex/shared';
+import { getPrimaryActivity } from '@vertex/shared/src/activities.js';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { SpotifyMiniRow } from '../spotify/SpotifyVinyl';
 

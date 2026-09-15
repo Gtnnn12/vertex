@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { DiscoverUser, User } from '@backspace/shared';
+import type { DiscoverUser, User } from '@vertex/shared';
 import { api } from '../api/client';
 import { useInstanceStore } from './instanceStore';
 import { normalizeUserAssets } from '../utils/assetUrls';

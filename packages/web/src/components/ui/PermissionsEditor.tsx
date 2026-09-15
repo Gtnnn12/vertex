@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useSpaceStore } from '../../stores/spaceStore';
 import { permissionsToString, stringToPermissions } from '../../utils/permissions';
 import { OverrideEntry, type PermissionDef } from './OverrideEntry';
-import type { Role, MemberWithUser } from '@backspace/shared';
+import type { Role, MemberWithUser } from '@vertex/shared';
 
 export interface Override {
   targetType: string;

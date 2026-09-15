@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import type { BoardWidget } from '@backspace/shared';
+import type { BoardWidget } from '@vertex/shared';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { useUIStore } from '../../../stores/uiStore';
 import { getApiForOrigin } from '../../../stores/spaceStore';

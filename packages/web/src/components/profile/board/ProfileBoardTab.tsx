@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import type { BoardWidget, User } from '@backspace/shared';
+import type { BoardWidget, User } from '@vertex/shared';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { useAuthStore } from '../../../stores/authStore';
 import { useUIStore } from '../../../stores/uiStore';

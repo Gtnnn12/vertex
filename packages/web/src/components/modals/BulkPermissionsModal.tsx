@@ -5,7 +5,7 @@ import { useUIStore } from '../../stores/uiStore';
 import { useSpaceStore, getApiForOrigin } from '../../stores/spaceStore';
 import { PermissionBits, hasPermissionBit } from '../../utils/permissions';
 import { useLanguage } from '../../contexts/LanguageContext';
-import type { Channel, Role } from '@backspace/shared';
+import type { Channel, Role } from '@vertex/shared';
 import type { PermissionDef } from '../ui/OverrideEntry';
 
 const BULK_PERMISSIONS: (PermissionDef & { voiceOnly?: boolean })[] = [

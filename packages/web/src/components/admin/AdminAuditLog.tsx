@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from '../../api/client';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { EmptyHint, ErrorBanner, LoadingHint, PaginationRow, formatDateTime } from './adminShared';
-import type { AuditLogEntry } from '@backspace/shared';
+import type { AuditLogEntry } from '@vertex/shared';
 
 const PAGE_SIZE = 20;
 

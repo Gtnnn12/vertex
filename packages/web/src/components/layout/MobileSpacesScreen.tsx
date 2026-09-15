@@ -10,7 +10,7 @@ import { useContextMenuStore, type ContextMenuItem } from '../../stores/contextM
 import { useNavigate } from 'react-router-dom';
 import { getSpaceGradient } from '../../utils/gradients';
 import { hasPermissionBit, PermissionBits } from '../../utils/permissions';
-import type { Channel, SpaceFolder } from '@backspace/shared';
+import type { Channel, SpaceFolder } from '@vertex/shared';
 import { Mascot } from '../ui/Mascot';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { TransferOwnershipModal } from '../modals/TransferOwnershipModal';

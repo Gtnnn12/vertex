@@ -6,8 +6,8 @@ import { useUIStore } from '../../stores/uiStore';
 import { useTransferStore } from '../../stores/transferStore';
 import { useNavigate } from 'react-router-dom';
 import { waitForTransferAttachment } from '../../utils/waitForTransfer';
-import { AVATAR_COLORS } from '@backspace/shared';
-import type { SpaceVisibility, AvatarColor } from '@backspace/shared';
+import { AVATAR_COLORS } from '@vertex/shared';
+import type { SpaceVisibility, AvatarColor } from '@vertex/shared';
 import { SPACE_GRADIENT_MAP, getSpaceGradient } from '../../utils/gradients';
 
 const visibilityOptions: { value: SpaceVisibility; label: string; desc: string }[] = [

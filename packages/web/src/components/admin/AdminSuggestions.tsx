@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
 import { useLanguage } from '../../contexts/LanguageContext';
-import type { UserSuggestion } from '@backspace/shared';
+import type { UserSuggestion } from '@vertex/shared';
 
 /**
  * Admin Center — "Sugerencias" tab: every user-submitted proposal with

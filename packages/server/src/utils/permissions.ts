@@ -5,7 +5,7 @@ import {
   ALL_PERMISSIONS,
   stringToPermissions,
   permissionsToString,
-} from '@backspace/shared/src/permissions.js';
+} from '@vertex/shared/src/permissions.js';
 
 // Re-export for convenience
 export { PermissionBits, ALL_PERMISSIONS, permissionsToString, stringToPermissions };

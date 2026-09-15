@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import ReactDOM from 'react-dom';
-import type { MemberWithUser } from '@backspace/shared';
+import type { MemberWithUser } from '@vertex/shared';
 import { useSpaceStore, getApiForOrigin, type TaggedSpace } from '../../stores/spaceStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useUIStore } from '../../stores/uiStore';

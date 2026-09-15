@@ -1,5 +1,5 @@
-import type { ActivitySpotify, MusicWidgetStyle } from '@backspace/shared';
-import { MUSIC_WIDGET_STYLES, MUSIC_WIDGET_FREE_STYLES } from '@backspace/shared';
+import type { ActivitySpotify, MusicWidgetStyle } from '@vertex/shared';
+import { MUSIC_WIDGET_STYLES, MUSIC_WIDGET_FREE_STYLES } from '@vertex/shared';
 
 /**
  * Data-driven registry of music-widget (Spotify card) visual styles.

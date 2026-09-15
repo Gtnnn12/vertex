@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { getDb, schema } from '../db/index.js';
 import { config } from '../config.js';
 import { getInstanceId } from '../utils/federationEpoch.js';
-import type { InstanceInfoResponse } from '@backspace/shared';
+import type { InstanceInfoResponse } from '@vertex/shared';
 
 const BACKSPACE_VERSION = '1.0.0';
 

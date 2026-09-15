@@ -1,6 +1,6 @@
 import React from 'react';
-import type { BoardWidget, BoardWidgetType, StaffRole } from '@backspace/shared';
-import { BOARD_FIELD_LIMITS, BOARD_WIDGET_TYPES } from '@backspace/shared';
+import type { BoardWidget, BoardWidgetType, StaffRole } from '@vertex/shared';
+import { BOARD_FIELD_LIMITS, BOARD_WIDGET_TYPES } from '@vertex/shared';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { StaffBadge, NetrexChip } from '../../ui/StaffBadge';
 import { useAuthStore } from '../../../stores/authStore';

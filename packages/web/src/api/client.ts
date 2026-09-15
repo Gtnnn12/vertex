@@ -86,7 +86,7 @@ import type {
   ReattachRequest,
   ReattachResponse,
   UserSuggestion,
-} from '@backspace/shared';
+} from '@vertex/shared';
 import { getApiForOrigin, getOwnerInstanceForDm } from '../utils/crossStoreResolvers';
 
 export type { FederationPeer, FederationOrphanedAccount, FederationResetEvent, FederationResetEventsResponse, ApprovalRequest, PeeringSubscription, PeeringNotification };/** The server could not be reached at all (down, DNS, proxy refused). */

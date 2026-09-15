@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import type { Activity, User } from '@backspace/shared';
-import { getPrimaryActivity } from '@backspace/shared/src/activities.js';
+import type { Activity, User } from '@vertex/shared';
+import { getPrimaryActivity } from '@vertex/shared/src/activities.js';
 import { Avatar } from '../ui/Avatar';
 import { useCanonicalUserView } from '../../utils/userViewLookup';
 import { parseFederatedUsername } from '../../utils/identity';

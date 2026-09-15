@@ -1,6 +1,6 @@
-import type { User, ReplicatedInstance, StaffRole, MusicWidgetStyle, BoardWidget } from '@backspace/shared';
-import { MUSIC_WIDGET_STYLES, BOARD_WIDGET_TYPES, MAX_BOARD_WIDGETS } from '@backspace/shared';
-import { STAFF_ROLES } from '@backspace/shared';
+import type { User, ReplicatedInstance, StaffRole, MusicWidgetStyle, BoardWidget } from '@vertex/shared';
+import { MUSIC_WIDGET_STYLES, BOARD_WIDGET_TYPES, MAX_BOARD_WIDGETS } from '@vertex/shared';
+import { STAFF_ROLES } from '@vertex/shared';
 import { schema } from '../db/index.js';
 
 const STAFF_ROLE_SET = new Set<string>(STAFF_ROLES);

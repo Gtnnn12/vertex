@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import type { User } from '@backspace/shared';
+import type { User } from '@vertex/shared';
 import { useChatStore } from '../../stores/chatStore';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { useUIStore } from '../../stores/uiStore';

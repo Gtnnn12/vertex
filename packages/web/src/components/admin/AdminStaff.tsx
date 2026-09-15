@@ -6,7 +6,7 @@ import { Avatar } from '../ui/Avatar';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { StaffBadge } from '../ui/StaffBadge';
 import { EmptyHint, ErrorBanner, LoadingHint, formatDateTime } from './adminShared';
-import type { AdminCenterViewerCapabilities, StaffMember, StaffRole } from '@backspace/shared';
+import type { AdminCenterViewerCapabilities, StaffMember, StaffRole } from '@vertex/shared';
 
 const ALL_ROLES: StaffRole[] = ['moderator', 'senior_moderator', 'support', 'developer', 'administrator', 'owner'];
 

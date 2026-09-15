@@ -108,7 +108,7 @@ let pendingScreenShareSelection: {
 // ─── AGPL-3.0 § 13 source offer ─────────────────────────────────────────────
 // Upstream fallback for the "Source code" menu items and the About panel.
 // Used when the connected instance can't be reached or advertises no source URL.
-const UPSTREAM_SOURCE_URL = 'https://github.com/gtnn12/VERTEX';
+const UPSTREAM_SOURCE_URL = 'https://github.com/Gtnnn12/vertex';
 
 /**
  * Resolve the Corresponding Source URL for the instance the desktop app is
@@ -281,7 +281,7 @@ function applyLoginItemSettings(openAtLogin: boolean, startMinimized: boolean): 
     });
   } else {
     // Linux: setLoginItemSettings creates ~/.config/autostart/<name>.desktop.
-    // - We pass an explicit `name: 'backspace'` so the filename is deterministic
+    // - We pass an explicit `name: 'vertex'` so the filename is deterministic
     //   across deb/AppImage installs and Electron versions.
     // - For AppImage, $APPIMAGE points to the (possibly newly-updated) AppImage
     //   path; pass it as `path` so the autostart entry tracks updates.
@@ -289,7 +289,7 @@ function applyLoginItemSettings(openAtLogin: boolean, startMinimized: boolean): 
     //   but the runtime accepts them.
     const opts: Record<string, unknown> = {
       openAtLogin,
-      name: 'backspace',
+      name: 'vertex',
     };
     if (process.env.APPIMAGE) {
       opts.path = process.env.APPIMAGE;
@@ -856,7 +856,7 @@ function initAutoUpdater(): void {
       if (updateConfirmed) {
         mainWindow?.webContents.send('update-error', {
           message,
-          releaseUrl: 'https://github.com/gtnn12/VERTEX/releases/latest',
+          releaseUrl: 'https://github.com/Gtnnn12/vertex/releases/latest',
         });
       }
     });
@@ -882,7 +882,7 @@ function initAutoUpdater(): void {
 // ─── Deep Linking ───────────────────────────────────────────────────────────
 
 function handleDeepLink(url: string): void {
-  if (!url.startsWith('backspace://')) return;
+  if (!url.startsWith('vertex://') && !url.startsWith('backspace://')) return;
 
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('deep-link', url);
@@ -909,7 +909,7 @@ if (process.platform === 'linux') {
 // Windows: AppUserModelId so toast notifications attribute correctly to VERTEX
 // (without this, recovery / update notifications appear under "electron.exe").
 if (process.platform === 'win32') {
-  app.setAppUserModelId('com.backspace.desktop');
+  app.setAppUserModelId('com.vertex.desktop');
 }
 
 /**
@@ -924,7 +924,14 @@ export function requestQuit(): void {
 }
 
 // Set as default protocol handler
-app.setAsDefaultProtocolClient('backspace');
+app.setAsDefaultProtocolClient('vertex');
+// Legacy: older installs registered backspace:// as the protocol handler.
+// Re-registering is harmless where it fails, and keeps old links working.
+try {
+  app.setAsDefaultProtocolClient('backspace');
+} catch {
+  // ignore — legacy scheme is best-effort
+}
 
 // macOS: open-url event
 app.on('open-url', (event, url) => {
@@ -939,8 +946,8 @@ if (!gotTheLock) {
   app.quit();
 } else {
   app.on('second-instance', (_event, commandLine) => {
-    // Find the deep link URL in the command line args
-    const deepLinkArg = commandLine.find((arg) => arg.startsWith('backspace://'));
+    // Find the deep link URL in the command line args (both schemes)
+    const deepLinkArg = commandLine.find((arg) => arg.startsWith('vertex://') || arg.startsWith('backspace://'));
     if (deepLinkArg) {
       handleDeepLink(deepLinkArg);
     }
@@ -1131,7 +1138,7 @@ if (!gotTheLock) {
           os.homedir(),
           '.config',
           'autostart',
-          'backspace.desktop',
+          'vertex.desktop',
         );
         let recordedExecPath: string | null = null;
         try {
@@ -1152,7 +1159,7 @@ if (!gotTheLock) {
     }
 
     // Check if the app was launched with a deep link (Windows/Linux)
-    const launchArg = process.argv.find((arg) => arg.startsWith('backspace://'));
+    const launchArg = process.argv.find((arg) => arg.startsWith('vertex://') || arg.startsWith('backspace://'));
     if (launchArg) {
       pendingDeepLink = launchArg;
     }

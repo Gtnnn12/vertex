@@ -1,5 +1,5 @@
-import type { BoardWidget } from '@backspace/shared';
-import { BOARD_WIDGET_TYPES, MAX_BOARD_WIDGETS } from '@backspace/shared';
+import type { BoardWidget } from '@vertex/shared';
+import { BOARD_WIDGET_TYPES, MAX_BOARD_WIDGETS } from '@vertex/shared';
 
 /**
  * Resolve a stored image reference to a URL: http/https absolute stays,

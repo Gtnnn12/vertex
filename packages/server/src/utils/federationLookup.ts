@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { getDb } from '../db/index.js';
 import * as schema from '../db/schema.js';
 import { buildFederationHeaders, getOurOrigin } from './federationAuth.js';
-import type { FederationUserLookupProfile, FederationUserLookupResponse } from '@backspace/shared';
+import type { FederationUserLookupProfile, FederationUserLookupResponse } from '@vertex/shared';
 
 const LOOKUP_TIMEOUT_MS = 10_000;
 

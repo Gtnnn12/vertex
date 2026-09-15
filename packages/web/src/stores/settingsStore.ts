@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { InstanceStreamingLimits, InstanceAdminSettings } from '@backspace/shared';
+import type { InstanceStreamingLimits, InstanceAdminSettings } from '@vertex/shared';
 import { api } from '../api/client';
 
 interface SettingsState {

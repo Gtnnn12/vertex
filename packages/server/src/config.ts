@@ -54,7 +54,7 @@ if (publicOrigin !== undefined) {
 // fork's source so the offer stays accurate. Defaults to the project repo for
 // unmodified deployments. (BACKSPACE_SOURCE_URL remains accepted as a legacy
 // alias so existing deployments don't break on upgrade.)
-const UPSTREAM_SOURCE_URL = 'https://github.com/gtnn12/VERTEX';
+const UPSTREAM_SOURCE_URL = 'https://github.com/Gtnnn12/vertex';
 const sourceCodeUrl =
   envOptional('VERTEX_SOURCE_URL') ?? envOptional('BACKSPACE_SOURCE_URL') ?? UPSTREAM_SOURCE_URL;
 if (!/^https?:\/\//i.test(sourceCodeUrl)) {

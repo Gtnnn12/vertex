@@ -12,7 +12,7 @@ import {
   STANDARD_RESOLUTIONS, STANDARD_FRAMERATES, WIDTH_MAP,
   BITRATE_MATRIX_KBPS,
   type StandardResolution,
-} from '@backspace/shared/src/constants';
+} from '@vertex/shared/src/constants';
 
 // ---------------------------------------------------------------------------
 // Types

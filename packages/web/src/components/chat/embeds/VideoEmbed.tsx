@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { Embed } from '@backspace/shared';
+import type { Embed } from '@vertex/shared';
 
 interface VideoEmbedProps {
   embed: Embed;

@@ -8,7 +8,7 @@ import { connectionManager } from '../ws/handler.js';
 import { tombstoneUser, collectDeletionBroadcastTargets } from '../utils/userDeletion.js';
 import { deleteUploadFile } from '../utils/fileCleanup.js';
 import { sanitizeUser } from '../utils/sanitize.js';
-import type { AdminUser, AdminUserListResponse, AdminResetPasswordResponse } from '@backspace/shared';
+import type { AdminUser, AdminUserListResponse, AdminResetPasswordResponse } from '@vertex/shared';
 
 function toAdminUser(row: typeof schema.users.$inferSelect): AdminUser {
   return {

@@ -1,4 +1,4 @@
-import type { EmbedType, EmbedProvider } from '@backspace/shared';
+import type { EmbedType, EmbedProvider } from '@vertex/shared';
 
 export interface EmbedClassification {
   embedType: EmbedType;
