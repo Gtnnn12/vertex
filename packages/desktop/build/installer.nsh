@@ -2,12 +2,12 @@
 ; The assisted flow (Language → Welcome → License → Destination →
 ; Progress → Finish) comes from oneClick: false in electron-builder.yml.
 
-; Compress harder — installer size matters for download.
-SetCompressor /SOLID lzma
+; Compression is owned by electron-builder (solid LZMA already); do not
+; SetCompressor here — it collides with the embedded-publisher macros.
 
 ; ── Branding ────────────────────────────────────────────────────────────────
-; Window title and name on every page.
-Name "VERTEX"
+; (The product Name comes from electron-builder's productName — do NOT
+; redefine it here: NSIS treats a duplicate Name as an error.)
 
 ; Keep user data on uninstall — this is already the default via
 ; deleteAppDataOnUninstall: false; explicit RMDir guard for safety.
