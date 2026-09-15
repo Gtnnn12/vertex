@@ -75,9 +75,10 @@ datos y de las reglas — nadie más.
 
 ## Download
 
-Los instaladores (Windows `.exe`, macOS `.dmg`, Linux `.AppImage`/`.deb`) se publican en
-**[GitHub Releases](https://github.com/Gtnnn12/vertex/releases)** — la sección está en
-preparación y se rellenará en las próximas fases del proyecto.
+**[⬇ Descargar VERTEX v1.0.2 para Windows](https://github.com/Gtnnn12/vertex/releases/latest)** —
+instalador asistido, conecta a la instancia oficial al instalar. Las versiones para macOS y Linux
+llegarán en próximas fases; todos los lanzamientos quedan en
+**[GitHub Releases](https://github.com/Gtnnn12/vertex/releases)**.
 
 Mientras tanto, puedes construirlo tú mismo:
 
