@@ -22,8 +22,10 @@
         "@fastify/static": "^7.0.4",
         "@fastify/websocket": "^10.0.1",
         "@google/generative-ai": "^0.24.1",
+        "@libsql/client": "^0.18.0",
         "@tus/file-store": "^1.5.1",
         "@tus/server": "^1.10.2",
+        "@vertex/shared": "workspace:*",
         "bcryptjs": "^2.4.3",
         "better-sqlite3": "^12.11.1",
         "cheerio": "^1.0.0",
@@ -31,9 +33,9 @@
         "drizzle-orm": "^0.33.0",
         "fastify": "^4.28.1",
         "jsonwebtoken": "^9.0.2",
+        "libsql": "^0.5.29",
         "livekit-server-sdk": "^2.6.1",
-        "sharp": "^0.33.0",
-        "@vertex/shared": "workspace:*"
+        "sharp": "^0.33.0"
     },
     "devDependencies": {
         "@types/bcryptjs": "^2.4.6",

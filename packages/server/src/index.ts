@@ -4,7 +4,7 @@ import rateLimit from '@fastify/rate-limit';
 import websocket from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
 import { config } from './config.js';
-import { getDb, getRawDb, closeDatabase } from './db/index.js';
+import { getDb, getRawDb, closeDatabase, initDatabaseOnce } from './db/index.js';
 import { checkFfmpeg } from './utils/thumbnail.js';
 import { authRoutes } from './routes/auth.js';
 import { userRoutes } from './routes/users.js';
@@ -116,8 +116,9 @@ async function main(): Promise<void> {
     });
   }
 
-  // Initialize database
-  getDb();
+  // Initialize database (Turso when TURSO_DATABASE_URL is set, else local
+  // SQLite) — awaited so every route/store sees migrated schema + invariants.
+  await initDatabaseOnce();
 
   // Reset orphaned `users.status` rows for locally-homed users. The previous
   // process's in-memory disconnect timers are gone, so any non-offline row
