@@ -30,7 +30,7 @@ COPY packages/server/ packages/server/
 COPY packages/web/ packages/web/
 
 # Build the web frontend
-RUN pnpm --filter @VERTEX/web build
+RUN pnpm --filter @vertex/shared build && pnpm --filter @vertex/web build && pnpm --filter @vertex/server build
 
 # ============================================================
 # Stage 2: Production runtime

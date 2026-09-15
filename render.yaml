@@ -12,7 +12,7 @@ services:
     branch: main
     rootDir: packages/server
     # pnpm is preinstalled on Render's Node runtime image.
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @vertex/shared build && pnpm --filter @vertex/server build
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @vertex/shared build && pnpm --filter @vertex/web build && pnpm --filter @vertex/server build
     startCommand: pnpm --filter @vertex/server start
     healthCheckPath: /api/health
     autoDeploy: true
