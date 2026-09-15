@@ -315,9 +315,9 @@ function generateFallbackTrayIcon(): Electron.NativeImage {
       const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
       if (dist <= r) {
         // NativeImage raw buffer uses BGRA on most platforms
-        canvas[idx] = 0xf2;     // B (blurple #5865f2)
-        canvas[idx + 1] = 0x65; // G
-        canvas[idx + 2] = 0x58; // R
+        canvas[idx] = 0x97;     // B (VERTEX mint accent #3ddc97)
+        canvas[idx + 1] = 0xdc; // G
+        canvas[idx + 2] = 0x3d; // R
         canvas[idx + 3] = 0xff; // A
       } else {
         canvas[idx] = 0;

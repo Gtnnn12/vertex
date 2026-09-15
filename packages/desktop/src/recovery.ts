@@ -139,8 +139,7 @@ export function buildTrayMenuTemplate(
 
   items.push(
     { type: 'separator' },
-    { label: 'Change Instance', click: actions?.onChangeInstance },
-    { label: 'Source code (AGPL)', click: actions?.onOpenSource },
+    { label: 'Source code', click: actions?.onOpenSource },
     { type: 'separator' },
     { label: 'Quit', click: actions?.onQuit },
   );
@@ -155,7 +154,7 @@ export function buildAppMenuTemplate(
 ): MenuItemConstructorOptions[] {
   const appSubmenu: MenuItemConstructorOptions[] = [
     { role: 'about' },
-    { label: 'Source code (AGPL)', click: () => actions?.onOpenSource?.() },
+    { label: 'Source code', click: () => actions?.onOpenSource?.() },
     { type: 'separator' },
     checkForUpdatesItem(state, () => actions?.onCheckForUpdates?.()),
   ];
@@ -170,8 +169,6 @@ export function buildAppMenuTemplate(
   }
 
   appSubmenu.push(
-    { type: 'separator' },
-    { label: 'Change Instance', click: actions?.onChangeInstance },
     { type: 'separator' },
     { role: 'hide' },
     { role: 'hideOthers' },

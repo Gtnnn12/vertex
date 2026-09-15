@@ -163,13 +163,14 @@ function defaultState(overrides?: Partial<RecoveryState>): RecoveryState {
 }
 
 describe('buildTrayMenuTemplate', () => {
-  it('includes Show/Hide/Change Instance/Quit base items', () => {
+  it('includes Show/Hide/Source code/Quit base items (no Change Instance)', () => {
     const items = buildTrayMenuTemplate(defaultState());
     const labels = items.map((i) => i.label);
     expect(labels).toContain('Show VERTEX');
     expect(labels).toContain('Hide');
-    expect(labels).toContain('Change Instance');
+    expect(labels).toContain('Source code');
     expect(labels).toContain('Quit');
+    expect(labels).not.toContain('Change Instance');
   });
 
   it('includes Check for Updates with idle label when updateState=idle', () => {
@@ -225,26 +226,27 @@ describe('buildTrayMenuTemplate', () => {
 
 describe('buildAppMenuTemplate', () => {
   it('returns top-level menu with App, Edit, Window submenus', () => {
-    const template = buildAppMenuTemplate('Backspace', defaultState());
+    const template = buildAppMenuTemplate('VERTEX', defaultState());
     const [appMenu, editMenu, windowMenu] = template;
     expect(template.length).toBeGreaterThanOrEqual(3);
-    expect(appMenu!.label).toBe('Backspace');
+    expect(appMenu!.label).toBe('VERTEX');
     expect(editMenu!.label).toBe('Edit');
     expect(windowMenu!.label).toBe('Window');
   });
 
-  it('App submenu includes About and Change Instance', () => {
-    const template = buildAppMenuTemplate('Backspace', defaultState());
+  it('App submenu includes About and Source code (no Change Instance)', () => {
+    const template = buildAppMenuTemplate('VERTEX', defaultState());
     const [appMenu] = template;
     const appSub = appMenu!.submenu as MenuItemConstructorOptions[];
     const labels = appSub.map((i) => i.label).filter(Boolean);
     expect(appSub.find((i) => i.role === 'about')).toBeDefined();
-    expect(labels).toContain('Change Instance');
+    expect(labels).toContain('Source code');
+    expect(labels).not.toContain('Change Instance');
     expect(appSub.find((i) => i.role === 'quit')).toBeDefined();
   });
 
   it('App submenu includes Check for Updates with state-correct label', () => {
-    const template = buildAppMenuTemplate('Backspace', defaultState({ updateState: 'idle' }));
+    const template = buildAppMenuTemplate('VERTEX', defaultState({ updateState: 'idle' }));
     const [appMenu] = template;
     const appSub = appMenu!.submenu as MenuItemConstructorOptions[];
     const item = appSub.find((i) => i.id === 'check-for-updates');
@@ -253,11 +255,11 @@ describe('buildAppMenuTemplate', () => {
   });
 
   it('App submenu inserts Restart to Install Update only when downloaded', () => {
-    const [idleAppMenu] = buildAppMenuTemplate('Backspace', defaultState({ updateState: 'idle' }));
+    const [idleAppMenu] = buildAppMenuTemplate('VERTEX', defaultState({ updateState: 'idle' }));
     const idleSub = idleAppMenu!.submenu as MenuItemConstructorOptions[];
     expect(idleSub.find((i) => i.id === 'restart-to-install')).toBeUndefined();
 
-    const [dlAppMenu] = buildAppMenuTemplate('Backspace', defaultState({ updateState: 'downloaded' }));
+    const [dlAppMenu] = buildAppMenuTemplate('VERTEX', defaultState({ updateState: 'downloaded' }));
     const dlSub = dlAppMenu!.submenu as MenuItemConstructorOptions[];
     const restartItem = dlSub.find((i) => i.id === 'restart-to-install');
     expect(restartItem).toBeDefined();
