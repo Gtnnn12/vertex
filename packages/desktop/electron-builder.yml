@@ -18,8 +18,12 @@ asarUnpack:
   - "**/*.node"
 npmRebuild: false
 afterPack: ./scripts/afterPack.js
-# Local build only — never publish from here.
-publish: null
+# Update channel — GitHub Releases of this repo. Builds still run with
+# --publish never; the artifacts are attached to drafted releases manually.
+publish:
+  provider: github
+  owner: Gtnnn12
+  repo: vertex
 protocols:
   - name: VERTEX
     schemes:
