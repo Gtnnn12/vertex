@@ -10,6 +10,7 @@ import {
   screen,
   session,
   desktopCapturer,
+  systemPreferences,
 } from 'electron';
 import path from 'path';
 import fs from 'fs';
@@ -366,7 +367,57 @@ function loadTrayIcon(): Electron.NativeImage {
 
 // ─── Window & Tray Creation ─────────────────────────────────────────────────
 
+// ─── Splash ─────────────────────────────────────────────────────────────────
+
+let splashWindow: BrowserWindow | null = null;
+
+function createSplashWindow(): void {
+  splashWindow = new BrowserWindow({
+    width: 420,
+    height: 260,
+    frame: false,
+    resizable: false,
+    movable: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    backgroundColor: '#0b0b10',
+    icon: path.join(__dirname, '..', 'build', 'icon.png'),
+    show: false,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+  splashWindow.loadFile(path.join(__dirname, '..', 'resources', 'splash.html'));
+  splashWindow.once('ready-to-show', () => splashWindow?.show());
+}
+
+function dismissSplash(): void {
+  if (!splashWindow || splashWindow.isDestroyed()) return;
+  const splash = splashWindow;
+  splashWindow = null;
+  // prefers-reduced-motion → cut instantly; otherwise a short opacity fade.
+  const reducedMotion = systemPreferences.getAnimationSettings().prefersReducedMotion;
+  if (reducedMotion || process.platform !== 'win32') {
+    splash.close();
+    return;
+  }
+  let opacity = 1;
+  const fade = setInterval(() => {
+    opacity -= 0.08;
+    if (opacity <= 0 || splash.isDestroyed()) {
+      clearInterval(fade);
+      if (!splash.isDestroyed()) splash.close();
+      return;
+    }
+    splash.setOpacity(Math.max(opacity, 0));
+  }, 16);
+}
+
 function createWindow(): void {
+  // Splash first — covers the load gap until the main window is ready.
+  createSplashWindow();
   const savedState = validateWindowBounds(loadWindowState());
 
   mainWindow = new BrowserWindow({
@@ -455,6 +506,7 @@ function createWindow(): void {
     if (!launchedHidden) {
       mainWindow?.show();
     }
+    dismissSplash();
 
     // Send any pending deep link that launched the app
     if (pendingDeepLink && mainWindow) {
@@ -462,6 +514,9 @@ function createWindow(): void {
       pendingDeepLink = null;
     }
   });
+
+  // Never leave the splash stranded over a dead window.
+  mainWindow.webContents.on('did-fail-load', () => dismissSplash());
 
   // Window state persistence — debounced save on resize/move
   let saveTimeout: ReturnType<typeof setTimeout> | null = null;
