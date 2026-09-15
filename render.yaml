@@ -1,0 +1,39 @@
+# VERTEX — Render Blueprint
+# Deploy: Render Dashboard → New → Blueprint → point at Gtnnn12/vertex.
+# Secrets (JWT_SECRET, GOOGLE_API_KEY, SPOTIFY_*) are set in the Render
+# dashboard — never committed here. sync: false asks Render to prompt for them.
+
+services:
+  - type: web
+    name: vertex-server
+    runtime: node
+    plan: starter
+    region: frankfurt  # closest to Spain; change in dashboard if you prefer
+    branch: main
+    rootDir: packages/server
+    # pnpm is preinstalled on Render's Node runtime image.
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @vertex/shared build && pnpm --filter @vertex/server build
+    startCommand: pnpm --filter @vertex/server start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      # Render injects PORT (bind 0.0.0.0 is the server default) — do not set it.
+      - key: NODE_VERSION
+        value: 20
+      - key: DB_PATH
+        value: /opt/render/project/src/data/vertex.db
+      - key: UPLOAD_DIR
+        value: /opt/render/project/src/data/uploads
+      # App secrets — Render will prompt you to fill these on first sync.
+      - key: JWT_SECRET
+        sync: false
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: SPOTIFY_CLIENT_ID
+        sync: false
+      - key: SPOTIFY_CLIENT_SECRET
+        sync: false
+      # Set after first deploy, once you know the *.onrender.com URL:
+      #   PUBLIC_ORIGIN=https://vertex-server.onrender.com
+      #   DOMAIN=vertex-server.onrender.com
+      #   SPOTIFY_REDIRECT_URI=https://vertex-server.onrender.com/api/spotify/callback
