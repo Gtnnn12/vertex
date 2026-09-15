@@ -7,7 +7,7 @@ import { Avatar } from '../../ui/Avatar';
 import { ImageCropModal } from '../../ui/ImageCropModal';
 import { ProfileIdentityCard } from '../../ui/ProfileIdentityCard';
 import { DeleteAccountModal } from '../DeleteAccountModal';
-import { api } from '../../../api/client';
+import { api, HttpError } from '../../../api/client';
 import { useTransferStore } from '../../../stores/transferStore';
 import { waitForTransferAttachment } from '../../../utils/waitForTransfer';
 import { isAnimatedGif } from '../../../utils/isAnimatedGif';
@@ -51,6 +51,10 @@ export function AccountPanel() {
   const addToast = useUIStore((s) => s.addToast);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  // Nickname-cooldown: epoch ms returned by the server on a 400 rejection, or
+  // derived locally from the user's self-view `nicknameChangedAt`. When set,
+  // the display-name input is disabled and shows when editing unlocks.
+  const [nicknameBlockedUntil, setNicknameBlockedUntil] = useState<number | null>(null);
   const { t } = useLanguage();
 
   useEffect(() => {
@@ -135,6 +139,28 @@ export function AccountPanel() {
   };
 
   if (!user) return null;
+
+  // ── Nickname-cooldown state (server is the authority; this is UX mirror) ──
+  // Source of truth: user.nicknameChangedAt + 15 days. The server enforces it
+  // on PATCH; here we derive the same window so the input is pre-disabled and
+  // shows the unlock date without waiting for a rejected request.
+  const NICKNAME_COOLDOWN_MS = 15 * 24 * 60 * 60 * 1000;
+  const nicknameUnlockAt =
+    nicknameBlockedUntil ??
+    (user.nicknameChangedAt ? user.nicknameChangedAt + NICKNAME_COOLDOWN_MS : null);
+  const nicknameInCooldown =
+    nicknameUnlockAt !== null &&
+    nicknameUnlockAt > Date.now() &&
+    displayName.trim() !== (user.displayName ?? '');
+
+  // Re-render every minute so the days-remaining countdown stays fresh while
+  // the panel is open. Hour precision isn't needed — days granularity is fine.
+  const [, setCooldownTick] = useState(0);
+  useEffect(() => {
+    if (nicknameUnlockAt === null) return;
+    const id = setInterval(() => setCooldownTick((n) => n + 1), 60_000);
+    return () => clearInterval(id);
+  }, [nicknameUnlockAt]);
 
   const effectiveDisplayName = displayName.trim() || user.username;
   const effectiveAccent = accentColor;
@@ -313,7 +339,7 @@ export function AccountPanel() {
     setIsLoading(true);
     try {
       const updates: Record<string, string | undefined> = {};
-      if (displayName !== (user.displayName ?? '')) updates.displayName = displayName.trim();
+      if (displayName !== (user.displayName ?? '') && !nicknameInCooldown) updates.displayName = displayName.trim();
       if (customStatus !== (user.customStatus ?? '')) updates.customStatus = customStatus.trim();
       if (status !== (user.status ?? 'online')) updates.status = status;
       if (bio !== (user.bio ?? '')) updates.bio = bio.trim();
@@ -324,7 +350,22 @@ export function AccountPanel() {
 
       await updateProfile(updates as Parameters<typeof updateProfile>[0]);
       addToast(t('profile_updated'), 'success', 2000);
+      setNicknameBlockedUntil(null);
     } catch (err) {
+      // Nickname-cooldown rejection: the server returns 400 with nextAllowedAt
+      // (epoch ms) — surface the exact unlock date instead of the raw error.
+      if (err instanceof HttpError && err.status === 400) {
+        const body = err.body as { nextAllowedAt?: unknown } | undefined;
+        if (body && typeof body.nextAllowedAt === 'number') {
+          setNicknameBlockedUntil(body.nextAllowedAt);
+          setError(t('nickname_cooldown_until').replace(
+            '{date}',
+            new Date(body.nextAllowedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }),
+          ));
+          setIsLoading(false);
+          return;
+        }
+      }
       setError(err instanceof Error ? err.message : t('failed_to_update_profile'));
     } finally {
       setIsLoading(false);
@@ -463,8 +504,20 @@ export function AccountPanel() {
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                className="input-standard w-full"
+                disabled={nicknameInCooldown}
+                className="input-standard w-full disabled:opacity-50 disabled:cursor-not-allowed"
               />
+              {nicknameInCooldown && nicknameUnlockAt !== null && (
+                <p className="mt-1.5 text-xs text-accent-amber">
+                  {(() => {
+                    const daysLeft = Math.max(0, Math.ceil((nicknameUnlockAt - Date.now()) / (24 * 60 * 60 * 1000)));
+                    const dateStr = new Date(nicknameUnlockAt).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
+                    return daysLeft > 0
+                      ? t('nickname_cooldown_days').replace('{days}', String(daysLeft)).replace('{date}', dateStr)
+                      : t('nickname_cooldown_until').replace('{date}', dateStr);
+                  })()}
+                </p>
+              )}
             </div>
 
             <div>

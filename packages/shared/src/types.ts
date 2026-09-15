@@ -38,6 +38,8 @@ export interface User {
   profileBoard?: BoardWidget[];
   /** Personal profile tint (hex) — colors the profile panel, banner glow and borders. */
   profileAccent?: string | null;
+  /** Self-view only: epoch ms of the last nickname (displayName) change — drives the 15-day cooldown. */
+  nicknameChangedAt?: number | null;
 }
 
 /**
@@ -728,6 +730,8 @@ export interface UpdateUserRequest {
   musicWidgetStyle?: string;
   /** Personal profile tint. Server validates the hex format; empty string clears it. */
   profileAccent?: string;
+  /** Response shape for a nickname-cooldown rejection (400). */
+  nextAllowedAt?: number;
 }
 
 export interface UpdateBoardResponse {

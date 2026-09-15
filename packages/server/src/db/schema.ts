@@ -22,6 +22,8 @@ export const users = sqliteTable('users', {
   discoverable: integer('discoverable').default(1),
   profileUpdatedAt: integer('profile_updated_at'),
   passwordChangedAt: integer('password_changed_at'),
+  /** Epoch ms of the last nickname (displayName) change — drives the 15-day cooldown. */
+  nicknameChangedAt: integer('nickname_changed_at'),
   showActivity: integer('show_activity').notNull().default(1),
   federationRegistryUpdatedAt: integer('federation_registry_updated_at').default(0),
   federationHealPending: integer('federation_heal_pending').default(0),

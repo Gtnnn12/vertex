@@ -402,11 +402,44 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
     if (displayName !== undefined) {
       if (displayName !== null && typeof displayName === 'string') {
         const trimmed = displayName.trim();
+        // ── Nickname validation (server-side authority) ──
         if (trimmed.length > 32) {
           return reply.code(400).send({ error: 'Display name must be 32 characters or less', statusCode: 400 });
         }
+        if (trimmed.length > 0 && trimmed.length < 2) {
+          return reply.code(400).send({ error: 'Display name must be at least 2 characters', statusCode: 400 });
+        }
+        // Letters (any script incl. accented), digits, spaces and common handle punctuation.
+        // Rejects control chars, emoji-heavy spam and protocol-ish characters.
+        if (trimmed.length > 0 && !/^[\p{L}\p{N} _.'\-]*$/u.test(trimmed)) {
+          return reply.code(400).send({ error: 'Display name contains invalid characters', statusCode: 400 });
+        }
+
+        // ── 15-day nickname cooldown (server-side authority) ──
+        // Same-value changes (or clearing to empty) never trigger — and never
+        // restart — the cooldown. Only a REAL change consumes the window.
+        const previousName = preUpdateUser.displayName ?? '';
+        const isRealChange = trimmed !== previousName;
+        if (isRealChange && trimmed.length > 0) {
+          const NICKNAME_COOLDOWN_MS = 15 * 24 * 60 * 60 * 1000;
+          const lastChanged = preUpdateUser.nicknameChangedAt ?? null;
+          if (lastChanged !== null) {
+            const nextAllowedAt = lastChanged + NICKNAME_COOLDOWN_MS;
+            if (Date.now() < nextAllowedAt) {
+              return reply.code(400).send({
+                error: 'Nickname can only be changed once every 15 days',
+                nextAllowedAt,
+                statusCode: 400,
+              });
+            }
+          }
+          // First-ever change (lastChanged === null) is always allowed.
+          (updateData as Record<string, unknown>).nicknameChangedAt = Date.now();
+        }
+
         updateData.displayName = trimmed || null;
       } else {
+        // Clearing the name to null — allowed anytime, never triggers cooldown.
         updateData.displayName = null;
       }
     }

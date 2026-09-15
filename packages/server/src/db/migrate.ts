@@ -31,6 +31,7 @@ export function ensureDefaults(db: Database.Database): void {
   ensureColumn('users', 'ban_reason', 'ban_reason TEXT');
   ensureColumn('users', 'banned_at', 'banned_at INTEGER');
   ensureColumn('users', 'banned_by', 'banned_by TEXT');
+  ensureColumn('users', 'nickname_changed_at', 'nickname_changed_at INTEGER');
 
   const ensureTable = (sql: string): void => {
     try {

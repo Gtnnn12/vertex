@@ -1296,6 +1296,8 @@
   "update_toast_later": "Más tarde",
   "update_toast_restart": "Reiniciar",
   "update_whats_new": "¿Qué hay de nuevo?",
+  "nickname_cooldown_days": "Podrás cambiarlo en {days} día(s) — el {date}",
+  "nickname_cooldown_until": "Podrás cambiarlo el {date}",
   "upload_banner_hint": "PNG o JPG, hasta 10 MB",
   "upload_failed": "Error de subida",
   "upload_limit": "Límite de subida",

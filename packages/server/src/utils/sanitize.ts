@@ -63,8 +63,9 @@ export function sanitizeUser(row: typeof schema.users.$inferSelect, isSelf = fal
       profileUpdatedAt: 0,
       createdAt: row.createdAt,
       homeInstance: null,
-      homeUserId: null,      replicatedInstances: [],
-    ...(isSelf ? { showActivity: false } : {}),
+      homeUserId: null,
+      replicatedInstances: [],
+    ...(isSelf ? { showActivity: false, nicknameChangedAt: row.nicknameChangedAt ?? null } : {}),
     musicWidgetStyle: 'vinyl',
     profileBoard: [],
     profileAccent: null,
@@ -123,5 +124,11 @@ export function sanitizeUser(row: typeof schema.users.$inferSelect, isSelf = fal
     profileBoard: sanitizeBoard(row.profileBoard),
     // Personal profile tint. Stored value is hex-validated at write time.
     profileAccent: row.profileAccent ?? null,
+    ...(isSelf
+      ? {
+          // Nickname-cooldown bookkeeping — self-view only, nobody else's business.
+          nicknameChangedAt: row.nicknameChangedAt ?? null,
+        }
+      : {}),
   };
 }
