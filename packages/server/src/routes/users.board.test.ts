@@ -43,12 +43,28 @@ function applyMigrations(db: Database.Database): void {
       if (clean) db.exec(clean);
     }
   }
-  // The board column comes from ensureColumn (runtime migration), not a
-  // drizzle file — mirror it here.
-  try {
-    db.prepare('SELECT profile_board FROM users LIMIT 1').get();
-  } catch {
-    db.exec('ALTER TABLE users ADD COLUMN profile_board TEXT');
+  // Columns added by ensureDefaults (db/migrate.ts) at runtime, not by the
+  // drizzle SQL files — mirror them ALL here or TS-schema inserts crash with
+  // "no column named ...".
+  const runtimeColumns: Array<[string, string]> = [
+    ['netrex_enabled', 'netrex_enabled INTEGER DEFAULT 0'],
+    ['netrex_expires_at', 'netrex_expires_at INTEGER'],
+    ['netrex_until', 'netrex_until INTEGER'],
+    ['profile_board', 'profile_board TEXT'],
+    ['profile_accent', 'profile_accent TEXT'],
+    ['staff_role', 'staff_role TEXT'],
+    ['last_seen_at', 'last_seen_at INTEGER'],
+    ['banned_until', 'banned_until INTEGER'],
+    ['ban_reason', 'ban_reason TEXT'],
+    ['banned_at', 'banned_at INTEGER'],
+    ['banned_by', 'banned_by TEXT'],
+  ];
+  for (const [column, ddl] of runtimeColumns) {
+    try {
+      db.prepare(`SELECT ${column} FROM users LIMIT 1`).get();
+    } catch {
+      db.exec(`ALTER TABLE users ADD COLUMN ${ddl}`);
+    }
   }
 }
 

@@ -47,13 +47,28 @@ function applyMigrations(db: Database.Database): void {
       if (clean) db.exec(clean);
     }
   }
-  // The profile-board column comes from the runtime ensureColumn migration,
-  // not a drizzle file — mirror it so the users insert (drizzle schema now
-  // includes profileBoard) works in this test's in-memory DB too.
-  try {
-    db.prepare('SELECT profile_board FROM users LIMIT 1').get();
-  } catch {
-    db.exec('ALTER TABLE users ADD COLUMN profile_board TEXT');
+  // Columns added by ensureDefaults (db/migrate.ts) at runtime, not by the
+  // drizzle SQL files — mirror them ALL here or TS-schema inserts crash with
+  // "no column named ...".
+  const runtimeColumns: Array<[string, string]> = [
+    ['netrex_enabled', 'netrex_enabled INTEGER DEFAULT 0'],
+    ['netrex_expires_at', 'netrex_expires_at INTEGER'],
+    ['netrex_until', 'netrex_until INTEGER'],
+    ['profile_board', 'profile_board TEXT'],
+    ['profile_accent', 'profile_accent TEXT'],
+    ['staff_role', 'staff_role TEXT'],
+    ['last_seen_at', 'last_seen_at INTEGER'],
+    ['banned_until', 'banned_until INTEGER'],
+    ['ban_reason', 'ban_reason TEXT'],
+    ['banned_at', 'banned_at INTEGER'],
+    ['banned_by', 'banned_by TEXT'],
+  ];
+  for (const [column, ddl] of runtimeColumns) {
+    try {
+      db.prepare(`SELECT ${column} FROM users LIMIT 1`).get();
+    } catch {
+      db.exec(`ALTER TABLE users ADD COLUMN ${ddl}`);
+    }
   }
 }
 
@@ -126,17 +141,17 @@ describe('PATCH /api/users/@me — musicWidgetStyle Netrex gate', () => {
     expect(row?.musicWidgetStyle).toBe('vinyl');
   });
 
-  it('accepts the free arcade base style for a user without Netrex', async () => {
+  it('accepts the free aurora base style for a user without Netrex', async () => {
     const res = await app.inject({
       method: 'PATCH',
       url: '/api/users/@me',
       headers: { Authorization: `Bearer ${tokenFor(USER_ID, USER_USERNAME)}` },
-      payload: { musicWidgetStyle: 'arcade' },
+      payload: { musicWidgetStyle: 'aurora' },
     });
 
     expect(res.statusCode).toBe(200);
     const row = testDb.select().from(schema.users).where(eq(schema.users.id, USER_ID)).get();
-    expect(row?.musicWidgetStyle).toBe('arcade');
+    expect(row?.musicWidgetStyle).toBe('aurora');
   });
 
   it('silently falls back to vinyl when a non-Netrex user picks a premium style', async () => {
@@ -144,7 +159,7 @@ describe('PATCH /api/users/@me — musicWidgetStyle Netrex gate', () => {
       method: 'PATCH',
       url: '/api/users/@me',
       headers: { Authorization: `Bearer ${tokenFor(USER_ID, USER_USERNAME)}` },
-      payload: { musicWidgetStyle: 'holographic-cd' },
+      payload: { musicWidgetStyle: 'cassette' },
     });
 
     expect(res.statusCode).toBe(200);
@@ -159,13 +174,13 @@ describe('PATCH /api/users/@me — musicWidgetStyle Netrex gate', () => {
       method: 'PATCH',
       url: '/api/users/@me',
       headers: { Authorization: `Bearer ${tokenFor(NETREX_ID, NETREX_USERNAME)}` },
-      payload: { musicWidgetStyle: 'boombox' },
+      payload: { musicWidgetStyle: 'neon-city' },
     });
 
     expect(res.statusCode).toBe(200);
-    expect(res.json().musicWidgetStyle).toBe('boombox');
+    expect(res.json().musicWidgetStyle).toBe('neon-city');
     const row = testDb.select().from(schema.users).where(eq(schema.users.id, NETREX_ID)).get();
-    expect(row?.musicWidgetStyle).toBe('boombox');
+    expect(row?.musicWidgetStyle).toBe('neon-city');
   });
 
   it('accepts a premium style based on a purchased plan (netrexUntil)', async () => {
@@ -178,11 +193,11 @@ describe('PATCH /api/users/@me — musicWidgetStyle Netrex gate', () => {
       method: 'PATCH',
       url: '/api/users/@me',
       headers: { Authorization: `Bearer ${tokenFor(USER_ID, USER_USERNAME)}` },
-      payload: { musicWidgetStyle: 'crystal-orbit' },
+      payload: { musicWidgetStyle: 'holo-room' },
     });
 
     expect(res.statusCode).toBe(200);
-    expect(res.json().musicWidgetStyle).toBe('crystal-orbit');
+    expect(res.json().musicWidgetStyle).toBe('holo-room');
   });
 
   it('falls back to vinyl when the grant has expired', async () => {

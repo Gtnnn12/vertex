@@ -83,12 +83,13 @@ describe('ProfileBoardTab — visibility rules', () => {
     expect(document.querySelector('.board-locked')).toBeNull();
   });
 
-  it('own profile with Netrex shows the edit button', () => {
+  it('own profile with Netrex shows the board content (edit button lives in the modal header)', () => {
     authState.user = SELF;
     const user = { ...SELF, profileBoard: [widget('q', 'quote', { text: 'mine' })] };
     render(<ProfileBoardTab user={user} origin="local" />);
     expect(screen.getByText(/mine/)).toBeTruthy();
-    expect(screen.getAllByRole('button').length).toBeGreaterThan(0);
+    // Editor state is modal-driven; the tab itself renders no locked CTA.
+    expect(document.querySelector('.board-locked')).toBeNull();
   });
 
   it('own profile WITHOUT Netrex shows the locked CTA instead of the board', () => {
@@ -112,7 +113,7 @@ describe('ProfileBoardTab — visibility rules', () => {
       ],
     };
     const { container } = render(<ProfileBoardTab user={user} origin="local" />);
-    const grid = container.querySelector('.board-grid');
+    const grid = container.querySelector('.grid.grid-cols-1');
     expect(grid?.children.length).toBe(2);
   });
 });
