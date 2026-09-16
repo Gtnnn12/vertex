@@ -33,6 +33,23 @@ export function ensureDefaults(db: Database.Database): void {
   ensureColumn('users', 'banned_by', 'banned_by TEXT');
   ensureColumn('users', 'nickname_changed_at', 'nickname_changed_at INTEGER');
   ensureColumn('spaces', 'server_evo_level', 'server_evo_level INTEGER NOT NULL DEFAULT 0');
+  ensureColumn('spaces', 'custom_invite_slug', 'custom_invite_slug TEXT');
+  ensureColumn('spaces', 'banner_content_type', 'banner_content_type TEXT');
+  ensureColumn('channels', 'is_event_stage', 'is_event_stage INTEGER DEFAULT 0');
+
+  try {
+    db.prepare(`CREATE TABLE IF NOT EXISTS space_emojis (
+      id TEXT PRIMARY KEY NOT NULL,
+      space_id TEXT NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      file TEXT NOT NULL,
+      created_by TEXT NOT NULL REFERENCES users(id),
+      created_at INTEGER NOT NULL
+    )`).run();
+    db.prepare('CREATE UNIQUE INDEX IF NOT EXISTS space_emojis_space_name_unique ON space_emojis (space_id, name)').run();
+  } catch (err) {
+    console.warn('[defaults] Could not create space_emojis table:', err);
+  }
 
   const ensureTable = (sql: string): void => {
     try {

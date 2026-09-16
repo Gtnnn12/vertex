@@ -29,11 +29,18 @@ vi.mock('../ws/handler.js', () => ({
     sendToUser: vi.fn(),
     sendToSpace: vi.fn(),
     sendToDmMembers: vi.fn(),
+    sendToChannel: vi.fn(),
     setUserShowActivity: vi.fn(),
     clearUserActivities: vi.fn(),
     getUserStatus: vi.fn(() => 'online'),
     forceDisconnectUser: vi.fn(),
     getUserSpaceEntries: vi.fn(() => new Map()),
+    addUserSpace: vi.fn(),
+    pushReadyPayload: vi.fn(),
+    clearVoiceUserStatus: vi.fn(),
+    getRoomParticipants: vi.fn(() => []),
+    leaveRoom: vi.fn(),
+    getAllRooms: vi.fn(() => []),
   },
 }));
 
@@ -58,9 +65,11 @@ function applyMigrations(db: Database.Database): void {
 async function buildApp(): Promise<FastifyInstance> {
   const { spaceRoutes } = await import('./spaces.js');
   const { channelRoutes } = await import('./channels.js');
+  const { spaceEvolutionRoutes } = await import('./spaceEvolution.js');
   const f = Fastify({ logger: false });
   await f.register(spaceRoutes);
   await f.register(channelRoutes);
+  await f.register(spaceEvolutionRoutes);
   await f.ready();
   return f;
 }
@@ -303,8 +312,9 @@ describe('Server Evolutions channel limits (POST /api/spaces/:id/channels)', () 
 });
 
 describe('Netrex cosmetic gate — space banner (PATCH /api/spaces/:id)', () => {
-  it('stores the banner when the owner has Netrex', async () => {
+  it('stores a static banner when the owner has Netrex AND level >= 1', async () => {
     setOwnerNetrex(true);
+    setEvoLevel(1);
     const res = await app.inject({
       method: 'PATCH',
       url: `/api/spaces/${SPACE_ID}`,
@@ -325,5 +335,307 @@ describe('Netrex cosmetic gate — space banner (PATCH /api/spaces/:id)', () => 
     });
     expect(res.statusCode).toBe(200);
     expect(res.json().banner).toBeNull();
+  });
+});
+
+// ─── Catalog tests (TAREA 2) ───────────────────────────────────────────
+
+function patchSpace(payload: Record<string, unknown>, userId = OWNER_ID) {
+  return app.inject({
+    method: 'PATCH',
+    url: `/api/spaces/${SPACE_ID}`,
+    headers: { Authorization: `Bearer ${tokenFor(userId)}` },
+    payload,
+  });
+}
+
+describe('Catalog — animated banner gate (N2 only)', () => {
+  it('rejects an animated banner at level 1 with 403 evo_required', async () => {
+    setOwnerNetrex(true);
+    setEvoLevel(1);
+    const res = await patchSpace({ banner: '/api/uploads/banner.gif', bannerContentType: 'image/gif' });
+    expect(res.statusCode).toBe(403);
+    expect(res.json().code).toBe('evo_required');
+  });
+
+  it('accepts an animated banner at level 2 and stores the content type', async () => {
+    setOwnerNetrex(true);
+    setEvoLevel(2);
+    const res = await patchSpace({ banner: '/api/uploads/banner.gif', bannerContentType: 'image/gif' });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().banner).toBe('/api/uploads/banner.gif');
+    expect(res.json().bannerContentType).toBe('image/gif');
+  });
+
+  it('accepts a static banner at level 1 (content type cleared)', async () => {
+    setOwnerNetrex(true);
+    setEvoLevel(1);
+    const res = await patchSpace({ banner: '/api/uploads/banner.png', bannerContentType: 'image/png' });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().bannerContentType).toBeNull();
+  });
+});
+
+describe('Catalog — animated icon gate (N1+)', () => {
+  it('rejects an animated icon at level 0 with 403 evo_required', async () => {
+    setOwnerNetrex(true);
+    setEvoLevel(0);
+    const res = await patchSpace({ icon: '/api/uploads/icon.gif', iconContentType: 'image/gif' });
+    expect(res.statusCode).toBe(403);
+    expect(res.json().code).toBe('evo_required');
+  });
+
+  it('accepts an animated icon at level 1', async () => {
+    setOwnerNetrex(true);
+    setEvoLevel(1);
+    const res = await patchSpace({ icon: '/api/uploads/icon.gif', iconContentType: 'image/gif' });
+    expect(res.statusCode).toBe(200);
+  });
+});
+
+describe('Catalog — custom role colors (base 1, N1 5, N2 unlimited)', () => {
+  async function createRole(name: string, color?: string) {
+    return app.inject({
+      method: 'POST',
+      url: `/api/spaces/${SPACE_ID}/roles`,
+      headers: { Authorization: `Bearer ${tokenFor(OWNER_ID)}` },
+      payload: { name, color },
+    });
+  }
+
+  it('allows only 1 custom color at base level', async () => {
+    setOwnerNetrex(false);
+    setEvoLevel(0);
+    expect((await createRole('gold', '#ffd700')).statusCode).toBe(201);
+    const res = await createRole('silver', '#c0c0c0');
+    expect(res.statusCode).toBe(403);
+    expect(res.json().code).toBe('evo_role_color_limit');
+    // Default color never trips the gate
+    expect((await createRole('plain')).statusCode).toBe(201);
+  });
+
+  it('allows 5 custom colors at level 1 and unlimited at level 2', async () => {
+    setOwnerNetrex(true);
+    setEvoLevel(1);
+    for (let i = 0; i < 5; i++) {
+      expect((await createRole(`c${i}`, `#aa000${i}`)).statusCode).toBe(201);
+    }
+    expect((await createRole('c5', '#aa0005')).statusCode).toBe(403);
+    // Level up to 2 → unlimited
+    setEvoLevel(2);
+    expect((await createRole('c5', '#aa0005')).statusCode).toBe(201);
+    expect((await createRole('c6', '#aa0006')).statusCode).toBe(201);
+  });
+});
+
+describe('Catalog — custom emojis (0 base, 10 N1, 30 N2)', () => {
+  function createEmoji(name: string) {
+    return app.inject({
+      method: 'POST',
+      url: `/api/spaces/${SPACE_ID}/emojis`,
+      headers: { Authorization: `Bearer ${tokenFor(OWNER_ID)}` },
+      payload: { name, file: '/api/uploads/e.png' },
+    });
+  }
+
+  it('rejects emoji creation at base level with evo_required', async () => {
+    setOwnerNetrex(true);
+    setEvoLevel(0);
+    const res = await createEmoji('party');
+    expect(res.statusCode).toBe(403);
+    expect(res.json().code).toBe('evo_required');
+  });
+
+  it('enforces the 10-emoji limit at level 1 with evo_emoji_limit', async () => {
+    setOwnerNetrex(true);
+    setEvoLevel(1);
+    for (let i = 0; i < 10; i++) {
+      expect((await createEmoji(`emo${i}`)).statusCode).toBe(201);
+    }
+    const res = await createEmoji('emo10');
+    expect(res.statusCode).toBe(403);
+    expect(res.json().code).toBe('evo_emoji_limit');
+  });
+
+  it('validates name format and duplicates', async () => {
+    setOwnerNetrex(true);
+    setEvoLevel(1);
+    expect((await createEmoji('X')).statusCode).toBe(400); // too short
+    expect((await createEmoji('Bad Name!')).statusCode).toBe(400); // invalid chars
+    expect((await createEmoji('dup')).statusCode).toBe(201);
+    expect((await createEmoji('dup')).statusCode).toBe(409);
+  });
+
+  it('allows 30 emojis at level 2', async () => {
+    setOwnerNetrex(true);
+    setEvoLevel(2);
+    for (let i = 0; i < 30; i++) {
+      expect((await createEmoji(`n2e${i}`)).statusCode).toBe(201);
+    }
+    expect((await createEmoji('n2e30')).statusCode).toBe(403);
+  });
+});
+
+describe('Catalog — custom invite slug (N1+)', () => {
+  function setSlug(slug: string | null) {
+    return app.inject({
+      method: 'PATCH',
+      url: `/api/spaces/${SPACE_ID}/invite-slug`,
+      headers: { Authorization: `Bearer ${tokenFor(OWNER_ID)}` },
+      payload: { slug },
+    });
+  }
+
+  it('rejects a slug at base level with evo_required', async () => {
+    setOwnerNetrex(true);
+    setEvoLevel(0);
+    const res = await setSlug('my-server');
+    expect(res.statusCode).toBe(403);
+    expect(res.json().code).toBe('evo_required');
+  });
+
+  it('validates format and reserved words at level 1', async () => {
+    setOwnerNetrex(true);
+    setEvoLevel(1);
+    expect((await setSlug('x')).statusCode).toBe(400); // too short
+    expect((await setSlug('My Server')).statusCode).toBe(400); // spaces/case
+    expect((await setSlug('-bad-')).statusCode).toBe(400); // edge hyphens
+    expect((await setSlug('join')).statusCode).toBe(409); // reserved
+  });
+
+  it('sets a valid slug and rejects duplicates with evo_slug_taken', async () => {
+    setOwnerNetrex(true);
+    setEvoLevel(1);
+    expect((await setSlug('my-server')).statusCode).toBe(200);
+    testDb.insert(schema.spaces).values({
+      id: 'space-2',
+      name: 'Other',
+      ownerId: OWNER_ID,
+      serverEvoLevel: 1,
+      createdAt: Date.now(),
+    }).run();
+    const res = await app.inject({
+      method: 'PATCH',
+      url: '/api/spaces/space-2/invite-slug',
+      headers: { Authorization: `Bearer ${tokenFor(OWNER_ID)}` },
+      payload: { slug: 'my-server' },
+    });
+    expect(res.statusCode).toBe(409);
+    expect(res.json().code).toBe('evo_slug_taken');
+  });
+
+  it('clears the slug with null', async () => {
+    setOwnerNetrex(true);
+    setEvoLevel(1);
+    await setSlug('my-server');
+    const res = await setSlug(null);
+    expect(res.statusCode).toBe(200);
+    expect(res.json().customInviteSlug).toBeNull();
+  });
+});
+
+describe('Catalog — event rooms (N1+)', () => {
+  it('accepts an event stage at level 1 and stores the flag', async () => {
+    setOwnerNetrex(true);
+    setEvoLevel(1);
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/spaces/${SPACE_ID}/channels`,
+      headers: { Authorization: `Bearer ${tokenFor(OWNER_ID)}` },
+      payload: { name: 'main-stage', type: 'voice', isEventStage: true },
+    });
+    expect(res.statusCode).toBe(201);
+    expect(res.json().isEventStage).toBe(true);
+  });
+
+  it('rejects an event stage at level 0 with evo_required', async () => {
+    setOwnerNetrex(true);
+    setEvoLevel(0);
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/spaces/${SPACE_ID}/channels`,
+      headers: { Authorization: `Bearer ${tokenFor(OWNER_ID)}` },
+      payload: { name: 'stage-x', type: 'voice', isEventStage: true },
+    });
+    expect(res.statusCode).toBe(403);
+    expect(res.json().code).toBe('evo_required');
+  });
+
+  it('rejects a text channel flagged as event stage', async () => {
+    setOwnerNetrex(true);
+    setEvoLevel(1);
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/spaces/${SPACE_ID}/channels`,
+      headers: { Authorization: `Bearer ${tokenFor(OWNER_ID)}` },
+      payload: { name: 'stage-text', type: 'text', isEventStage: true },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+});
+
+describe('Catalog — space stats (N2)', () => {
+  function getStats() {
+    return app.inject({
+      method: 'GET',
+      url: `/api/spaces/${SPACE_ID}/stats`,
+      headers: { Authorization: `Bearer ${tokenFor(OWNER_ID)}` },
+    });
+  }
+
+  it('rejects stats at level 1 with evo_required', async () => {
+    setOwnerNetrex(true);
+    setEvoLevel(1);
+    const res = await getStats();
+    expect(res.statusCode).toBe(403);
+    expect(res.json().code).toBe('evo_required');
+  });
+
+  it('returns real counts at level 2', async () => {
+    setOwnerNetrex(true);
+    setEvoLevel(2);
+    const res = await getStats();
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.spaceId).toBe(SPACE_ID);
+    expect(body.memberCount).toBe(2);
+    expect(typeof body.messageCount).toBe('number');
+    expect(body.createdAt).toBeGreaterThan(0);
+  });
+});
+
+describe('Catalog — GET /api/spaces/:id/evolution state', () => {
+  it('reports stored vs effective level and per-benefit availability', async () => {
+    setOwnerNetrex(true);
+    setEvoLevel(2);
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/spaces/${SPACE_ID}/evolution`,
+      headers: { Authorization: `Bearer ${tokenFor(OWNER_ID)}` },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.serverEvoLevel).toBe(2);
+    expect(body.effectiveLevel).toBe(2);
+    expect(body.benefits.animatedBanner).toBe(true);
+    expect(body.benefits.spaceStats).toBe(true);
+    expect(body.emojiLimit).toBe(30);
+  });
+
+  it('clamps effectiveLevel to base when Netrex lapses (freeze rule)', async () => {
+    setOwnerNetrex(true);
+    setEvoLevel(2);
+    setOwnerNetrex(false);
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/spaces/${SPACE_ID}/evolution`,
+      headers: { Authorization: `Bearer ${tokenFor(OWNER_ID)}` },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.serverEvoLevel).toBe(2); // stored level survives
+    expect(body.effectiveLevel).toBe(0); // enforcement clamps to base
+    expect(body.benefits.banner).toBe(false);
+    expect(body.emojiLimit).toBe(0);
   });
 });

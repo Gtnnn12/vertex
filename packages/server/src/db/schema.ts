@@ -61,8 +61,25 @@ export const spaces = sqliteTable('spaces', {
   description: text('description'),
   /** Server Evolutions level (0 = base, 1, 2). Gated on the owner's real Netrex entitlement. */
   serverEvoLevel: integer('server_evo_level').notNull().default(0),
+  /** Custom invite slug (Evolutions level 1+). Null = random code. */
+  customInviteSlug: text('custom_invite_slug'),
+  /** Uploaded media MIME type of the banner ('image/gif' = animated, N2 only). */
+  bannerContentType: text('banner_content_type'),
   createdAt: integer('created_at').notNull(),
 });
+
+export const spaceEmojis = sqliteTable('space_emojis', {
+  id: text('id').primaryKey(),
+  spaceId: text('space_id').notNull().references(() => spaces.id, { onDelete: 'cascade' }),
+  /** Lowercase handle used as :name: — unique per space. */
+  name: text('name').notNull(),
+  /** Upload filename/path, same convention as avatars/banners. */
+  file: text('file').notNull(),
+  createdBy: text('created_by').notNull().references(() => users.id),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  uniqueName: uniqueIndex('space_emojis_space_name_unique').on(table.spaceId, table.name),
+}));
 
 export const spaceMembers = sqliteTable('space_members', {
   spaceId: text('space_id').notNull().references(() => spaces.id, { onDelete: 'cascade' }),
@@ -92,6 +109,8 @@ export const channels = sqliteTable('channels', {
   topic: text('topic'),
   position: integer('position').default(0),
   categoryId: text('category_id'),
+  /** Salas de eventos (event rooms) — Evolutions level 1+, voice only. */
+  isEventStage: integer('is_event_stage', { mode: 'boolean' }).default(false),
   createdAt: integer('created_at').notNull(),
 }, (table) => ({
   spaceIdx: index('idx_channels_space_id').on(table.spaceId),

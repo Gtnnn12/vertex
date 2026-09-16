@@ -2,13 +2,28 @@ import { useState } from 'react';
 import { useSpaceStore, getApiForOrigin, getMyUserIdForOrigin } from '../../../stores/spaceStore';
 import { useUIStore } from '../../../stores/uiStore';
 import { useLanguage } from '../../../contexts/LanguageContext';
-import { MAX_EVO_LEVEL, EVO_CHANNEL_LIMITS } from '@backspace/shared/src/evoConstants.js';
+import { MAX_EVO_LEVEL, EVO_CHANNEL_LIMITS, EVO_ROLE_COLOR_LIMITS, EVO_EMOJI_LIMITS } from '@backspace/shared/src/evoConstants.js';
 
 interface EvolutionsPanelProps {
   spaceId: string;
 }
 
 const LEVELS = [0, 1, 2];
+
+/** One row of the benefit catalog: min level + i18n key. */
+const BENEFIT_ROWS: { key: string; minLevel: number }[] = [
+  { key: 'evo_b_channels', minLevel: 0 },
+  { key: 'evo_b_banner', minLevel: 1 },
+  { key: 'evo_b_animated_icon', minLevel: 1 },
+  { key: 'evo_b_role_colors', minLevel: 1 },
+  { key: 'evo_b_invite_slug', minLevel: 1 },
+  { key: 'evo_b_emojis', minLevel: 1 },
+  { key: 'evo_b_event_rooms', minLevel: 1 },
+  { key: 'evo_b_animated_banner', minLevel: 2 },
+  { key: 'evo_b_role_colors_unlimited', minLevel: 2 },
+  { key: 'evo_b_emojis_30', minLevel: 2 },
+  { key: 'evo_b_stats', minLevel: 2 },
+];
 
 export function EvolutionsPanel({ spaceId }: EvolutionsPanelProps) {
   const spaces = useSpaceStore((s) => s.spaces);
@@ -59,38 +74,65 @@ export function EvolutionsPanel({ spaceId }: EvolutionsPanelProps) {
       <h2 className="text-lg font-semibold text-txt-primary mb-6">{t('evo_title')}</h2>
       <p className="text-xs text-txt-tertiary -mt-3">{t('evo_subtitle')}</p>
 
-      {/* Level cards */}
-      <div className="space-y-2.5">
-        {LEVELS.map((lvl) => {
-          const limits = EVO_CHANNEL_LIMITS[lvl as 0 | 1 | 2];
-          const isCurrent = lvl === currentLevel;
-          return (
-            <div
-              key={lvl}
-              className={`rounded-lg p-3.5 border transition-colors ${
-                isCurrent
-                  ? 'bg-interactive-selected border-accent-primary/40'
-                  : 'bg-white/[0.02] border-white/[0.05]'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-1.5">
-                <div className="text-sm font-medium text-txt-primary">
-                  {lvl === 0 ? t('evo_level_base') : t('evo_level_n').replace('{n}', String(lvl))}
-                </div>
-                {isCurrent && (
-                  <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-accent-primary/20 text-accent-primary">
-                    {t('evo_current')}
-                  </span>
-                )}
-              </div>
-              <div className="text-xs text-txt-tertiary">
-                {t('evo_benefit_channels')
-                  .replace('{text}', String(limits.text))
-                  .replace('{voice}', String(limits.voice))}
-              </div>
-            </div>
-          );
-        })}
+      {/* Full benefit catalog: 🔒 locked / ✅ unlocked per level column */}
+      <div className="rounded-lg border border-white/[0.05] overflow-hidden">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-white/[0.03]">
+              <th className="px-3 py-2 text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider">
+                {t('evo_table_benefit')}
+              </th>
+              {LEVELS.map((lvl) => (
+                <th
+                  key={lvl}
+                  className={`px-2 py-2 text-[11px] font-semibold uppercase tracking-wider text-center w-20 ${
+                    lvl === currentLevel ? 'text-accent-primary' : 'text-txt-tertiary'
+                  }`}
+                >
+                  {lvl === 0 ? t('evo_level_base_short') : t('evo_level_n_short').replace('{n}', String(lvl))}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {BENEFIT_ROWS.map((row) => {
+              const fmt = (key: string, lvl: number): string => {
+                let s = t(key);
+                if (key === 'evo_b_channels') {
+                  const limits = EVO_CHANNEL_LIMITS[lvl as 0 | 1 | 2];
+                  s = s.replace('{text}', String(limits.text)).replace('{voice}', String(limits.voice));
+                } else if (key === 'evo_b_role_colors') {
+                  s = s.replace('{n}', String(EVO_ROLE_COLOR_LIMITS[1]));
+                } else if (key === 'evo_b_emojis') {
+                  s = s.replace('{n}', String(EVO_EMOJI_LIMITS[1]));
+                }
+                return s;
+              };
+              return (
+                <tr
+                  key={row.key}
+                  className={`border-t border-white/[0.04] ${row.minLevel === currentLevel ? 'bg-interactive-selected/30' : ''}`}
+                >
+                  <td className="px-3 py-2 text-[13px] text-txt-secondary">
+                    {row.minLevel === 0
+                      ? fmt(row.key, currentLevel)
+                      : fmt(row.key, row.minLevel)}
+                  </td>
+                  {LEVELS.map((lvl) => {
+                    const unlocked = lvl >= row.minLevel;
+                    return (
+                      <td key={lvl} className="px-2 py-2 text-center">
+                        <span aria-hidden="true" className={unlocked ? 'text-accent-primary' : 'text-txt-tertiary/50'}>
+                          {unlocked ? '✅' : '🔒'}
+                        </span>
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
 
       {/* Owner CTA */}

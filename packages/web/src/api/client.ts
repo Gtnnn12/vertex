@@ -172,6 +172,12 @@ export class BackspaceApiClient {
     unban: (spaceId: string, userId: string) => Promise<{ success: boolean }>;
     transferOwnership: (spaceId: string, newOwnerId: string) => Promise<Space>;
     evolve: (spaceId: string, targetLevel: 1 | 2) => Promise<Space>;
+    evolution: (spaceId: string) => Promise<import('@backspace/shared').EvolutionState>;
+    emojis: (spaceId: string) => Promise<{ emojis: import('@backspace/shared').SpaceEmoji[]; limit: number }>;
+    createEmoji: (spaceId: string, data: { name: string; file: string }) => Promise<{ emoji: import('@backspace/shared').SpaceEmoji | null; limit: number }>;
+    deleteEmoji: (spaceId: string, emojiId: string) => Promise<{ success: boolean }>;
+    setInviteSlug: (spaceId: string, slug: string | null) => Promise<{ customInviteSlug: string | null }>;
+    stats: (spaceId: string) => Promise<import('@backspace/shared').SpaceStats>;
     invitePreview: (code: string) => Promise<InvitePreview>;
   };
 
@@ -552,6 +558,18 @@ export class BackspaceApiClient {
         request<Space>('PATCH', `/spaces/${spaceId}/transfer-ownership`, { newOwnerId }),
       evolve: (spaceId: string, targetLevel: 1 | 2) =>
         request<Space>('POST', `/spaces/${spaceId}/evolution`, { targetLevel }),
+      evolution: (spaceId: string) =>
+        request<import('@backspace/shared').EvolutionState>('GET', `/spaces/${spaceId}/evolution`),
+      emojis: (spaceId: string) =>
+        request<{ emojis: import('@backspace/shared').SpaceEmoji[]; limit: number }>('GET', `/spaces/${spaceId}/emojis`),
+      createEmoji: (spaceId: string, data: { name: string; file: string }) =>
+        request<{ emoji: import('@backspace/shared').SpaceEmoji | null; limit: number }>('POST', `/spaces/${spaceId}/emojis`, data),
+      deleteEmoji: (spaceId: string, emojiId: string) =>
+        request<{ success: boolean }>('DELETE', `/spaces/${spaceId}/emojis/${emojiId}`),
+      setInviteSlug: (spaceId: string, slug: string | null) =>
+        request<{ customInviteSlug: string | null }>('PATCH', `/spaces/${spaceId}/invite-slug`, { slug }),
+      stats: (spaceId: string) =>
+        request<import('@backspace/shared').SpaceStats>('GET', `/spaces/${spaceId}/stats`),
       invitePreview: (code: string) =>
         request<InvitePreview>('GET', `/spaces/invite/${encodeURIComponent(code)}/preview`, undefined, false),
     };

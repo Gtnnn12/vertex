@@ -187,6 +187,10 @@ export interface Space {
   description: string | null;
   /** Server Evolutions level (0 = base, 1, 2). Server-side gated on the owner's Netrex entitlement. */
   serverEvoLevel: number;
+  /** Custom invite slug (Evolutions level 1+). Null = random code or none. */
+  customInviteSlug: string | null;
+  /** Uploaded media MIME type of the banner ('image/gif' = animated, N2 only). */
+  bannerContentType: string | null;
   createdAt: number;
 }
 
@@ -307,6 +311,8 @@ export interface Channel {
   position: number;
   categoryId: string | null;
   isPrivate?: boolean;
+  /** Salas de eventos (event rooms) — Evolutions level 1+, voice channels only. */
+  isEventStage?: boolean;
   createdAt: number;
   lastMessageId?: string | null;
   myPermissions?: string; // Computed per-user BigInt decimal string
@@ -696,6 +702,8 @@ export interface CreateChannelRequest {
   type: ChannelType;
   topic?: string;
   categoryId?: string;
+  /** Salas de eventos (event rooms) — Evolutions level 1+. Voice-only flag. */
+  isEventStage?: boolean;
 }
 
 export interface UpdateChannelRequest {
@@ -708,7 +716,11 @@ export interface UpdateChannelRequest {
 export interface UpdateSpaceRequest {
   name?: string;
   icon?: string;
+  /** Uploaded icon media MIME type — animated icon requires Evolutions N1+. */
+  iconContentType?: string;
   banner?: string;
+  /** Uploaded banner media MIME type — animated banner requires Evolutions N2. */
+  bannerContentType?: string;
   avatarColor?: string;
   visibility?: SpaceVisibility;
   description?: string;
@@ -717,6 +729,55 @@ export interface UpdateSpaceRequest {
 /** POST /api/spaces/:id/evolution — evolve to the next Server Evolutions level. */
 export interface EvolveSpaceRequest {
   targetLevel: 1 | 2;
+}
+
+/** Custom space emoji (Server Evolutions level 1+). */
+export interface SpaceEmoji {
+  id: string;
+  spaceId: string;
+  name: string;
+  file: string;
+  createdBy: string;
+  createdAt: number;
+}
+
+export interface CreateSpaceEmojiRequest {
+  name: string;
+  file: string;
+}
+
+/** PATCH /api/spaces/:id/invite-slug — custom invite URL (Evolutions level 1+). */
+export interface SetInviteSlugRequest {
+  slug: string | null;
+}
+
+/** GET /api/spaces/:id/evolution — full evolution state for the settings panel. */
+export interface EvolutionState {
+  serverEvoLevel: number;
+  effectiveLevel: number;
+  emojiLimit: number;
+  emojiCount: number;
+  benefits: {
+    banner: boolean;
+    animatedIcon: boolean;
+    customInviteSlug: boolean;
+    eventChannels: boolean;
+    animatedBanner: boolean;
+    spaceStats: boolean;
+  };
+}
+
+/** GET /api/spaces/:id/stats — space statistics (Evolutions level 2). */
+export interface SpaceStats {
+  spaceId: string;
+  memberCount: number;
+  messageCount: number;
+  channelCount: number;
+  voiceChannelCount: number;
+  roleCount: number;
+  emojiCount: number;
+  activeMembers7d: number;
+  createdAt: number;
 }
 
 export interface UpdateUserRequest {
