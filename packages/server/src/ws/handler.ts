@@ -1319,6 +1319,7 @@ function buildReadyPayload(userId: string): {
         inviteCode: spaceRow.inviteCode,
         visibility: (spaceRow.visibility ?? 'private') as SpaceWithChannelsAndMembers['visibility'],
         description: spaceRow.description ?? null,
+        serverEvoLevel: spaceRow.serverEvoLevel ?? 0,
         createdAt: spaceRow.createdAt,
         channels: visibleChannels,
         categories: categoriesBySpace.get(spaceRow.id) ?? [],

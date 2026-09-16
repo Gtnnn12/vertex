@@ -171,6 +171,7 @@ export class BackspaceApiClient {
     ban: (spaceId: string, userId: string, reason?: string) => Promise<{ success: boolean }>;
     unban: (spaceId: string, userId: string) => Promise<{ success: boolean }>;
     transferOwnership: (spaceId: string, newOwnerId: string) => Promise<Space>;
+    evolve: (spaceId: string, targetLevel: 1 | 2) => Promise<Space>;
     invitePreview: (code: string) => Promise<InvitePreview>;
   };
 
@@ -549,6 +550,8 @@ export class BackspaceApiClient {
         request<{ success: boolean }>('DELETE', `/spaces/${spaceId}/bans/${userId}`),
       transferOwnership: (spaceId: string, newOwnerId: string) =>
         request<Space>('PATCH', `/spaces/${spaceId}/transfer-ownership`, { newOwnerId }),
+      evolve: (spaceId: string, targetLevel: 1 | 2) =>
+        request<Space>('POST', `/spaces/${spaceId}/evolution`, { targetLevel }),
       invitePreview: (code: string) =>
         request<InvitePreview>('GET', `/spaces/invite/${encodeURIComponent(code)}/preview`, undefined, false),
     };

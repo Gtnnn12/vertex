@@ -8,6 +8,7 @@ import { permissionsToString } from '@backspace/shared/src/permissions.js';
 import { connectionManager } from '../ws/handler.js';
 import { checkVoicePermissions } from '../ws/events.js';
 import { deleteAttachmentFiles } from '../utils/fileCleanup.js';
+import { assertChannelLimit } from '../utils/evoLimits.js';
 import type {
   CreateChannelRequest,
   UpdateChannelRequest,
@@ -221,16 +222,35 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
     const channelId = generateSnowflake();
     const now = Date.now();
 
-    db.insert(schema.channels).values({
-      id: channelId,
-      spaceId: id,
-      name: trimmedName,
-      type,
-      topic: topic?.trim() || null,
-      position: maxPosition + 1,
-      categoryId: validCategoryId,
-      createdAt: now,
-    }).run();
+    // Server Evolutions channel-limit enforcement: count real channels and
+    // reject inside the same write transaction that inserts the channel, so
+    // concurrent creations cannot race past the limit.
+    try {
+      db.transaction((tx) => {
+        assertChannelLimit(space, type);
+        tx.insert(schema.channels).values({
+          id: channelId,
+          spaceId: id,
+          name: trimmedName,
+          type,
+          topic: topic?.trim() || null,
+          position: maxPosition + 1,
+          categoryId: validCategoryId,
+          createdAt: now,
+        }).run();
+      });
+    } catch (err) {
+      const e = err as Error & { statusCode?: number; code?: string; limit?: number };
+      if (e.statusCode === 403 && e.code) {
+        return reply.code(403).send({
+          error: e.message,
+          code: e.code,
+          limit: e.limit,
+          statusCode: 403,
+        });
+      }
+      throw err;
+    }
 
     const channel = db.select().from(schema.channels).where(eq(schema.channels.id, channelId)).get();
     if (!channel) {

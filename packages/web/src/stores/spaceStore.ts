@@ -889,6 +889,7 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
       inviteCode: s.inviteCode,
       visibility: s.visibility ?? 'private' as const,
       description: s.description ?? null,
+      serverEvoLevel: s.serverEvoLevel ?? 0,
       createdAt: s.createdAt,
       _instanceOrigin: origin,
     }));
@@ -1108,6 +1109,7 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
       inviteCode: space.inviteCode,
       visibility: space.visibility,
       description: space.description,
+      serverEvoLevel: space.serverEvoLevel ?? 0,
       createdAt: space.createdAt,
       _instanceOrigin: origin,
     };

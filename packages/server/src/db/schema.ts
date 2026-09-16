@@ -59,6 +59,8 @@ export const spaces = sqliteTable('spaces', {
   inviteCode: text('invite_code').unique(),
   visibility: text('visibility').default('private'),
   description: text('description'),
+  /** Server Evolutions level (0 = base, 1, 2). Gated on the owner's real Netrex entitlement. */
+  serverEvoLevel: integer('server_evo_level').notNull().default(0),
   createdAt: integer('created_at').notNull(),
 });
 

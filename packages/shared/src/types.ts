@@ -185,6 +185,8 @@ export interface Space {
   inviteCode: string | null;
   visibility: SpaceVisibility;
   description: string | null;
+  /** Server Evolutions level (0 = base, 1, 2). Server-side gated on the owner's Netrex entitlement. */
+  serverEvoLevel: number;
   createdAt: number;
 }
 
@@ -710,6 +712,11 @@ export interface UpdateSpaceRequest {
   avatarColor?: string;
   visibility?: SpaceVisibility;
   description?: string;
+}
+
+/** POST /api/spaces/:id/evolution — evolve to the next Server Evolutions level. */
+export interface EvolveSpaceRequest {
+  targetLevel: 1 | 2;
 }
 
 export interface UpdateUserRequest {

@@ -165,6 +165,7 @@ function buildFullSpace(spaceId: string, forUserId: string): SpaceWithChannelsAn
     inviteCode: space.inviteCode,
     visibility: (space.visibility ?? 'private') as SpaceWithChannelsAndMembers['visibility'],
     description: space.description ?? null,
+    serverEvoLevel: space.serverEvoLevel ?? 0,
     createdAt: space.createdAt,
     channels: visibleChannels,
     categories,
