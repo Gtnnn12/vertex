@@ -6,7 +6,6 @@ import { useSettingsStore } from '../../stores/settingsStore';
 import { Avatar } from '../ui/Avatar';
 import { api } from '../../api/client';
 import { hasPermissionBit, PermissionBits } from '../../utils/permissions';
-import { getMyUserIdForOrigin } from '../../stores/spaceStore';
 import { OverviewPanel } from './spaceSettingsPanels/OverviewPanel';
 import { EvolutionsPanel } from './spaceSettingsPanels/EvolutionsPanel';
 import { MembersPanel } from './spaceSettingsPanels/MembersPanel';
@@ -277,7 +276,6 @@ export function SpaceSettingsModal() {
   const canManageSpace = hasPermissionBit(mySpacePerms, PermissionBits.MANAGE_SPACE);
   const canManageRoles = hasPermissionBit(mySpacePerms, PermissionBits.MANAGE_ROLES);
   const canBanMembers = hasPermissionBit(mySpacePerms, PermissionBits.BAN_MEMBERS);
-  const isOwner = !!space && space.ownerId === getMyUserIdForOrigin((space as any)?._instanceOrigin ?? '');
 
   // Reset tab and mobile view when modal opens
   useEffect(() => {
@@ -324,9 +322,9 @@ export function SpaceSettingsModal() {
             {canManageSpace && (
               <button onClick={() => handleTabClick('discovery')} className={tabClass('discovery')}>Discovery</button>
             )}
-            {isOwner && (
-              <button onClick={() => handleTabClick('evolutions')} className={tabClass('evolutions')}>Evolutions</button>
-            )}
+            {/* Evoluciones visible para TODOS los miembros: el nivel sube con
+                las mejoras de la comunidad; cualquier miembro puede comprar. */}
+            <button onClick={() => handleTabClick('evolutions')} className={tabClass('evolutions')}>Evolutions</button>
 
             <div className="border-t border-white/[0.04] my-2 mx-2" />
             <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-3 py-1">Management</div>
@@ -362,9 +360,7 @@ export function SpaceSettingsModal() {
               {canManageSpace && (
                 <button onClick={() => handleTabClick('discovery')} className={tabClass('discovery')}>Discovery</button>
               )}
-              {isOwner && (
-                <button onClick={() => handleTabClick('evolutions')} className={tabClass('evolutions')}>Evolutions</button>
-              )}
+              <button onClick={() => handleTabClick('evolutions')} className={tabClass('evolutions')}>Evolutions</button>
 
               <div className="border-t border-white/[0.04] my-2 mx-2" />
               <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-3 py-1">Management</div>
@@ -397,7 +393,7 @@ export function SpaceSettingsModal() {
                 </button>
               )}
               {tab === 'overview' && <OverviewPanel spaceId={currentSpaceId} />}
-              {tab === 'evolutions' && isOwner && <EvolutionsPanel spaceId={currentSpaceId} />}
+              {tab === 'evolutions' && <EvolutionsPanel spaceId={currentSpaceId} />}
               {tab === 'discovery' && canManageSpace && <DiscoveryPanel spaceId={currentSpaceId} />}
               {tab === 'members' && <MembersPanel spaceId={currentSpaceId} />}
               {tab === 'roles' && canManageRoles && <RolesPanel spaceId={currentSpaceId} />}

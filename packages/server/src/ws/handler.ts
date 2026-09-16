@@ -22,6 +22,7 @@ import type {
 } from '@backspace/shared';
 import { sanitizeUser } from '../utils/sanitize.js';
 import { collectProfileBroadcastTargetIds } from '../utils/userDeletion.js';
+import { getEvoState } from '../utils/evoLimits.js';
 
 // ─── Heartbeat State ──────────────────────────────────────────────────────────
 const wsIsAlive: WeakMap<WebSocket, boolean> = new WeakMap();
@@ -1319,7 +1320,8 @@ function buildReadyPayload(userId: string): {
         inviteCode: spaceRow.inviteCode,
         visibility: (spaceRow.visibility ?? 'private') as SpaceWithChannelsAndMembers['visibility'],
         description: spaceRow.description ?? null,
-        serverEvoLevel: spaceRow.serverEvoLevel ?? 0,
+        // Modelo boosts: nivel derivado (nº de mejoras activas), no almacenado.
+        serverEvoLevel: getEvoState(spaceRow).effectiveLevel,
         customInviteSlug: spaceRow.customInviteSlug ?? null,
         bannerContentType: spaceRow.bannerContentType ?? null,
         createdAt: spaceRow.createdAt,

@@ -6,6 +6,7 @@ import { generateSnowflake } from '../utils/snowflake.js';
 import { isMember, isBanned, isSpaceOwner, hasPermission, computePermissions, PermissionBits, permissionsToString } from '../utils/permissions.js';
 import { connectionManager } from '../ws/handler.js';
 import { sanitizeUser } from '../utils/sanitize.js';
+import { getEvoState } from '../utils/evoLimits.js';
 import type {
   ExploreSpace,
   JoinRequest,
@@ -165,7 +166,7 @@ function buildFullSpace(spaceId: string, forUserId: string): SpaceWithChannelsAn
     inviteCode: space.inviteCode,
     visibility: (space.visibility ?? 'private') as SpaceWithChannelsAndMembers['visibility'],
     description: space.description ?? null,
-    serverEvoLevel: space.serverEvoLevel ?? 0,
+    serverEvoLevel: getEvoState(space).effectiveLevel,
     customInviteSlug: space.customInviteSlug ?? null,
     bannerContentType: space.bannerContentType ?? null,
     createdAt: space.createdAt,

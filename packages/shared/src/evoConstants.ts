@@ -41,3 +41,18 @@ export const EVO_REQUIREMENTS = {
 /** Slug format for custom invite URLs (e.g. /join/my-server). */
 export const CUSTOM_INVITE_SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{1,30}[a-z0-9])$/;
 export const CUSTOM_INVITE_SLUG_MAX = 32;
+
+// ─── Server Boosts (modelo estilo Nitro server boosts) ──────────────────────
+
+/** Cada mejora cuesta 2€/mes y dura 30 días. */
+export const BOOST_PRICE_LABEL = '2€';
+export const BOOST_DURATION_DAYS = 30;
+
+/** Umbral de boosts activos por nivel: 0→base, 4→Nivel 1, 10→Nivel 2. */
+export const BOOST_THRESHOLDS: readonly [4, 10] = [4, 10];
+export const BOOSTS_FOR_LEVEL_1 = BOOST_THRESHOLDS[0];
+export const BOOSTS_FOR_LEVEL_2 = BOOST_THRESHOLDS[1];
+
+/** Rol cosmético asignado al miembro que compra una mejora. CERO permisos. */
+export const BOOSTER_ROLE_DEFAULT_NAME = 'Server Booster';
+export const BOOSTER_ROLE_COLOR = '#ff73fa';

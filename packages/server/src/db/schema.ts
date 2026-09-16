@@ -68,6 +68,26 @@ export const spaces = sqliteTable('spaces', {
   createdAt: integer('created_at').notNull(),
 });
 
+export const spaceBoosts = sqliteTable('space_boosts', {
+  id: text('id').primaryKey(),
+  spaceId: text('space_id').notNull().references(() => spaces.id, { onDelete: 'cascade' }),
+  /** Member who purchased this boost (any member, not just the owner). */
+  userId: text('user_id').notNull().references(() => users.id),
+  createdAt: integer('created_at').notNull(),
+  /** Epoch ms. Expired boosts keep the row (freeze rule) but stop counting. */
+  expiresAt: integer('expires_at').notNull(),
+}, (table) => ({
+  spaceIdx: index('idx_space_boosts_space_id').on(table.spaceId),
+  userIdx: index('idx_space_boosts_user_id').on(table.userId),
+}));
+
+/** Purchased-but-not-yet-redeemed boost credits per user (billing webhook → POST /boost). */
+export const boostCredits = sqliteTable('boost_credits', {
+  userId: text('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
+  credits: integer('credits').notNull().default(0),
+  updatedAt: integer('updated_at').notNull(),
+});
+
 export const spaceEmojis = sqliteTable('space_emojis', {
   id: text('id').primaryKey(),
   spaceId: text('space_id').notNull().references(() => spaces.id, { onDelete: 'cascade' }),

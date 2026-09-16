@@ -726,9 +726,40 @@ export interface UpdateSpaceRequest {
   description?: string;
 }
 
-/** POST /api/spaces/:id/evolution — evolve to the next Server Evolutions level. */
-export interface EvolveSpaceRequest {
-  targetLevel: 1 | 2;
+/**
+ * POST /api/spaces/:id/boost — cualquier MIEMBRO canjea 1 crédito de mejora
+ * (comprado vía billing: 2€/mes por mejora). El nivel del server sube con el
+ * nº de boosts activos: 4+ → Nivel 1, 10+ → Nivel 2.
+ */
+export interface BoostSpaceRequest {
+  /** Ignorado (siempre 1 por compra); presente por simetría con el body JSON. */
+  count?: number;
+}
+
+/** Una mejora individual comprada por un miembro (space_boosts row). */
+export interface SpaceBoost {
+  id: string;
+  spaceId: string;
+  userId: string;
+  createdAt: number;
+  expiresAt: number;
+}
+
+/** GET /api/spaces/:id/boosts — estado de mejoras del server, visible para todos los miembros. */
+export interface BoostState {
+  /** Boosts no expirados (= nivel del server). */
+  activeBoosts: number;
+  serverEvoLevel: number;
+  /** Nivel real aplicable ahora mismo: activos, clamped a MAX_EVO_LEVEL. */
+  effectiveLevel: number;
+  boostsForLevel1: number;
+  boostsForLevel2: number;
+  /** Créditos sin canjear del usuario que consulta (para el CTA). */
+  myCredits: number;
+  /** Mejoras activas del usuario que consulta. */
+  myBoosts: number;
+  /** Fecha epoch ms en la que cae el próximo boost activo (progreso/barras). */
+  nextExpiryAt: number | null;
 }
 
 /** Custom space emoji (Server Evolutions level 1+). */
@@ -751,7 +782,7 @@ export interface SetInviteSlugRequest {
   slug: string | null;
 }
 
-/** GET /api/spaces/:id/evolution — full evolution state for the settings panel. */
+/** GET /api/spaces/:id/evolution — estado de evoluciones (nivel por boosts activos). */
 export interface EvolutionState {
   serverEvoLevel: number;
   effectiveLevel: number;

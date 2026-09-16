@@ -2,13 +2,14 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
-import { eq } from 'drizzle-orm';
+import { eq, gt } from 'drizzle-orm';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as schema from '../db/schema.js';
 import { setWorkerId } from '../utils/snowflake.js';
 import { signJwt } from '../utils/auth.js';
+import { DEFAULT_EVERYONE_PERMISSIONS, permissionsToString } from '@backspace/shared/src/permissions.js';
 
 setWorkerId(31);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -66,25 +67,21 @@ async function buildApp(): Promise<FastifyInstance> {
   const { spaceRoutes } = await import('./spaces.js');
   const { channelRoutes } = await import('./channels.js');
   const { spaceEvolutionRoutes } = await import('./spaceEvolution.js');
+  const { netrexRoutes } = await import('./netrex.js');
   const f = Fastify({ logger: false });
   await f.register(spaceRoutes);
   await f.register(channelRoutes);
   await f.register(spaceEvolutionRoutes);
+  await f.register(netrexRoutes);
   await f.ready();
   return f;
 }
 
 const OWNER_ID = 'owner-1';
-const OTHER_ID = 'member-1';
+const MEMBER_ID = 'member-1';
 const USERNAME = 'evotester';
 const SPACE_ID = 'space-1';
 
-// The channel POST handler calls permission helpers against the same DB.
-// computePermissions walks space_members + roles; the owner gets
-// MANAGE_CHANNELS via ADMINISTRATOR from the @everyone role defaults set up
-// below. The non-owner member only gets the @everyone defaults too, so we
-// grant them MANAGE_CHANNELS via an explicit role to prove the limit applies
-// to ANY manager, not just owners.
 function seedBase(): void {
   testDb.insert(schema.users).values([
     {
@@ -97,7 +94,7 @@ function seedBase(): void {
       createdAt: Date.now(),
     },
     {
-      id: OTHER_ID,
+      id: MEMBER_ID,
       username: 'evomember',
       displayName: 'Member',
       passwordHash: 'x',
@@ -116,35 +113,55 @@ function seedBase(): void {
 
   testDb.insert(schema.spaceMembers).values([
     { spaceId: SPACE_ID, userId: OWNER_ID, joinedAt: Date.now() },
-    { spaceId: SPACE_ID, userId: OTHER_ID, joinedAt: Date.now() },
+    { spaceId: SPACE_ID, userId: MEMBER_ID, joinedAt: Date.now() },
   ]).run();
 }
 
-function setOwnerNetrex(active: boolean): void {
-  testDb.update(schema.users)
-    .set(active ? { netrexEnabled: 1, netrexUntil: null } : { netrexEnabled: 0, netrexUntil: null })
-    .where(eq(schema.users.id, OWNER_ID))
-    .run();
-}
-
-function setEvoLevel(level: number): void {
-  testDb.update(schema.spaces)
-    .set({ serverEvoLevel: level })
-    .where(eq(schema.spaces.id, SPACE_ID))
-    .run();
+function grantCredits(userId: string, credits: number): void {
+  const existing = testDb.select().from(schema.boostCredits).where(eq(schema.boostCredits.userId, userId)).get();
+  if (existing) {
+    testDb.update(schema.boostCredits).set({ credits, updatedAt: Date.now() })
+      .where(eq(schema.boostCredits.userId, userId)).run();
+  } else {
+    testDb.insert(schema.boostCredits).values({ userId, credits, updatedAt: Date.now() }).run();
+  }
 }
 
 function tokenFor(userId: string): string {
   return signJwt({ userId, username: USERNAME });
 }
 
-function evolve(payload: Record<string, unknown>, userId = OWNER_ID) {
+function boost(userId = MEMBER_ID) {
   return app.inject({
     method: 'POST',
+    url: `/api/spaces/${SPACE_ID}/boost`,
+    headers: { Authorization: `Bearer ${tokenFor(userId)}` },
+    payload: {},
+  });
+}
+
+function getBoosts(userId = MEMBER_ID) {
+  return app.inject({
+    method: 'GET',
+    url: `/api/spaces/${SPACE_ID}/boosts`,
+    headers: { Authorization: `Bearer ${tokenFor(userId)}` },
+  });
+}
+
+function getEvolution(userId = MEMBER_ID) {
+  return app.inject({
+    method: 'GET',
     url: `/api/spaces/${SPACE_ID}/evolution`,
     headers: { Authorization: `Bearer ${tokenFor(userId)}` },
-    payload,
   });
+}
+
+function activeBoostCount(): number {
+  return testDb.select()
+    .from(schema.spaceBoosts)
+    .where(eq(schema.spaceBoosts.spaceId, SPACE_ID))
+    .all()
+    .filter((r) => r.expiresAt > Date.now()).length;
 }
 
 function createChannel(type: 'text' | 'voice', name: string, userId = OWNER_ID) {
@@ -178,464 +195,329 @@ afterEach(async () => {
   sqlite.close();
 });
 
-describe('POST /api/spaces/:id/evolution', () => {
-  it('evolves to level 1 when the owner has an active Netrex grant', async () => {
-    setOwnerNetrex(true);
-    const res = await evolve({ targetLevel: 1 });
-    expect(res.statusCode).toBe(200);
-    expect(res.json().serverEvoLevel).toBe(1);
-    expect(testDb.select().from(schema.spaces).where(eq(schema.spaces.id, SPACE_ID)).get()?.serverEvoLevel).toBe(1);
+describe('POST /api/spaces/:id/boost — compra por cualquier MIEMBRO', () => {
+  it('a normal member (not the owner) can boost with one credit', async () => {
+    grantCredits(MEMBER_ID, 1);
+    const res = await boost();
+    expect(res.statusCode).toBe(201);
+    expect(res.json().activeBoosts).toBe(1);
+    expect(res.json().serverEvoLevel).toBe(0); // 1 boost < 4 → base
+    expect(activeBoostCount()).toBe(1);
+    // Credit consumed
+    expect(testDb.select().from(schema.boostCredits).where(eq(schema.boostCredits.userId, MEMBER_ID)).get()?.credits).toBe(0);
   });
 
-  it('rejects evolution with 403 netrex_required when the owner lacks Netrex', async () => {
-    setOwnerNetrex(false);
-    const res = await evolve({ targetLevel: 1 });
+  it('rejects without credits (402 no_boost_credits) and consumes nothing', async () => {
+    const res = await boost();
+    expect(res.statusCode).toBe(402);
+    expect(res.json().code).toBe('no_boost_credits');
+    expect(activeBoostCount()).toBe(0);
+  });
+
+  it('rejects non-members (403 not_member)', async () => {
+    testDb.insert(schema.users).values({
+      id: 'outsider',
+      username: 'outsider',
+      displayName: 'Outsider',
+      passwordHash: 'x',
+      isDeleted: 0,
+      homeInstance: null,
+      createdAt: Date.now(),
+    }).run();
+    // outsider has credits but no membership
+    grantCredits('outsider', 1);
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/spaces/${SPACE_ID}/boost`,
+      headers: { Authorization: `Bearer ${tokenFor('outsider')}` },
+      payload: {},
+    });
     expect(res.statusCode).toBe(403);
-    expect(res.json().code).toBe('netrex_required');
-    expect(testDb.select().from(schema.spaces).where(eq(schema.spaces.id, SPACE_ID)).get()?.serverEvoLevel).toBe(0);
+    expect(res.json().code).toBe('not_member');
+    expect(activeBoostCount()).toBe(0);
   });
 
-  it('rejects an expired Netrex grant', async () => {
-    testDb.update(schema.users)
-      .set({ netrexEnabled: 1, netrexUntil: Date.now() - 1000 })
-      .where(eq(schema.users.id, OWNER_ID))
-      .run();
-    const res = await evolve({ targetLevel: 1 });
-    expect(res.statusCode).toBe(403);
-    expect(res.json().code).toBe('netrex_required');
+  it('the OWNER can also boost (any member, owner included)', async () => {
+    grantCredits(OWNER_ID, 1);
+    const res = await boost(OWNER_ID);
+    expect(res.statusCode).toBe(201);
   });
 
-  it('accepts a purchased plan (netrexUntil in the future)', async () => {
-    testDb.update(schema.users)
-      .set({ netrexEnabled: 0, netrexUntil: Date.now() + 30 * 24 * 60 * 60 * 1000 })
-      .where(eq(schema.users.id, OWNER_ID))
-      .run();
-    const res = await evolve({ targetLevel: 1 });
-    expect(res.statusCode).toBe(200);
-    expect(res.json().serverEvoLevel).toBe(1);
+  it('expires 30 days out', async () => {
+    grantCredits(MEMBER_ID, 1);
+    const before = Date.now();
+    const res = await boost();
+    const row = testDb.select().from(schema.spaceBoosts).where(eq(schema.spaceBoosts.spaceId, SPACE_ID)).get()!;
+    const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+    expect(row.expiresAt).toBeGreaterThanOrEqual(before + thirtyDays - 1000);
+    expect(row.expiresAt).toBeLessThanOrEqual(Date.now() + thirtyDays + 1000);
+    expect(res.json().boost.expiresAt).toBe(row.expiresAt);
   });
 
-  it('is owner-only (a MANAGE_CHANNELS admin cannot evolve)', async () => {
-    setOwnerNetrex(true);
-    const res = await evolve({ targetLevel: 1 }, OTHER_ID);
-    expect(res.statusCode).toBe(403);
+  it('level rises with each purchase: 4 boosts → N1, 10 → N2', async () => {
+    grantCredits(MEMBER_ID, 10);
+    grantCredits(OWNER_ID, 1);
+
+    for (let i = 0; i < 3; i++) {
+      const res = await boost();
+      expect(res.json().serverEvoLevel).toBe(0);
+    }
+    const res4 = await boost(OWNER_ID);
+    expect(res4.json().activeBoosts).toBe(4);
+    expect(res4.json().serverEvoLevel).toBe(1);
+    expect(res4.json().previousLevel).toBe(0);
+
+    for (let i = 0; i < 5; i++) {
+      await boost();
+    }
+    const res10 = await boost();
+    expect(res10.json().activeBoosts).toBe(10);
+    expect(res10.json().serverEvoLevel).toBe(2);
+    expect(res10.json().previousLevel).toBe(1);
+  });
+});
+
+describe('Server Booster role', () => {
+  it('assigns an idempotent "Server Booster" role to the buyer on purchase', async () => {
+    grantCredits(MEMBER_ID, 3);
+    await boost();
+    await boost();
+    await boost();
+
+    const roleId = `${SPACE_ID}:booster`;
+    const role = testDb.select().from(schema.roles).where(eq(schema.roles.id, roleId)).get();
+    expect(role).toBeTruthy();
+    expect(role!.name).toBe('Server Booster');
+    // CERO permisos extra: solo el baseline @everyone.
+    expect(role!.permissions).toBe(permissionsToString(DEFAULT_EVERYONE_PERMISSIONS));
+
+    const assignments = testDb.select()
+      .from(schema.memberRoles)
+      .where(eq(schema.memberRoles.userId, MEMBER_ID))
+      .all()
+      .filter((r) => r.roleId === roleId);
+    expect(assignments.length).toBe(1); // idempotent — no duplicates
   });
 
-  it('rejects invalid targetLevel values', async () => {
-    setOwnerNetrex(true);
-    expect((await evolve({ targetLevel: 3 })).statusCode).toBe(400);
-    expect((await evolve({ targetLevel: 0 })).statusCode).toBe(400);
-    expect((await evolve({})).statusCode).toBe(400);
-  });
-
-  it('rejects going backwards (targetLevel <= stored level)', async () => {
-    setOwnerNetrex(true);
-    setEvoLevel(2);
-    const res = await evolve({ targetLevel: 1 });
-    expect(res.statusCode).toBe(400);
-  });
-
-  it('FREEZE RULE: Netrex lapse does not downgrade the stored level', async () => {
-    setOwnerNetrex(true);
-    setEvoLevel(2);
-    setOwnerNetrex(false);
-    const state = testDb.select().from(schema.spaces).where(eq(schema.spaces.id, SPACE_ID)).get();
-    expect(state?.serverEvoLevel).toBe(2);
-    // And the GET still reports the stored level (frozen, not wiped)
+  it('the booster role is visible in the member list', async () => {
+    grantCredits(MEMBER_ID, 1);
+    await boost();
     const res = await app.inject({
       method: 'GET',
-      url: `/api/spaces/${SPACE_ID}`,
+      url: `/api/spaces/${SPACE_ID}/members`,
       headers: { Authorization: `Bearer ${tokenFor(OWNER_ID)}` },
     });
+    const members = res.json() as { userId: string; roles: { name: string }[] }[];
+    const member = members.find((m) => m.userId === MEMBER_ID)!;
+    expect(member.roles.some((r) => r.name === 'Server Booster')).toBe(true);
+  });
+});
+
+describe('Boost state endpoint (GET /api/spaces/:id/boosts)', () => {
+  it('reports active count, per-member boosts and credits', async () => {
+    grantCredits(MEMBER_ID, 2);
+    await boost();
+    await boost();
+    const res = await getBoosts();
     expect(res.statusCode).toBe(200);
-    expect(res.json().serverEvoLevel).toBe(2);
-  });
-});
-
-describe('Server Evolutions channel limits (POST /api/spaces/:id/channels)', () => {
-  it('enforces the base limit (10 text) when level is 0', async () => {
-    setOwnerNetrex(false);
-    setEvoLevel(0);
-    for (let i = 0; i < 10; i++) {
-      const res = await createChannel('text', `texto-${i}`);
-      expect(res.statusCode).toBe(201);
-    }
-    const res = await createChannel('text', 'texto-11');
-    expect(res.statusCode).toBe(403);
-    expect(res.json().code).toBe('evo_limit_base_upgrade');
-    expect(channelCountByType('text')).toBe(10);
+    const body = res.json();
+    expect(body.activeBoosts).toBe(2);
+    expect(body.myBoosts).toBe(2);
+    expect(body.myCredits).toBe(0);
+    expect(body.boostsForLevel1).toBe(4);
+    expect(body.boostsForLevel2).toBe(10);
+    expect(body.nextExpiryAt).toBeGreaterThan(Date.now());
   });
 
-  it('enforces the base voice limit (5) independently of text', async () => {
-    setOwnerNetrex(false);
-    setEvoLevel(0);
-    for (let i = 0; i < 5; i++) {
-      expect((await createChannel('voice', `voz-${i}`)).statusCode).toBe(201);
-    }
-    expect((await createChannel('voice', 'voz-6')).statusCode).toBe(403);
-    // Text still has room
-    expect((await createChannel('text', 'texto-1')).statusCode).toBe(201);
-  });
-
-  it('allows level-1 limits (20 text) only while Netrex is active', async () => {
-    setOwnerNetrex(true);
-    setEvoLevel(1);
-    for (let i = 0; i < 20; i++) {
-      expect((await createChannel('text', `t-${i}`)).statusCode).toBe(201);
-    }
-    expect((await createChannel('text', 't-21')).statusCode).toBe(403);
-    expect((await createChannel('text', 't-21')).json().code).toBe('evo_limit_reached');
-  });
-
-  it('freeze rule at creation: level 2 with lapsed Netrex clamps to base limits', async () => {
-    setOwnerNetrex(true);
-    setEvoLevel(2);
-    setOwnerNetrex(false);
-    // Level is frozen at 2, but effective enforcement is base: 11th text channel is rejected
-    for (let i = 0; i < 10; i++) {
-      expect((await createChannel('text', `ft-${i}`)).statusCode).toBe(201);
-    }
-    const res = await createChannel('text', 'ft-11');
-    expect(res.statusCode).toBe(403);
-    expect(res.json().code).toBe('evo_limit_base_upgrade');
-  });
-
-  it('allows level-2 limits (35 text) with active Netrex', async () => {
-    setOwnerNetrex(true);
-    setEvoLevel(2);
-    for (let i = 0; i < 35; i++) {
-      expect((await createChannel('text', `lv2-${i}`)).statusCode).toBe(201);
-    }
-    expect((await createChannel('text', 'lv2-36')).statusCode).toBe(403);
-    expect(channelCountByType('text')).toBe(35);
-  });
-});
-
-describe('Netrex cosmetic gate — space banner (PATCH /api/spaces/:id)', () => {
-  it('stores a static banner when the owner has Netrex AND level >= 1', async () => {
-    setOwnerNetrex(true);
-    setEvoLevel(1);
-    const res = await app.inject({
-      method: 'PATCH',
-      url: `/api/spaces/${SPACE_ID}`,
-      headers: { Authorization: `Bearer ${tokenFor(OWNER_ID)}` },
-      payload: { banner: '/api/uploads/banner.png' },
-    });
-    expect(res.statusCode).toBe(200);
-    expect(res.json().banner).toBe('/api/uploads/banner.png');
-  });
-
-  it('silently clears the banner when the owner lacks Netrex (200, no error)', async () => {
-    setOwnerNetrex(false);
-    const res = await app.inject({
-      method: 'PATCH',
-      url: `/api/spaces/${SPACE_ID}`,
-      headers: { Authorization: `Bearer ${tokenFor(OWNER_ID)}` },
-      payload: { banner: '/api/uploads/banner.png' },
-    });
-    expect(res.statusCode).toBe(200);
-    expect(res.json().banner).toBeNull();
-  });
-});
-
-// ─── Catalog tests (TAREA 2) ───────────────────────────────────────────
-
-function patchSpace(payload: Record<string, unknown>, userId = OWNER_ID) {
-  return app.inject({
-    method: 'PATCH',
-    url: `/api/spaces/${SPACE_ID}`,
-    headers: { Authorization: `Bearer ${tokenFor(userId)}` },
-    payload,
-  });
-}
-
-describe('Catalog — animated banner gate (N2 only)', () => {
-  it('rejects an animated banner at level 1 with 403 evo_required', async () => {
-    setOwnerNetrex(true);
-    setEvoLevel(1);
-    const res = await patchSpace({ banner: '/api/uploads/banner.gif', bannerContentType: 'image/gif' });
-    expect(res.statusCode).toBe(403);
-    expect(res.json().code).toBe('evo_required');
-  });
-
-  it('accepts an animated banner at level 2 and stores the content type', async () => {
-    setOwnerNetrex(true);
-    setEvoLevel(2);
-    const res = await patchSpace({ banner: '/api/uploads/banner.gif', bannerContentType: 'image/gif' });
-    expect(res.statusCode).toBe(200);
-    expect(res.json().banner).toBe('/api/uploads/banner.gif');
-    expect(res.json().bannerContentType).toBe('image/gif');
-  });
-
-  it('accepts a static banner at level 1 (content type cleared)', async () => {
-    setOwnerNetrex(true);
-    setEvoLevel(1);
-    const res = await patchSpace({ banner: '/api/uploads/banner.png', bannerContentType: 'image/png' });
-    expect(res.statusCode).toBe(200);
-    expect(res.json().bannerContentType).toBeNull();
-  });
-});
-
-describe('Catalog — animated icon gate (N1+)', () => {
-  it('rejects an animated icon at level 0 with 403 evo_required', async () => {
-    setOwnerNetrex(true);
-    setEvoLevel(0);
-    const res = await patchSpace({ icon: '/api/uploads/icon.gif', iconContentType: 'image/gif' });
-    expect(res.statusCode).toBe(403);
-    expect(res.json().code).toBe('evo_required');
-  });
-
-  it('accepts an animated icon at level 1', async () => {
-    setOwnerNetrex(true);
-    setEvoLevel(1);
-    const res = await patchSpace({ icon: '/api/uploads/icon.gif', iconContentType: 'image/gif' });
-    expect(res.statusCode).toBe(200);
-  });
-});
-
-describe('Catalog — custom role colors (base 1, N1 5, N2 unlimited)', () => {
-  async function createRole(name: string, color?: string) {
-    return app.inject({
-      method: 'POST',
-      url: `/api/spaces/${SPACE_ID}/roles`,
-      headers: { Authorization: `Bearer ${tokenFor(OWNER_ID)}` },
-      payload: { name, color },
-    });
-  }
-
-  it('allows only 1 custom color at base level', async () => {
-    setOwnerNetrex(false);
-    setEvoLevel(0);
-    expect((await createRole('gold', '#ffd700')).statusCode).toBe(201);
-    const res = await createRole('silver', '#c0c0c0');
-    expect(res.statusCode).toBe(403);
-    expect(res.json().code).toBe('evo_role_color_limit');
-    // Default color never trips the gate
-    expect((await createRole('plain')).statusCode).toBe(201);
-  });
-
-  it('allows 5 custom colors at level 1 and unlimited at level 2', async () => {
-    setOwnerNetrex(true);
-    setEvoLevel(1);
-    for (let i = 0; i < 5; i++) {
-      expect((await createRole(`c${i}`, `#aa000${i}`)).statusCode).toBe(201);
-    }
-    expect((await createRole('c5', '#aa0005')).statusCode).toBe(403);
-    // Level up to 2 → unlimited
-    setEvoLevel(2);
-    expect((await createRole('c5', '#aa0005')).statusCode).toBe(201);
-    expect((await createRole('c6', '#aa0006')).statusCode).toBe(201);
-  });
-});
-
-describe('Catalog — custom emojis (0 base, 10 N1, 30 N2)', () => {
-  function createEmoji(name: string) {
-    return app.inject({
-      method: 'POST',
-      url: `/api/spaces/${SPACE_ID}/emojis`,
-      headers: { Authorization: `Bearer ${tokenFor(OWNER_ID)}` },
-      payload: { name, file: '/api/uploads/e.png' },
-    });
-  }
-
-  it('rejects emoji creation at base level with evo_required', async () => {
-    setOwnerNetrex(true);
-    setEvoLevel(0);
-    const res = await createEmoji('party');
-    expect(res.statusCode).toBe(403);
-    expect(res.json().code).toBe('evo_required');
-  });
-
-  it('enforces the 10-emoji limit at level 1 with evo_emoji_limit', async () => {
-    setOwnerNetrex(true);
-    setEvoLevel(1);
-    for (let i = 0; i < 10; i++) {
-      expect((await createEmoji(`emo${i}`)).statusCode).toBe(201);
-    }
-    const res = await createEmoji('emo10');
-    expect(res.statusCode).toBe(403);
-    expect(res.json().code).toBe('evo_emoji_limit');
-  });
-
-  it('validates name format and duplicates', async () => {
-    setOwnerNetrex(true);
-    setEvoLevel(1);
-    expect((await createEmoji('X')).statusCode).toBe(400); // too short
-    expect((await createEmoji('Bad Name!')).statusCode).toBe(400); // invalid chars
-    expect((await createEmoji('dup')).statusCode).toBe(201);
-    expect((await createEmoji('dup')).statusCode).toBe(409);
-  });
-
-  it('allows 30 emojis at level 2', async () => {
-    setOwnerNetrex(true);
-    setEvoLevel(2);
-    for (let i = 0; i < 30; i++) {
-      expect((await createEmoji(`n2e${i}`)).statusCode).toBe(201);
-    }
-    expect((await createEmoji('n2e30')).statusCode).toBe(403);
-  });
-});
-
-describe('Catalog — custom invite slug (N1+)', () => {
-  function setSlug(slug: string | null) {
-    return app.inject({
-      method: 'PATCH',
-      url: `/api/spaces/${SPACE_ID}/invite-slug`,
-      headers: { Authorization: `Bearer ${tokenFor(OWNER_ID)}` },
-      payload: { slug },
-    });
-  }
-
-  it('rejects a slug at base level with evo_required', async () => {
-    setOwnerNetrex(true);
-    setEvoLevel(0);
-    const res = await setSlug('my-server');
-    expect(res.statusCode).toBe(403);
-    expect(res.json().code).toBe('evo_required');
-  });
-
-  it('validates format and reserved words at level 1', async () => {
-    setOwnerNetrex(true);
-    setEvoLevel(1);
-    expect((await setSlug('x')).statusCode).toBe(400); // too short
-    expect((await setSlug('My Server')).statusCode).toBe(400); // spaces/case
-    expect((await setSlug('-bad-')).statusCode).toBe(400); // edge hyphens
-    expect((await setSlug('join')).statusCode).toBe(409); // reserved
-  });
-
-  it('sets a valid slug and rejects duplicates with evo_slug_taken', async () => {
-    setOwnerNetrex(true);
-    setEvoLevel(1);
-    expect((await setSlug('my-server')).statusCode).toBe(200);
-    testDb.insert(schema.spaces).values({
-      id: 'space-2',
-      name: 'Other',
-      ownerId: OWNER_ID,
-      serverEvoLevel: 1,
+  it('rejects non-members', async () => {
+    testDb.insert(schema.users).values({
+      id: 'outsider',
+      username: 'outsider',
+      displayName: 'Outsider',
+      passwordHash: 'x',
+      isDeleted: 0,
+      homeInstance: null,
       createdAt: Date.now(),
     }).run();
     const res = await app.inject({
-      method: 'PATCH',
-      url: '/api/spaces/space-2/invite-slug',
-      headers: { Authorization: `Bearer ${tokenFor(OWNER_ID)}` },
-      payload: { slug: 'my-server' },
+      method: 'GET',
+      url: `/api/spaces/${SPACE_ID}/boosts`,
+      headers: { Authorization: `Bearer ${tokenFor('outsider')}` },
     });
-    expect(res.statusCode).toBe(409);
-    expect(res.json().code).toBe('evo_slug_taken');
-  });
-
-  it('clears the slug with null', async () => {
-    setOwnerNetrex(true);
-    setEvoLevel(1);
-    await setSlug('my-server');
-    const res = await setSlug(null);
-    expect(res.statusCode).toBe(200);
-    expect(res.json().customInviteSlug).toBeNull();
+    expect(res.statusCode).toBe(403);
   });
 });
 
-describe('Catalog — event rooms (N1+)', () => {
-  it('accepts an event stage at level 1 and stores the flag', async () => {
-    setOwnerNetrex(true);
-    setEvoLevel(1);
-    const res = await app.inject({
-      method: 'POST',
-      url: `/api/spaces/${SPACE_ID}/channels`,
-      headers: { Authorization: `Bearer ${tokenFor(OWNER_ID)}` },
-      payload: { name: 'main-stage', type: 'voice', isEventStage: true },
-    });
-    expect(res.statusCode).toBe(201);
-    expect(res.json().isEventStage).toBe(true);
+describe('EXPIRACIÓN + FREEZE RULE (nada se borra, se clampa al base)', () => {
+  it('expired boosts stop counting and effective level clamps to base', async () => {
+    grantCredits(MEMBER_ID, 5);
+    for (let i = 0; i < 4; i++) await boost();
+    expect(activeBoostCount()).toBe(4);
+    expect((await getEvolution()).json().effectiveLevel).toBe(1);
+
+    // Simulate expiry: backdate all rows. Rows are NEVER deleted.
+    const now = Date.now();
+    testDb.update(schema.spaceBoosts)
+      .set({ expiresAt: now - 1000 })
+      .where(eq(schema.spaceBoosts.spaceId, SPACE_ID))
+      .run();
+
+    const evo = (await getEvolution()).json();
+    expect(evo.effectiveLevel).toBe(0);
+    // Freeze rule: the rows survive
+    expect(testDb.select().from(schema.spaceBoosts).where(eq(schema.spaceBoosts.spaceId, SPACE_ID)).all().length).toBe(4);
   });
 
-  it('rejects an event stage at level 0 with evo_required', async () => {
-    setOwnerNetrex(true);
-    setEvoLevel(0);
+  it('partial expiry de-factors only expired boosts (4 → 3 drops to base)', async () => {
+    grantCredits(MEMBER_ID, 5);
+    for (let i = 0; i < 4; i++) await boost();
+    const rows = testDb.select().from(schema.spaceBoosts).where(eq(schema.spaceBoosts.spaceId, SPACE_ID)).all();
+    testDb.update(schema.spaceBoosts)
+      .set({ expiresAt: Date.now() - 1000 })
+      .where(eq(schema.spaceBoosts.id, rows[0]!.id))
+      .run();
+    const body = (await getBoosts()).json();
+    expect(body.activeBoosts).toBe(3);
+    expect(body.effectiveLevel).toBe(0);
+  });
+
+  it('channel creation clamps to base limits when boosts expire (freeze at write time)', async () => {
+    grantCredits(MEMBER_ID, 5);
+    for (let i = 0; i < 4; i++) await boost();
+    // Level 1 → 20 text channels allowed; create 20
+    for (let i = 0; i < 20; i++) {
+      expect((await createChannel('text', `lv1-${i}`)).statusCode).toBe(201);
+    }
+    // Boosts expire → effective clamps to base (10) → creation blocked
+    testDb.update(schema.spaceBoosts)
+      .set({ expiresAt: Date.now() - 1000 })
+      .where(eq(schema.spaceBoosts.spaceId, SPACE_ID))
+      .run();
+    const res = await createChannel('text', 'lv1-20');
+    expect(res.statusCode).toBe(403);
+    expect(res.json().code).toBe('evo_limit_base_upgrade');
+    // Nothing was deleted: existing 20 channels survive
+    expect(channelCountByType('text')).toBe(20);
+  });
+
+  it('re-boosting after expiry raises the level again', async () => {
+    grantCredits(MEMBER_ID, 9);
+    for (let i = 0; i < 4; i++) await boost();
+    const rows = testDb.select().from(schema.spaceBoosts).where(eq(schema.spaceBoosts.spaceId, SPACE_ID)).all();
+    testDb.update(schema.spaceBoosts)
+      .set({ expiresAt: Date.now() - 1000 })
+      .where(eq(schema.spaceBoosts.spaceId, SPACE_ID))
+      .run();
+    expect((await getEvolution()).json().effectiveLevel).toBe(0);
+    // Revive (like buying again)
+    testDb.update(schema.spaceBoosts)
+      .set({ expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000 })
+      .where(eq(schema.spaceBoosts.spaceId, SPACE_ID))
+      .run();
+    expect((await getEvolution()).json().effectiveLevel).toBe(1);
+  });
+});
+
+describe('Evolutions catalog gates (por nivel derivado de boosts)', () => {
+  it('custom emojis need level 1 (evo_required at base)', async () => {
     const res = await app.inject({
       method: 'POST',
-      url: `/api/spaces/${SPACE_ID}/channels`,
+      url: `/api/spaces/${SPACE_ID}/emojis`,
       headers: { Authorization: `Bearer ${tokenFor(OWNER_ID)}` },
-      payload: { name: 'stage-x', type: 'voice', isEventStage: true },
+      payload: { name: 'party', file: '/api/uploads/e.png' },
     });
     expect(res.statusCode).toBe(403);
     expect(res.json().code).toBe('evo_required');
   });
 
-  it('rejects a text channel flagged as event stage', async () => {
-    setOwnerNetrex(true);
-    setEvoLevel(1);
+  it('custom emojis unlock at 4 active boosts (level 1)', async () => {
+    grantCredits(MEMBER_ID, 5);
+    for (let i = 0; i < 4; i++) await boost();
     const res = await app.inject({
       method: 'POST',
-      url: `/api/spaces/${SPACE_ID}/channels`,
+      url: `/api/spaces/${SPACE_ID}/emojis`,
       headers: { Authorization: `Bearer ${tokenFor(OWNER_ID)}` },
-      payload: { name: 'stage-text', type: 'text', isEventStage: true },
+      payload: { name: 'party', file: '/api/uploads/e.png' },
     });
-    expect(res.statusCode).toBe(400);
+    expect(res.statusCode).toBe(201);
+  });
+
+  it('evolution endpoint reports derived level and boost count', async () => {
+    grantCredits(MEMBER_ID, 5);
+    for (let i = 0; i < 4; i++) await boost();
+    const body = (await getEvolution()).json();
+    expect(body.serverEvoLevel).toBe(1);
+    expect(body.effectiveLevel).toBe(1);
+    expect(body.activeBoosts).toBe(4);
+    expect(body.benefits.banner).toBe(true);
+    expect(body.benefits.spaceStats).toBe(false);
+  });
+
+  it('space GET carries the derived level (not the stored column)', async () => {
+    // Legacy stored level is ignored — must stay 0 in DB
+    expect(testDb.select().from(schema.spaces).where(eq(schema.spaces.id, SPACE_ID)).get()?.serverEvoLevel).toBe(0);
+    grantCredits(MEMBER_ID, 5);
+    for (let i = 0; i < 4; i++) await boost();
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/spaces/${SPACE_ID}`,
+      headers: { Authorization: `Bearer ${tokenFor(OWNER_ID)}` },
+    });
+    expect(res.json().serverEvoLevel).toBe(1);
   });
 });
 
-describe('Catalog — space stats (N2)', () => {
-  function getStats() {
+describe('Billing webhook — boost credits', () => {
+  async function sendPing(form: Record<string, string>) {
     return app.inject({
-      method: 'GET',
-      url: `/api/spaces/${SPACE_ID}/stats`,
-      headers: { Authorization: `Bearer ${tokenFor(OWNER_ID)}` },
+      method: 'POST',
+      url: '/api/webhooks/gumroad',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      payload: new URLSearchParams(form).toString(),
     });
   }
 
-  it('rejects stats at level 1 with evo_required', async () => {
-    setOwnerNetrex(true);
-    setEvoLevel(1);
-    const res = await getStats();
-    expect(res.statusCode).toBe(403);
-    expect(res.json().code).toBe('evo_required');
+  it('routes boost product sales to +1 credit (not Netrex)', async () => {
+    process.env.BOOST_PRODUCT_ID = 'boost-product-1';
+    try {
+      testDb.update(schema.users).set({ billingEmail: 'buyer@example.com' }).where(eq(schema.users.id, MEMBER_ID)).run();
+      const res = await sendPing({
+        product_id: 'boost-product-1',
+        email: 'buyer@example.com',
+        seller_id: 's1',
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json().boostCredit).toBe(true);
+      // No Netrex granted
+      const user = testDb.select().from(schema.users).where(eq(schema.users.id, MEMBER_ID)).get()!;
+      expect(user.netrexEnabled).toBe(0);
+      // Credit granted
+      expect(testDb.select().from(schema.boostCredits).where(eq(schema.boostCredits.userId, MEMBER_ID)).get()?.credits).toBe(1);
+    } finally {
+      delete process.env.BOOST_PRODUCT_ID;
+    }
   });
 
-  it('returns real counts at level 2', async () => {
-    setOwnerNetrex(true);
-    setEvoLevel(2);
-    const res = await getStats();
-    expect(res.statusCode).toBe(200);
-    const body = res.json();
-    expect(body.spaceId).toBe(SPACE_ID);
-    expect(body.memberCount).toBe(2);
-    expect(typeof body.messageCount).toBe('number');
-    expect(body.createdAt).toBeGreaterThan(0);
-  });
-});
+  it('boost product refund expires the buyer’s most recent active boost', async () => {
+    process.env.BOOST_PRODUCT_ID = 'boost-product-1';
+    try {
+      testDb.update(schema.users).set({ billingEmail: 'buyer@example.com' }).where(eq(schema.users.id, MEMBER_ID)).run();
+      grantCredits(MEMBER_ID, 1);
+      await boost(); // 1 active boost
 
-describe('Catalog — GET /api/spaces/:id/evolution state', () => {
-  it('reports stored vs effective level and per-benefit availability', async () => {
-    setOwnerNetrex(true);
-    setEvoLevel(2);
-    const res = await app.inject({
-      method: 'GET',
-      url: `/api/spaces/${SPACE_ID}/evolution`,
-      headers: { Authorization: `Bearer ${tokenFor(OWNER_ID)}` },
-    });
-    expect(res.statusCode).toBe(200);
-    const body = res.json();
-    expect(body.serverEvoLevel).toBe(2);
-    expect(body.effectiveLevel).toBe(2);
-    expect(body.benefits.animatedBanner).toBe(true);
-    expect(body.benefits.spaceStats).toBe(true);
-    expect(body.emojiLimit).toBe(30);
-  });
+      const res = await sendPing({
+        product_id: 'boost-product-1',
+        email: 'buyer@example.com',
+        refunded: 'true',
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json().revoked).toBe(true);
 
-  it('clamps effectiveLevel to base when Netrex lapses (freeze rule)', async () => {
-    setOwnerNetrex(true);
-    setEvoLevel(2);
-    setOwnerNetrex(false);
-    const res = await app.inject({
-      method: 'GET',
-      url: `/api/spaces/${SPACE_ID}/evolution`,
-      headers: { Authorization: `Bearer ${tokenFor(OWNER_ID)}` },
-    });
-    expect(res.statusCode).toBe(200);
-    const body = res.json();
-    expect(body.serverEvoLevel).toBe(2); // stored level survives
-    expect(body.effectiveLevel).toBe(0); // enforcement clamps to base
-    expect(body.benefits.banner).toBe(false);
-    expect(body.emojiLimit).toBe(0);
+      const rows = testDb.select().from(schema.spaceBoosts).where(eq(schema.spaceBoosts.userId, MEMBER_ID)).all();
+      expect(rows.length).toBe(1); // freeze rule: row kept
+      expect(rows[0]!.expiresAt).toBeLessThanOrEqual(Date.now()); // but expired
+    } finally {
+      delete process.env.BOOST_PRODUCT_ID;
+    }
   });
 });

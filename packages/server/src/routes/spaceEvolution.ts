@@ -1,9 +1,9 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, gt, desc } from 'drizzle-orm';
 import { getDb, getRawDb, schema } from '../db/index.js';
 import { authenticate } from '../utils/auth.js';
 import { generateSnowflake } from '../utils/snowflake.js';
-import { hasPermission, isSpaceOwner, PermissionBits } from '../utils/permissions.js';
+import { hasPermission, isSpaceOwner, isMember, PermissionBits } from '../utils/permissions.js';
 import { deleteAttachmentByFilename } from '../utils/fileCleanup.js';
 import { connectionManager } from '../ws/handler.js';
 import {
@@ -12,8 +12,21 @@ import {
   validateInviteSlug,
   requireEvoLevel,
   getEffectiveLevel,
+  getEvoState,
+  levelForBoosts,
+  ensureBoosterRole,
+  getBoosterRoleId,
 } from '../utils/evoLimits.js';
-import type { SpaceEmoji, CreateSpaceEmojiRequest, SetInviteSlugRequest, SpaceStats } from '@backspace/shared';
+import type {
+  Space,
+  SpaceEmoji,
+  CreateSpaceEmojiRequest,
+  SetInviteSlugRequest,
+  SpaceStats,
+  BoostState,
+  SpaceBoost,
+} from '@backspace/shared';
+import { BOOST_DURATION_DAYS } from '@backspace/shared/src/evoConstants.js';
 
 /** Emoji name: 2-32 chars, lowercase handle style (letters/digits/_/-). */
 const EMOJI_NAME_RE = /^[a-z0-9_-]{2,32}$/;
@@ -299,8 +312,8 @@ export async function spaceEvolutionRoutes(app: FastifyInstance): Promise<void> 
   });
 
   // GET /api/spaces/:id/evolution — full evolution state for the settings
-  // panel: stored level, effective level, per-benefit availability and the
-  // emoji limit. One round-trip for the whole catalog UI.
+  // panel: effective level (computed from active boosts), per-benefit
+  // availability and the emoji limit. One round-trip for the whole catalog UI.
   app.get<{ Params: { id: string } }>('/api/spaces/:id/evolution', {
     preHandler: authenticate,
   }, async (request, reply) => {
@@ -317,19 +330,205 @@ export async function spaceEvolutionRoutes(app: FastifyInstance): Promise<void> 
       .where(eq(schema.spaceEmojis.spaceId, id))
       .all().length;
 
+    const state = getEvoState(space);
+
     return reply.code(200).send({
-      serverEvoLevel: space.serverEvoLevel ?? 0,
-      effectiveLevel: getEffectiveLevel(space),
+      serverEvoLevel: state.effectiveLevel,
+      effectiveLevel: state.effectiveLevel,
+      activeBoosts: state.activeBoosts,
       emojiLimit: getEmojiLimit(space),
       emojiCount,
       benefits: {
-        banner: getEffectiveLevel(space) >= 1,
-        animatedIcon: getEffectiveLevel(space) >= 1,
-        customInviteSlug: getEffectiveLevel(space) >= 1,
-        eventChannels: getEffectiveLevel(space) >= 1,
-        animatedBanner: getEffectiveLevel(space) >= 2,
-        spaceStats: getEffectiveLevel(space) >= 2,
+        banner: state.effectiveLevel >= 1,
+        animatedIcon: state.effectiveLevel >= 1,
+        customInviteSlug: state.effectiveLevel >= 1,
+        eventChannels: state.effectiveLevel >= 1,
+        animatedBanner: state.effectiveLevel >= 2,
+        spaceStats: state.effectiveLevel >= 2,
       },
+    });
+  });
+
+  // ─── Server Boosts (modelo estilo Nitro server boosts) ───────────────────
+
+  /** GET /api/spaces/:id/boosts — estado de mejoras, visible para TODOS los miembros. */
+  app.get<{ Params: { id: string } }>('/api/spaces/:id/boosts', {
+    preHandler: authenticate,
+  }, async (request, reply) => {
+    const { id } = request.params;
+    const db = getDb();
+
+    const space = db.select().from(schema.spaces).where(eq(schema.spaces.id, id)).get();
+    if (!space) {
+      return reply.code(404).send({ error: 'Space not found', statusCode: 404 });
+    }
+    if (!isMember(id, request.userId)) {
+      return reply.code(403).send({ error: 'You are not a member of this space', statusCode: 403 });
+    }
+
+    const state = getEvoState(space);
+    const now = Date.now();
+
+    const mine = db.select()
+      .from(schema.spaceBoosts)
+      .where(and(
+        eq(schema.spaceBoosts.spaceId, id),
+        eq(schema.spaceBoosts.userId, request.userId),
+        gt(schema.spaceBoosts.expiresAt, now),
+      ))
+      .all();
+
+    const creditRow = db.select().from(schema.boostCredits)
+      .where(eq(schema.boostCredits.userId, request.userId)).get();
+
+    const body: BoostState = {
+      activeBoosts: state.activeBoosts,
+      serverEvoLevel: levelForBoosts(state.activeBoosts),
+      effectiveLevel: state.effectiveLevel,
+      boostsForLevel1: 4,
+      boostsForLevel2: 10,
+      myCredits: creditRow?.credits ?? 0,
+      myBoosts: mine.length,
+      nextExpiryAt: state.nextExpiryAt,
+    };
+    return reply.code(200).send(body);
+  });
+
+  // GET /api/spaces/:id/boosts/list — mejora activa más reciente de cada
+  // miembro (para la tabla "boosters" del panel). Readable by every member.
+  app.get<{ Params: { id: string } }>('/api/spaces/:id/boosts/list', {
+    preHandler: authenticate,
+  }, async (request, reply) => {
+    const { id } = request.params;
+    const db = getDb();
+
+    const space = db.select().from(schema.spaces).where(eq(schema.spaces.id, id)).get();
+    if (!space) {
+      return reply.code(404).send({ error: 'Space not found', statusCode: 404 });
+    }
+    if (!isMember(id, request.userId)) {
+      return reply.code(403).send({ error: 'You are not a member of this space', statusCode: 403 });
+    }
+
+    const rows = db.select()
+      .from(schema.spaceBoosts)
+      .where(and(eq(schema.spaceBoosts.spaceId, id), gt(schema.spaceBoosts.expiresAt, Date.now())))
+      .orderBy(desc(schema.spaceBoosts.createdAt))
+      .all();
+
+    const boosts: SpaceBoost[] = rows.map((r) => ({
+      id: r.id,
+      spaceId: r.spaceId,
+      userId: r.userId,
+      createdAt: r.createdAt,
+      expiresAt: r.expiresAt,
+    }));
+    return reply.code(200).send({ boosts });
+  });
+
+  // POST /api/spaces/:id/boost — CUALQUIER MIEMBRO del server canjea 1 crédito
+  // de mejora (comprado vía billing, 2€/mes por mejora). La compra original va
+  // por el webhook de billing → boost_credits; aquí solo se canjea: 1 crédito
+  // → 1 fila space_boosts con expires_at = now + 30 días. Idempotente por
+  // crédito (el débito y el insert van en la misma transacción).
+  app.post<{ Params: { id: string } }>('/api/spaces/:id/boost', {
+    preHandler: authenticate,
+  }, async (request, reply) => {
+    const { id } = request.params;
+    const db = getDb();
+
+    const space = db.select().from(schema.spaces).where(eq(schema.spaces.id, id)).get();
+    if (!space) {
+      return reply.code(404).send({ error: 'Space not found', statusCode: 404 });
+    }
+
+    // Cualquier MIEMBRO puede mejorar el server — no solo el owner.
+    if (!isMember(id, request.userId)) {
+      return reply.code(403).send({ error: 'Space membership required to boost', code: 'not_member', statusCode: 403 });
+    }
+
+    const now = Date.now();
+    const expiresAt = now + BOOST_DURATION_DAYS * 24 * 60 * 60 * 1000;
+    let boostId: string | null = null;
+
+    try {
+      db.transaction((tx) => {
+        // Débito atómico del crédito (INSERT ... ON CONFLICT + RETURNING vía
+        // drizzle: upsert then decrement, race-safe dentro de la transacción).
+        const existing = tx.select().from(schema.boostCredits)
+          .where(eq(schema.boostCredits.userId, request.userId)).get();
+        if (!existing || existing.credits < 1) {
+          const err = new Error('No boost credits available — purchase "Mejora de server — 2€/mes" first') as Error & {
+            statusCode: number;
+            code: string;
+          };
+          err.statusCode = 402;
+          err.code = 'no_boost_credits';
+          throw err;
+        }
+        tx.update(schema.boostCredits)
+          .set({ credits: existing.credits - 1, updatedAt: now })
+          .where(eq(schema.boostCredits.userId, request.userId))
+          .run();
+
+        boostId = generateSnowflake();
+        tx.insert(schema.spaceBoosts).values({
+          id: boostId,
+          spaceId: id,
+          userId: request.userId,
+          createdAt: now,
+          expiresAt,
+        }).run();
+      });
+    } catch (e) {
+      const ev = e as Error & { statusCode?: number; code?: string };
+      if (ev.statusCode === 402 && ev.code) {
+        return reply.code(402).send({ error: ev.message, code: ev.code, statusCode: 402 });
+      }
+      throw e;
+    }
+
+    // Rol "Server Booster" idempotente en este server, asignado al comprador.
+    ensureBoosterRole(id, request.userId, now);
+
+    const after = getEvoState(space);
+    const previousLevel = levelForBoosts(Math.max(after.activeBoosts - 1, 0));
+    const updatedSpace = db.select().from(schema.spaces).where(eq(schema.spaces.id, id)).get();
+    if (updatedSpace) {
+      // serverEvoLevel is now derived (not stored); ship the computed value
+      // via rowToSpace-equivalent shape so older clients stay in sync.
+      connectionManager.sendToSpace(id, {
+        type: 'space_updated',
+        space: {
+          id: updatedSpace.id,
+          name: updatedSpace.name,
+          icon: updatedSpace.icon,
+          banner: updatedSpace.banner ?? null,
+          avatarColor: (updatedSpace.avatarColor as Space['avatarColor']) ?? null,
+          ownerId: updatedSpace.ownerId,
+          inviteCode: updatedSpace.inviteCode,
+          visibility: (updatedSpace.visibility ?? 'private') as Space['visibility'],
+          description: updatedSpace.description ?? null,
+          serverEvoLevel: after.effectiveLevel,
+          customInviteSlug: updatedSpace.customInviteSlug ?? null,
+          bannerContentType: updatedSpace.bannerContentType ?? null,
+          createdAt: updatedSpace.createdAt,
+        },
+      });
+    }
+
+    const createdBoost: SpaceBoost = {
+      id: boostId!,
+      spaceId: id,
+      userId: request.userId,
+      createdAt: now,
+      expiresAt,
+    };
+    return reply.code(201).send({
+      boost: createdBoost,
+      activeBoosts: after.activeBoosts,
+      serverEvoLevel: after.effectiveLevel,
+      previousLevel,
     });
   });
 }

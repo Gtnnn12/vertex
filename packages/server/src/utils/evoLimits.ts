@@ -1,4 +1,4 @@
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, gt, inArray } from 'drizzle-orm';
 import { getDb, schema } from '../db/index.js';
 import {
   EVO_CHANNEL_LIMITS as SHARED_EVO_LIMITS,
@@ -8,20 +8,23 @@ import {
   EVO_REQUIREMENTS,
   CUSTOM_INVITE_SLUG_RE,
   CUSTOM_INVITE_SLUG_MAX,
+  BOOSTER_ROLE_DEFAULT_NAME,
+  BOOSTER_ROLE_COLOR,
 } from '@backspace/shared/src/evoConstants.js';
+import { DEFAULT_EVERYONE_PERMISSIONS, permissionsToString } from '@backspace/shared/src/permissions.js';
 
 /**
  * Server Evolutions ("boosts", our own flavor):
  *
  * - Channel limits per level: base (free) 10 text + 5 voice; level 1: 20 text
  *   + 15 voice; level 2: 35 text + 25 voice.
- * - Evolving requires the space OWNER's real Netrex entitlement, validated
- *   server-side via the same chain as the music-widget gate / profile board.
- * - The level is stored on the spaces row (server_evo_level, migration 0017).
- * - When the owner's Netrex lapses NOTHING is deleted or downgraded: the
- *   level freezes, and only creation above the base limit is blocked until
- *   it is renewed. Channel creation enforces this at write time by clamping
- *   the effective level to base when the current owner lost entitlement.
+ * - MODELO BOOSTS: the level is NOT stored on the spaces row anymore. It is
+ *   computed server-side by counting non-expired rows in space_boosts:
+ *   4+ active boosts → Level 1, 10+ → Level 2. Any member can purchase a
+ *   boost (2€/mes vía billing) — money goes to the platform, like Discord.
+ * - FREEZE RULE: expired boosts keep their rows (nothing is deleted or
+ *   downgraded anywhere); the level simply counts fewer active boosts, so
+ *   enforcement clamps to the base limits until the community re-boosts.
  */
 
 export const BASE_TEXT_CHANNEL_LIMIT = SHARED_EVO_LIMITS[0].text;
@@ -46,32 +49,48 @@ export function computeNetrexEntitlement(row: typeof schema.users.$inferSelect):
 }
 
 export interface EvoState {
-  /** Level stored on the row (frozen when Netrex lapses — never downgraded). */
-  storedLevel: number;
-  /** Level actually enforceable right now: stored, clamped to base if the current owner lacks entitlement. */
+  /** Number of non-expired boosts (= the server's level source of truth). */
+  activeBoosts: number;
+  /** Level actually enforceable right now: min(activeBoosts mapped, MAX). */
   effectiveLevel: number;
   limits: { text: number; voice: number };
-  /** Owner currently has Netrex. */
-  ownerEntitled: boolean;
+  /** Epoch ms of the soonest-expiring active boost (null when none). */
+  nextExpiryAt: number | null;
+}
+
+/** Map active-boost count → level: 0-3 base, 4-9 N1, 10+ N2. */
+export function levelForBoosts(activeBoosts: number): number {
+  if (activeBoosts >= 10) return 2;
+  if (activeBoosts >= 4) return 1;
+  return 0;
 }
 
 /**
- * Compute the evolution state of a space. The stored level survives a Netrex
- * lapse (freeze rule), but the effective level — the one used to authorize
- * creating MORE channels — clamps down to base until the owner renews.
+ * Count non-expired boosts for a space and derive the level. The count IS the
+ * level source of truth — nothing is stored, so an expiry automatically
+ * de-factors from the count without any scheduled job (freeze rule: the rows
+ * survive, only the count changes).
  */
-export function getEvoState(space: typeof schema.spaces.$inferSelect): EvoState {
+export function getEvoState(space: Pick<typeof schema.spaces.$inferSelect, 'id'>): EvoState {
   const db = getDb();
-  const owner = db.select().from(schema.users).where(eq(schema.users.id, space.ownerId)).get();
-  const ownerEntitled = owner ? computeNetrexEntitlement(owner) : false;
-  const storedLevel = Math.min(Math.max(space.serverEvoLevel ?? 0, 0), MAX_EVO_LEVEL);
-  const effectiveLevel = ownerEntitled ? storedLevel : 0;
-  const limits = EVO_CHANNEL_LIMITS[effectiveLevel] ?? EVO_CHANNEL_LIMITS[0]!;
+  const now = Date.now();
+  const rows = db
+    .select({ id: schema.spaceBoosts.id, expiresAt: schema.spaceBoosts.expiresAt })
+    .from(schema.spaceBoosts)
+    .where(and(eq(schema.spaceBoosts.spaceId, space.id), gt(schema.spaceBoosts.expiresAt, now)))
+    .all();
+  const activeBoosts = rows.length;
+  const effectiveLevel = levelForBoosts(activeBoosts);
+  const limits = EVO_CHANNEL_LIMITS[Math.min(Math.max(effectiveLevel, 0), MAX_EVO_LEVEL) as 0 | 1 | 2]
+    ?? EVO_CHANNEL_LIMITS[0]!;
+  const nextExpiryAt = rows.length > 0
+    ? rows.reduce((min, r) => Math.min(min, r.expiresAt), Number.POSITIVE_INFINITY)
+    : null;
   return {
-    storedLevel,
+    activeBoosts,
     effectiveLevel,
     limits,
-    ownerEntitled,
+    nextExpiryAt: nextExpiryAt === Number.POSITIVE_INFINITY ? null : nextExpiryAt,
   };
 }
 
@@ -99,12 +118,12 @@ export function assertChannelLimit(
     .all().length;
   if (current >= limit) {
     const err = new Error(
-      state.ownerEntitled
+      state.effectiveLevel > 0
         ? `Channel limit reached for level ${state.effectiveLevel} (${limit} ${kind})`
         : `Channel limit reached (base plan: ${limit} ${kind})`,
     ) as Error & { statusCode: number; code: string; limit: number };
     err.statusCode = 403;
-    err.code = state.ownerEntitled ? 'evo_limit_reached' : 'evo_limit_base_upgrade';
+    err.code = state.effectiveLevel > 0 ? 'evo_limit_reached' : 'evo_limit_base_upgrade';
     err.limit = limit;
     throw err;
   }
@@ -137,6 +156,50 @@ export function requireEvoLevel(
 }
 
 /**
+ * Deterministic role id for a space's Server Booster role: '<spaceId>:booster'.
+ * Idempotency for the role + its assignment is keyed on this shape, so a
+ * member buying 5 boosts still ends with exactly one role and one assignment.
+ */
+export function getBoosterRoleId(spaceId: string): string {
+  return `${spaceId}:booster`;
+}
+
+/**
+ * Ensure the space's "Server Booster" role exists (idempotent) and is
+ * assigned to `userId` (idempotent). CERO permisos extra — the role carries
+ * the @everyone baseline only; the owner may rename it or recolor it later
+ * via the normal role endpoints. Visible in the member list and popout.
+ */
+export function ensureBoosterRole(spaceId: string, userId: string, now: number): void {
+  const db = getDb();
+  const roleId = getBoosterRoleId(spaceId);
+  const existing = db.select({ id: schema.roles.id }).from(schema.roles).where(eq(schema.roles.id, roleId)).get();
+  if (!existing) {
+    db.insert(schema.roles).values({
+      id: roleId,
+      spaceId,
+      name: BOOSTER_ROLE_DEFAULT_NAME,
+      color: BOOSTER_ROLE_COLOR,
+      position: 0,
+      permissions: permissionsToString(DEFAULT_EVERYONE_PERMISSIONS),
+      createdAt: now,
+    }).run();
+  }
+  const assigned = db
+    .select({ roleId: schema.memberRoles.roleId })
+    .from(schema.memberRoles)
+    .where(and(
+      eq(schema.memberRoles.spaceId, spaceId),
+      eq(schema.memberRoles.userId, userId),
+      eq(schema.memberRoles.roleId, roleId),
+    ))
+    .get();
+  if (!assigned) {
+    db.insert(schema.memberRoles).values({ spaceId, userId, roleId }).run();
+  }
+}
+
+/**
  * Role-color gate: base allows 1 custom color (the default grey doesn't
  * count), level 1 allows 5, level 2 unlimited. Count roles whose color
  * differs from the default.
@@ -153,7 +216,10 @@ export function assertRoleColorLimit(space: typeof schema.spaces.$inferSelect): 
     .from(schema.roles)
     .where(eq(schema.roles.spaceId, space.id))
     .all()
-    .filter((r) => (r.color ?? DEFAULT_ROLE_COLOR).toLowerCase() !== DEFAULT_ROLE_COLOR).length;
+    .filter((r) => (r.color ?? DEFAULT_ROLE_COLOR).toLowerCase() !== DEFAULT_ROLE_COLOR)
+    // The Server Booster role is a fixed cosmetics perk of the boosts model:
+    // it never consumes a level's custom-color slot.
+    .filter((r) => r.id !== getBoosterRoleId(space.id)).length;
   if (customColors >= limit) {
     const err = new Error(`Custom role color limit reached (${limit} at level ${level})`) as Error & {
       statusCode: number;

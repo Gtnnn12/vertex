@@ -51,6 +51,27 @@ export function ensureDefaults(db: Database.Database): void {
     console.warn('[defaults] Could not create space_emojis table:', err);
   }
 
+  // Server boosts (modelo estilo Discord): compras de mejora por miembro +
+  // créditos de mejora pagados vía billing. Idempotente, seguro en cada boot.
+  try {
+    db.prepare(`CREATE TABLE IF NOT EXISTS space_boosts (
+      id TEXT PRIMARY KEY NOT NULL,
+      space_id TEXT NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
+      user_id TEXT NOT NULL REFERENCES users(id),
+      created_at INTEGER NOT NULL,
+      expires_at INTEGER NOT NULL
+    )`).run();
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_space_boosts_space_id ON space_boosts (space_id)').run();
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_space_boosts_user_id ON space_boosts (user_id)').run();
+    db.prepare(`CREATE TABLE IF NOT EXISTS boost_credits (
+      user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      credits INTEGER NOT NULL DEFAULT 0,
+      updated_at INTEGER NOT NULL
+    )`).run();
+  } catch (err) {
+    console.warn('[defaults] Could not create space_boosts/boost_credits tables:', err);
+  }
+
   const ensureTable = (sql: string): void => {
     try {
       db.prepare(sql).run();

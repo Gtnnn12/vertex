@@ -1,9 +1,10 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import crypto from 'crypto';
-import { eq } from 'drizzle-orm';
-import { getDb } from '../db/index.js';
+import { eq, and, gt, desc } from 'drizzle-orm';
+import { getDb, schema } from '../db/index.js';
 import { users } from '../db/schema.js';
 import { authenticate } from '../utils/auth.js';
+import { getBoosterRoleId } from '../utils/evoLimits.js';
 
 /**
  * Netrex Premium billing:
@@ -18,6 +19,13 @@ import { authenticate } from '../utils/auth.js';
  * Plan windows: monthly +30d, six_months +180d, yearly +365d. For recurring
  * subscriptions Gumroad includes the next charge date in the ping — when
  * present it wins over the flat window.
+ *
+ * SERVER BOOSTS: the product "Mejora de server — 2€/mes" (GUMROAD_BOOST_PRODUCT_ID)
+ * does NOT grant Netrex — each sale credits one boost credit to the buyer
+ * (boost_credits). The buyer redeems it in any space they belong to via
+ * POST /api/spaces/:id/boost. A refund of a boost product revokes that
+ * buyer's most recent ACTIVE boost across all spaces (freeze rule: rows are
+ * kept but expired immediately, so the level recount drops without deleting).
  */
 
 export type NetrexPlan = 'monthly' | 'six_months' | 'yearly' | 'lifetime';
@@ -63,6 +71,17 @@ function planForProduct(productId: string): NetrexPlan | null {
   // The original monthly product (single source: desktop config uses the same id).
   if (productId === 'U7HOiXnRmFeO5WU3xCP_MA==') return 'monthly';
   return null;
+}
+
+/**
+ * Product id of "Mejora de server — 2€/mes". The owner configures it in
+ * GUMROAD_PRODUCT_PLAN_MAP once the product exists; until then the boost
+ * product can be set via the BOOST_PRODUCT_ID env var. Pings for this product
+ * are routed to the boost-credit path instead of the Netrex plan path.
+ */
+export function isBoostProduct(productId: string): boolean {
+  const configured = process.env.BOOST_PRODUCT_ID ?? '';
+  return !!configured && productId === configured;
 }
 
 /** Next-charge epoch ms from a ping, when the product is a subscription. */
@@ -138,13 +157,60 @@ export async function netrexRoutes(app: FastifyInstance): Promise<void> {
       return reply.code(400).send({ ok: false, error: 'missing_email' });
     }
 
+    const db = getDb();
+
+    // ── Server boost product: "Mejora de server — 2€/mes" ────────────────
+    // Money goes to the platform (like Discord); each sale = 1 boost credit
+    // the buyer redeems in any space they belong to via POST /boost.
+    if (isBoostProduct(productId)) {
+      const buyer = db.select({ id: users.id }).from(users).where(eq(users.billingEmail, email)).get();
+      if (!buyer) {
+        console.warn(`[gumroad-ping] boost sale for unknown user ${email.slice(0, 3)}***`);
+        return reply.code(200).send({ ok: false, error: 'unknown_user' });
+      }
+
+      const now = Date.now();
+      if (refunded || disputed || chargebacked) {
+        // Revoke the buyer's most recent ACTIVE boost, wherever it lives:
+        // expire the row immediately (freeze rule — nothing is deleted), so
+        // the level recount drops without touching history.
+        const row = db.select()
+          .from(schema.spaceBoosts)
+          .where(and(eq(schema.spaceBoosts.userId, buyer.id), gt(schema.spaceBoosts.expiresAt, now)))
+          .orderBy(desc(schema.spaceBoosts.createdAt))
+          .get();
+        if (row) {
+          db.update(schema.spaceBoosts)
+            .set({ expiresAt: now })
+            .where(eq(schema.spaceBoosts.id, row.id))
+            .run();
+          console.log(`[gumroad-ping] boost refund — expired boost ${row.id} for ${email.slice(0, 3)}***`);
+        } else {
+          console.warn(`[gumroad-ping] boost refund with no active boost for ${email.slice(0, 3)}***`);
+        }
+        return reply.send({ ok: true, revoked: true });
+      }
+
+      // Sale → +1 boost credit. No expiry: the credit is redeemed via POST /boost.
+      const creditRow = db.select().from(schema.boostCredits)
+        .where(eq(schema.boostCredits.userId, buyer.id)).get();
+      if (creditRow) {
+        db.update(schema.boostCredits)
+          .set({ credits: creditRow.credits + 1, updatedAt: now })
+          .where(eq(schema.boostCredits.userId, buyer.id))
+          .run();
+      } else {
+        db.insert(schema.boostCredits).values({ userId: buyer.id, credits: 1, updatedAt: now }).run();
+      }
+      console.log(`[gumroad-ping] ACTIVATED +1 boost credit for ${email.slice(0, 3)}***`);
+      return reply.send({ ok: true, boostCredit: true });
+    }
+
     const plan = planForProduct(productId);
     if (!plan) {
       console.warn(`[gumroad-ping] unknown product_id ${productId} — add it to GUMROAD_PRODUCT_PLAN_MAP`);
       return reply.code(200).send({ ok: false, error: 'unknown_product' }); // 200 so Gumroad stops retrying
     }
-
-    const db = getDb();
 
     // Refund / dispute / chargeback → revoke immediately.
     if (refunded || disputed || chargebacked) {

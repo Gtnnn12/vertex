@@ -134,6 +134,13 @@
       "when": 1791792000004,
       "tag": "0018_evo_catalog",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1791792000005,
+      "tag": "0019_space_boosts",
+      "breakpoints": true
     }
   ]
 }

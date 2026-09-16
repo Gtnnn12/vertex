@@ -14,7 +14,6 @@ import { config } from '../config.js';
 import type {
   CreateSpaceRequest,
   UpdateSpaceRequest,
-  EvolveSpaceRequest,
   JoinSpaceRequest,
   UpdateMemberRequest,
   Space,
@@ -28,7 +27,7 @@ import { AVATAR_COLORS } from '@backspace/shared';
 import { sanitizeUser } from '../utils/sanitize.js';
 import { checkVoicePermissions } from '../ws/events.js';
 import { getLocalInviteSnapshot } from '../utils/spaceInviteSnapshot.js';
-import { getEvoState, computeNetrexEntitlement, EVO_CHANNEL_LIMITS, MAX_EVO_LEVEL, requireEvoLevel, assertRoleColorLimit, getEmojiLimit, assertEmojiLimit, validateInviteSlug } from '../utils/evoLimits.js';
+import { requireEvoLevel, assertRoleColorLimit, getEmojiLimit, assertEmojiLimit, validateInviteSlug, getEvoState } from '../utils/evoLimits.js';
 
 function rowToSpace(row: typeof schema.spaces.$inferSelect): Space {
   return {
@@ -41,7 +40,9 @@ function rowToSpace(row: typeof schema.spaces.$inferSelect): Space {
     inviteCode: row.inviteCode,
     visibility: (row.visibility ?? 'private') as Space['visibility'],
     description: row.description ?? null,
-    serverEvoLevel: row.serverEvoLevel ?? 0,
+    // Modelo boosts: el nivel es DERIVADO (nº de mejoras activas), nunca
+    // almacenado. La columna server_evo_level queda como legacy siempre-0.
+    serverEvoLevel: getEvoState(row).effectiveLevel,
     customInviteSlug: row.customInviteSlug ?? null,
     bannerContentType: row.bannerContentType ?? null,
     createdAt: row.createdAt,
@@ -440,32 +441,25 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
     }
 
     if (banner !== undefined) {
-      // Server Evolutions / Netrex cosmetic gate (server-side, like the music
-      // widget and profile board): a custom banner requires the OWNER's real
-      // Netrex entitlement (level 1). Without it the request still succeeds
-      // (200) and the banner silently clears, so client and server agree on
-      // stored data. An ANIMATED banner (gif/webp-animated) is level 2 only.
+      // Server Evolutions cosmetic gate (modelo boosts): a custom banner
+      // requires level 1+, computed from the space's active boosts. When the
+      // level is below the requirement the request still succeeds (200) and
+      // the banner silently clears, so client and server agree on stored
+      // data. An ANIMATED banner (gif/webp-animated) is level 2 only.
       if (banner) {
-        const owner = db.select().from(schema.users).where(eq(schema.users.id, server.ownerId)).get();
-        const entitled = owner ? computeNetrexEntitlement(owner) : false;
-        if (!entitled) {
-          updates.banner = null;
-          updates.bannerContentType = null;
-        } else {
-          const contentType = typeof bannerContentType === 'string' && bannerContentType ? bannerContentType : null;
-          const animated = contentType === 'image/gif' || contentType === 'image/webp' || contentType === 'image/apng';
-          try {
-            requireEvoLevel(server, 'banner');
-            if (animated) requireEvoLevel(server, 'animatedBanner');
-            updates.banner = banner;
-            updates.bannerContentType = animated ? contentType : (contentType ? null : null);
-          } catch (e) {
-            const ev = e as Error & { statusCode?: number; code?: string };
-            if (ev.statusCode === 403 && ev.code) {
-              return reply.code(403).send({ error: ev.message, code: ev.code, statusCode: 403 });
-            }
-            throw e;
+        const contentType = typeof bannerContentType === 'string' && bannerContentType ? bannerContentType : null;
+        const animated = contentType === 'image/gif' || contentType === 'image/webp' || contentType === 'image/apng';
+        try {
+          requireEvoLevel(server, 'banner');
+          if (animated) requireEvoLevel(server, 'animatedBanner');
+          updates.banner = banner;
+          updates.bannerContentType = animated ? contentType : (contentType ? null : null);
+        } catch (e) {
+          const ev = e as Error & { statusCode?: number; code?: string };
+          if (ev.statusCode === 403 && ev.code) {
+            return reply.code(403).send({ error: ev.message, code: ev.code, statusCode: 403 });
           }
+          throw e;
         }
       } else {
         updates.banner = null;
@@ -546,64 +540,9 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
     return reply.code(200).send(spaceData);
   });
 
-  // POST /api/spaces/:id/evolution - Evolve the server (owner only, Netrex-gated)
-  app.post<{ Params: { id: string }; Body: EvolveSpaceRequest }>('/api/spaces/:id/evolution', {
-    preHandler: authenticate,
-  }, async (request, reply) => {
-    const { id } = request.params;
-    const { targetLevel } = request.body ?? {} as EvolveSpaceRequest;
-    const db = getDb();
-
-    const server = db.select().from(schema.spaces).where(eq(schema.spaces.id, id)).get();
-    if (!server) {
-      return reply.code(404).send({ error: 'Space not found', statusCode: 404 });
-    }
-
-    // Owner-only by design (unlike MANAGE_SPACE admins)
-    if (!isSpaceOwner(id, request.userId)) {
-      return reply.code(403).send({ error: 'Only the space owner can evolve the server', statusCode: 403 });
-    }
-
-    if (targetLevel !== 1 && targetLevel !== 2) {
-      return reply.code(400).send({ error: 'targetLevel must be 1 or 2', statusCode: 400 });
-    }
-
-    const state = getEvoState(server);
-    if (targetLevel <= state.storedLevel) {
-      return reply.code(400).send({ error: `Server is already at level ${state.storedLevel}`, statusCode: 400 });
-    }
-    if (targetLevel > MAX_EVO_LEVEL) {
-      return reply.code(400).send({ error: `Maximum evolution level is ${MAX_EVO_LEVEL}`, statusCode: 400 });
-    }
-
-    // Real Netrex entitlement of the OWNER, computed server-side. The client
-    // can never mint it — same gate as the music widget / profile board.
-    if (!state.ownerEntitled) {
-      return reply.code(403).send({
-        error: 'Netrex subscription required to evolve the server',
-        code: 'netrex_required',
-        statusCode: 403,
-      });
-    }
-
-    db.update(schema.spaces)
-      .set({ serverEvoLevel: targetLevel })
-      .where(eq(schema.spaces.id, id))
-      .run();
-
-    const updated = db.select().from(schema.spaces).where(eq(schema.spaces.id, id)).get();
-    if (!updated) {
-      return reply.code(500).send({ error: 'Failed to evolve space', statusCode: 500 });
-    }
-
-    const spaceData = rowToSpace(updated);
-    connectionManager.sendToSpace(id, {
-      type: 'space_updated',
-      space: spaceData,
-    });
-
-    return reply.code(200).send(spaceData);
-  });
+  // (POST /api/spaces/:id/evolution REMOVED — modelo boosts: owners ya no
+  // compran directo. El nivel sube con las mejoras acumuladas de la comunidad
+  // vía POST /api/spaces/:id/boost, disponible para cualquier miembro.)
 
   // DELETE /api/spaces/:id - Delete server (owner only)
   app.delete<{ Params: { id: string } }>('/api/spaces/:id', {
