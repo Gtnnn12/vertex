@@ -9,6 +9,7 @@ import { checkFfmpeg } from './utils/thumbnail.js';
 import { authRoutes } from './routes/auth.js';
 import { userRoutes } from './routes/users.js';
 import { spaceRoutes } from './routes/spaces.js';
+import { spaceEvolutionRoutes } from './routes/spaceEvolution.js';
 import { channelRoutes } from './routes/channels.js';
 import { messageRoutes } from './routes/messages.js';
 import { uploadRoutes } from './routes/uploads.js';
@@ -130,6 +131,7 @@ async function main(): Promise<void> {
   await app.register(authRoutes);
   await app.register(userRoutes);
   await app.register(spaceRoutes);
+  await app.register(spaceEvolutionRoutes);
   await app.register(channelRoutes);
   await app.register(messageRoutes);
   await app.register(uploadRoutes);

@@ -890,6 +890,8 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
       visibility: s.visibility ?? 'private' as const,
       description: s.description ?? null,
       serverEvoLevel: s.serverEvoLevel ?? 0,
+      customInviteSlug: s.customInviteSlug ?? null,
+      bannerContentType: s.bannerContentType ?? null,
       createdAt: s.createdAt,
       _instanceOrigin: origin,
     }));
@@ -1110,6 +1112,8 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
       visibility: space.visibility,
       description: space.description,
       serverEvoLevel: space.serverEvoLevel ?? 0,
+      customInviteSlug: space.customInviteSlug ?? null,
+      bannerContentType: space.bannerContentType ?? null,
       createdAt: space.createdAt,
       _instanceOrigin: origin,
     };
