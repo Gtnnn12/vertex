@@ -1312,6 +1312,7 @@
   "update_toast_later": "Later",
   "update_toast_restart": "Restart",
   "update_whats_new": "What's new?",
+  "nickname_cooldown_banner": "Display name changes are available every 15 days. You'll be able to change it again once the waiting period ends.",
   "nickname_cooldown_days": "You can change it in {days} day(s) — on {date}",
   "nickname_cooldown_until": "You can change it on {date}",
   "upload_banner_hint": "PNG or JPG, up to 10 MB",

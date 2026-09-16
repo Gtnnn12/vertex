@@ -162,6 +162,22 @@ export function AccountPanel() {
     return () => clearInterval(id);
   }, [nicknameUnlockAt]);
 
+  // One-time cooldown notice: a small dismissable amber banner shown the FIRST
+  // time the user opens settings while a cooldown is active. Dismissal persists
+  // in localStorage — never shown again (not per-session, just once ever).
+  const COOLDOWN_BANNER_KEY = 'nickname-cooldown-banner-dismissed';
+  const [showCooldownBanner, setShowCooldownBanner] = useState(false);
+  const cooldownActive = nicknameUnlockAt !== null && nicknameUnlockAt > Date.now();
+  useEffect(() => {
+    if (cooldownActive && localStorage.getItem(COOLDOWN_BANNER_KEY) === null) {
+      setShowCooldownBanner(true);
+    }
+  }, [cooldownActive]);
+  const dismissCooldownBanner = () => {
+    setShowCooldownBanner(false);
+    localStorage.setItem(COOLDOWN_BANNER_KEY, '1');
+  };
+
   const effectiveDisplayName = displayName.trim() || user.username;
   const effectiveAccent = accentColor;
   const effectiveAvatarColor = avatarColorState;
@@ -482,6 +498,21 @@ export function AccountPanel() {
 
         {/* Controls column */}
         <div className="min-w-0 flex-1 space-y-4 lg:order-1">
+          {showCooldownBanner && cooldownActive && (
+            <div className="flex items-start gap-2.5 p-3 bg-accent-amber/10 border border-accent-amber/30 rounded-lg text-[13px] text-accent-amber">
+              <span aria-hidden="true">⏳</span>
+              <p className="flex-1">{t('nickname_cooldown_banner')}</p>
+              <button
+                onClick={dismissCooldownBanner}
+                className="p-0.5 rounded text-accent-amber/70 hover:text-accent-amber hover:bg-accent-amber/10 transition-colors shrink-0"
+                aria-label={t('dismiss')}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                </svg>
+              </button>
+            </div>
+          )}
 
           {/* ── Profile ── */}
           <SettingsCard title={t('profile_customization')} description={t('acct_card_profile_desc')}>
