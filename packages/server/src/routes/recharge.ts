@@ -130,6 +130,31 @@ export async function registerRechargeRoutes(app: FastifyInstance): Promise<void
     return reply.send(payload);
   });
 
+  // El usuario cierra SU conversación. Un ticket open se cierra SIN acreditar
+  // (podrá iniciar otro); uno resuelto queda sellado en lectura.
+  app.post('/api/credits/recharge/my/close', { preHandler: [authenticate] }, async (req, reply) => {
+    const userId = req.userId;
+    const ticket = db
+      .select()
+      .from(schema.rechargeTickets)
+      .where(eq(schema.rechargeTickets.userId, userId))
+      .orderBy(desc(schema.rechargeTickets.createdAt))
+      .get();
+    if (!ticket) return reply.code(404).send({ error: 'no_ticket' });
+    if (ticket.status !== 'open') return reply.code(409).send({ error: 'ticket_already_resolved' });
+
+    const now = Date.now();
+    db.update(schema.rechargeTickets)
+      .set({ status: 'closed', resolvedAt: now })
+      .where(eq(schema.rechargeTickets.id, ticket.id))
+      .run();
+    postSystemMessage(ticket.id, 'SYSTEM_CLOSED_BY_USER');
+
+    const updated = db.select().from(schema.rechargeTickets).where(eq(schema.rechargeTickets.id, ticket.id)).get()!;
+    const payload: RechargeTicketWithMessages = { ticket: rowToTicket(updated), messages: getTicketMessages(ticket.id) };
+    return reply.send(payload);
+  });
+
   // El usuario envía mensaje/captura a SU ticket (solo abierto).
   app.post('/api/credits/recharge/my/message', { preHandler: [authenticate] }, async (req, reply) => {
     const userId = req.userId;
@@ -220,6 +245,7 @@ export async function registerRechargeRoutes(app: FastifyInstance): Promise<void
 
     const ticket = db.select().from(schema.rechargeTickets).where(eq(schema.rechargeTickets.id, id)).get();
     if (!ticket) return reply.code(404).send({ error: 'not_found' });
+    if (ticket.status === 'closed') return reply.code(409).send({ error: 'ticket_closed' });
 
     const mid = generateSnowflake();
     db.insert(schema.rechargeMessages)
@@ -285,6 +311,28 @@ export async function registerRechargeRoutes(app: FastifyInstance): Promise<void
     postSystemMessage(id, `SYSTEM_REJECTED:${text}`);
 
     const payload: RechargeTicketWithMessages = { ticket: rowToTicket({ ...ticket, status: 'rejected', resolvedAt: now, adminNote: text }), messages: getTicketMessages(id) };
+    return reply.send(payload);
+  });
+
+  // Cierra un ticket (sin acreditar). El chat queda en modo lectura para ambos.
+  app.post('/api/admin/recharge/:id/close', { preHandler: [authenticate, requireAdmin] }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const { note } = (req.body ?? {}) as { note?: string | null };
+    const text = typeof note === 'string' ? note.trim() : '';
+
+    const ticket = db.select().from(schema.rechargeTickets).where(eq(schema.rechargeTickets.id, id)).get();
+    if (!ticket) return reply.code(404).send({ error: 'not_found' });
+    if (ticket.status !== 'open') return reply.code(409).send({ error: 'ticket_already_resolved' });
+
+    const now = Date.now();
+    db.update(schema.rechargeTickets)
+      .set({ status: 'closed', resolvedAt: now, adminNote: text || null })
+      .where(eq(schema.rechargeTickets.id, id))
+      .run();
+    postSystemMessage(id, text ? `SYSTEM_CLOSED:${text}` : 'SYSTEM_CLOSED');
+
+    const updated = db.select().from(schema.rechargeTickets).where(eq(schema.rechargeTickets.id, id)).get()!;
+    const payload: RechargeTicketWithMessages = { ticket: rowToTicket(updated), messages: getTicketMessages(id) };
     return reply.send(payload);
   });
 }

@@ -421,4 +421,122 @@ describe('recharge purchase chat (T1 backend)', () => {
     expect(msg.statusCode).toBe(409);
     expect(msg.json().error).toBe('ticket_closed');
   });
+
+  it('user closes their open ticket: no credits, sealed, can start another', async () => {
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/credits/recharge',
+      headers: { authorization: `Bearer ${tokenFor(USER_ID)}` },
+      payload: { packId: 'pack_5' },
+    });
+    const ticketId = created.json().ticket.id;
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/credits/recharge/my/close',
+      headers: { authorization: `Bearer ${tokenFor(USER_ID)}` },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().ticket.status).toBe('closed');
+    expect(res.json().ticket.resolvedAt).toBeTruthy();
+    const last = res.json().messages.at(-1);
+    expect(last.senderRole).toBe('system');
+    expect(last.body).toContain('SYSTEM_CLOSED_BY_USER');
+
+    // Sin acreditar.
+    const balance = testDb.select().from(schema.users).where(eq(schema.users.id, USER_ID)).get()!.creditBalance;
+    expect(balance).toBe(0);
+
+    // Nadie puede escribir más: ni usuario ni admin.
+    const userMsg = await app.inject({
+      method: 'POST',
+      url: '/api/credits/recharge/my/message',
+      headers: { authorization: `Bearer ${tokenFor(USER_ID)}` },
+      payload: { body: 'hola?' },
+    });
+    expect(userMsg.statusCode).toBe(409);
+    const adminMsg = await app.inject({
+      method: 'POST',
+      url: `/api/admin/recharge/${ticketId}/message`,
+      headers: { authorization: `Bearer ${tokenFor(ADMIN_ID)}` },
+      payload: { body: 'te confirmo' },
+    });
+    expect(adminMsg.statusCode).toBe(409);
+
+    // Puede iniciar otro ticket.
+    const second = await app.inject({
+      method: 'POST',
+      url: '/api/credits/recharge',
+      headers: { authorization: `Bearer ${tokenFor(USER_ID)}` },
+      payload: { packId: 'pack_2' },
+    });
+    expect(second.statusCode).toBe(201);
+  });
+
+  it('admin closes a ticket with optional note + system message', async () => {
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/credits/recharge',
+      headers: { authorization: `Bearer ${tokenFor(USER_ID)}` },
+      payload: { packId: 'pack_2' },
+    });
+    const ticketId = created.json().ticket.id;
+
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/admin/recharge/${ticketId}/close`,
+      headers: { authorization: `Bearer ${tokenFor(ADMIN_ID)}` },
+      payload: { note: 'Duplicado, seguimos por soporte' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().ticket.status).toBe('closed');
+    expect(res.json().ticket.adminNote).toBe('Duplicado, seguimos por soporte');
+    const last = res.json().messages.at(-1);
+    expect(last.body).toContain('SYSTEM_CLOSED:Duplicado');
+
+    // Sin créditos ni transacción.
+    const balance = testDb.select().from(schema.users).where(eq(schema.users.id, USER_ID)).get()!.creditBalance;
+    expect(balance).toBe(0);
+    const txns = testDb.select().from(schema.creditTransactions).where(eq(schema.creditTransactions.userId, USER_ID)).all();
+    expect(txns).toHaveLength(0);
+
+    // Cerrar de nuevo / aprobar → 409.
+    const again = await app.inject({
+      method: 'POST',
+      url: `/api/admin/recharge/${ticketId}/close`,
+      headers: { authorization: `Bearer ${tokenFor(ADMIN_ID)}` },
+      payload: {},
+    });
+    expect(again.statusCode).toBe(409);
+    const approve = await app.inject({
+      method: 'POST',
+      url: `/api/admin/recharge/${ticketId}/approve`,
+      headers: { authorization: `Bearer ${tokenFor(ADMIN_ID)}` },
+      payload: {},
+    });
+    expect(approve.statusCode).toBe(409);
+  });
+
+  it('closing an approved ticket is rejected (already resolved)', async () => {
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/credits/recharge',
+      headers: { authorization: `Bearer ${tokenFor(USER_ID)}` },
+      payload: { packId: 'pack_2' },
+    });
+    const ticketId = created.json().ticket.id;
+    await app.inject({
+      method: 'POST',
+      url: `/api/admin/recharge/${ticketId}/approve`,
+      headers: { authorization: `Bearer ${tokenFor(ADMIN_ID)}` },
+      payload: {},
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/credits/recharge/my/close',
+      headers: { authorization: `Bearer ${tokenFor(USER_ID)}` },
+    });
+    expect(res.statusCode).toBe(409);
+  });
 });

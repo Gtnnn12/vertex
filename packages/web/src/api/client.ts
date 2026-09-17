@@ -181,6 +181,7 @@ export class BackspaceApiClient {
     purchaseCredits: (packId: 'pack_2' | 'pack_5' | 'pack_10') => Promise<import('@backspace/shared').CreditPurchaseResponse>;
     purchaseNetrexWithCredits: () => Promise<import('@backspace/shared').NetrexWithCreditsResponse>;
     rechargeMy: () => Promise<import('@backspace/shared').RechargeTicketWithMessages>;
+    rechargeClose: () => Promise<import('@backspace/shared').RechargeTicketWithMessages>;
     rechargeCreate: (packId: 'pack_2' | 'pack_5' | 'pack_10') => Promise<import('@backspace/shared').RechargeTicketWithMessages>;
     rechargeSendMessage: (data: { body?: string; imageUrl?: string }) => Promise<{ message: import('@backspace/shared').RechargeMessage }>;
     rechargeQueue: (status?: 'open' | 'approved' | 'rejected' | 'all') => Promise<import('@backspace/shared').RechargeQueueResponse>;
@@ -188,6 +189,7 @@ export class BackspaceApiClient {
     rechargeReply: (id: string, data: { body?: string; imageUrl?: string }) => Promise<{ message: import('@backspace/shared').RechargeMessage }>;
     rechargeApprove: (id: string, note?: string) => Promise<import('@backspace/shared').RechargeTicketWithMessages>;
     rechargeReject: (id: string, note: string) => Promise<import('@backspace/shared').RechargeTicketWithMessages>;
+    rechargeAdminClose: (id: string, note?: string) => Promise<import('@backspace/shared').RechargeTicketWithMessages>;
     emojis: (spaceId: string) => Promise<{ emojis: import('@backspace/shared').SpaceEmoji[]; limit: number }>;
     createEmoji: (spaceId: string, data: { name: string; file: string }) => Promise<{ emoji: import('@backspace/shared').SpaceEmoji | null; limit: number }>;
     deleteEmoji: (spaceId: string, emojiId: string) => Promise<{ success: boolean }>;
@@ -595,6 +597,8 @@ export class BackspaceApiClient {
         request<import('@backspace/shared').RechargeTicketWithMessages>('POST', '/credits/recharge', { packId }),
       rechargeSendMessage: (data: { body?: string; imageUrl?: string }) =>
         request<{ message: import('@backspace/shared').RechargeMessage }>('POST', '/credits/recharge/my/message', data),
+      rechargeClose: () =>
+        request<import('@backspace/shared').RechargeTicketWithMessages>('POST', '/credits/recharge/my/close', {}),
       rechargeQueue: (status?: 'open' | 'approved' | 'rejected' | 'all') =>
         request<import('@backspace/shared').RechargeQueueResponse>('GET', `/admin/recharge${status ? `?status=${status}` : ''}`),
       rechargeTicket: (id: string) =>
@@ -605,6 +609,8 @@ export class BackspaceApiClient {
         request<import('@backspace/shared').RechargeTicketWithMessages>('POST', `/admin/recharge/${id}/approve`, { note }),
       rechargeReject: (id: string, note: string) =>
         request<import('@backspace/shared').RechargeTicketWithMessages>('POST', `/admin/recharge/${id}/reject`, { note }),
+      rechargeAdminClose: (id: string, note?: string) =>
+        request<import('@backspace/shared').RechargeTicketWithMessages>('POST', `/admin/recharge/${id}/close`, { note }),
       emojis: (spaceId: string) =>
         request<{ emojis: import('@backspace/shared').SpaceEmoji[]; limit: number }>('GET', `/spaces/${spaceId}/emojis`),
       createEmoji: (spaceId: string, data: { name: string; file: string }) =>

@@ -795,7 +795,7 @@ export interface NetrexWithCreditsResponse {
 
 // ─── Chat de compra (recargas vía paypal.me in-app) ─────────────────────────
 
-export type RechargeTicketStatus = 'open' | 'approved' | 'rejected';
+export type RechargeTicketStatus = 'open' | 'approved' | 'rejected' | 'closed';
 export type RechargeSenderRole = 'user' | 'admin' | 'system';
 
 export interface RechargeTicket {

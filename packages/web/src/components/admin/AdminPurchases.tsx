@@ -20,14 +20,31 @@ const PACK_CREDITS: Record<string, number> = { pack_2: 100, pack_5: 275, pack_10
 
 type QueueItem = RechargeTicket & { username: string };
 
-function systemBody(body: string): { kind: 'created' | 'approved' | 'rejected'; note?: string } {
+function systemBody(body: string): { kind: 'created' | 'approved' | 'rejected' | 'closed'; note?: string } {
   if (body.startsWith('SYSTEM_APPROVED')) {
     return { kind: 'approved', note: body.slice('SYSTEM_APPROVED'.length + 1) || undefined };
   }
   if (body.startsWith('SYSTEM_REJECTED')) {
     return { kind: 'rejected', note: body.slice('SYSTEM_REJECTED'.length + 1) || undefined };
   }
+  if (body.startsWith('SYSTEM_CLOSED')) {
+    return { kind: 'closed', note: body.slice('SYSTEM_CLOSED'.length + 1) || undefined };
+  }
   return { kind: 'created' };
+}
+
+function statusChipClass(status: string): string {
+  if (status === 'open') return 'bg-amber-400/15 text-amber-300';
+  if (status === 'approved') return 'bg-green-400/15 text-green-300';
+  if (status === 'rejected') return 'bg-red-400/15 text-red-300';
+  return 'bg-white/10 text-txt-secondary'; // closed
+}
+
+function statusIcon(status: string): string {
+  if (status === 'open') return '⏳';
+  if (status === 'approved') return '✓';
+  if (status === 'rejected') return '✗';
+  return '📁';
 }
 
 export function AdminPurchases() {
@@ -41,6 +58,8 @@ export function AdminPurchases() {
   const [busy, setBusy] = useState(false);
   const [rejectNote, setRejectNote] = useState('');
   const [showReject, setShowReject] = useState(false);
+  const [showCloseNote, setShowCloseNote] = useState(false);
+  const [closeNote, setCloseNote] = useState('');
 
   const loadQueue = useCallback(async () => {
     try {
@@ -77,6 +96,8 @@ export function AdminPurchases() {
     setSelectedId(id);
     setShowReject(false);
     setRejectNote('');
+    setShowCloseNote(false);
+    setCloseNote('');
     void loadDetail(id);
   };
 
@@ -94,7 +115,7 @@ export function AdminPurchases() {
     }
   };
 
-  const resolve = async (action: 'approve' | 'reject') => {
+  const resolve = async (action: 'approve' | 'reject' | 'close') => {
     if (!detail || busy) return;
     if (action === 'reject' && !rejectNote.trim()) return;
     setBusy(true);
@@ -102,14 +123,22 @@ export function AdminPurchases() {
       const res =
         action === 'approve'
           ? await api.spaces.rechargeApprove(detail.ticket.id)
-          : await api.spaces.rechargeReject(detail.ticket.id, rejectNote.trim());
+          : action === 'reject'
+            ? await api.spaces.rechargeReject(detail.ticket.id, rejectNote.trim())
+            : await api.spaces.rechargeAdminClose(detail.ticket.id, closeNote.trim() || undefined);
       setDetail({ ...res, username: detail.username });
       addToast(
-        action === 'approve' ? t('admin_purchases_toast_approved') : t('admin_purchases_toast_rejected'),
+        action === 'approve'
+          ? t('admin_purchases_toast_approved')
+          : action === 'reject'
+            ? t('admin_purchases_toast_rejected')
+            : t('admin_purchases_toast_closed'),
         'success',
       );
       setShowReject(false);
       setRejectNote('');
+      setShowCloseNote(false);
+      setCloseNote('');
       await loadQueue();
     } catch (err: unknown) {
       const code = (err as { body?: { code?: string } })?.body?.code;
@@ -168,15 +197,9 @@ export function AdminPurchases() {
               <div className="flex items-center gap-2">
                 <span className="text-[12.5px] font-semibold text-txt-primary truncate">{tk.username}</span>
                 <span
-                  className={`ml-auto shrink-0 rounded-full px-1.5 py-px text-[9px] font-bold uppercase ${
-                    tk.status === 'open'
-                      ? 'bg-amber-400/15 text-amber-300'
-                      : tk.status === 'approved'
-                        ? 'bg-green-400/15 text-green-300'
-                        : 'bg-red-400/15 text-red-300'
-                  }`}
+                  className={`ml-auto shrink-0 rounded-full px-1.5 py-px text-[9px] font-bold uppercase ${statusChipClass(tk.status)}`}
                 >
-                  {tk.status === 'open' ? '⏳' : tk.status === 'approved' ? '✓' : '✗'}
+                  {statusIcon(tk.status)}
                 </span>
               </div>
               <div className="mt-0.5 flex items-center gap-2 text-[10.5px] text-txt-tertiary">
@@ -204,13 +227,7 @@ export function AdminPurchases() {
                   {detail.ticket.packId.replace('pack_', '')}€ → {PACK_CREDITS[detail.ticket.packId] ?? '?'} 💎
                 </span>
                 <span
-                  className={`ml-auto rounded-full px-2 py-px text-[9.5px] font-bold uppercase ${
-                    detail.ticket.status === 'open'
-                      ? 'bg-amber-400/15 text-amber-300'
-                      : detail.ticket.status === 'approved'
-                        ? 'bg-green-400/15 text-green-300'
-                        : 'bg-red-400/15 text-red-300'
-                  }`}
+                  className={`ml-auto rounded-full px-2 py-px text-[9.5px] font-bold uppercase ${statusChipClass(detail.ticket.status)}`}
                 >
                   {detail.ticket.status}
                 </span>
@@ -232,10 +249,11 @@ export function AdminPurchases() {
                                 : 'bg-white/[0.05] text-txt-tertiary'
                           }`}
                         >
-                          {info.kind === 'created' && t('recharge_system_created')}
-                          {info.kind === 'approved' && t('recharge_system_approved')}
-                          {info.kind === 'rejected' && `${t('recharge_system_rejected')}${info.note ? `: ${info.note}` : ''}`}
-                        </div>
+                  {info.kind === 'created' && t('recharge_system_created')}
+                  {info.kind === 'approved' && t('recharge_system_approved')}
+                  {info.kind === 'rejected' && `${t('recharge_system_rejected')}${info.note ? `: ${info.note}` : ''}`}
+                  {info.kind === 'closed' && `${t('recharge_system_closed')}${info.note ? `: ${info.note}` : ''}`}
+                </div>
                       </div>
                     );
                   }
@@ -302,7 +320,7 @@ export function AdminPurchases() {
               {/* Acciones de resolución */}
               {detail.ticket.status === 'open' && (
                 <div className="border-t border-white/[0.06] px-3 py-2.5">
-                  {!showReject ? (
+                  {!showReject && !showCloseNote ? (
                     <div className="flex gap-2">
                       <button
                         type="button"
@@ -320,8 +338,16 @@ export function AdminPurchases() {
                       >
                         {t('admin_purchases_reject')}
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowCloseNote(true)}
+                        disabled={busy}
+                        className="rounded-lg border border-white/15 px-3 py-2 text-[12px] font-semibold text-txt-secondary transition-colors hover:bg-white/5 disabled:opacity-40 motion-reduce:transition-none"
+                      >
+                        {t('admin_purchases_close_ticket')}
+                      </button>
                     </div>
-                  ) : (
+                  ) : showReject ? (
                     <div className="space-y-2">
                       <input
                         value={rejectNote}
@@ -348,7 +374,34 @@ export function AdminPurchases() {
                         </button>
                       </div>
                     </div>
-                  )}
+                  ) : showCloseNote ? (
+                    <div className="space-y-2">
+                      <input
+                        value={closeNote}
+                        onChange={(e) => setCloseNote(e.target.value)}
+                        maxLength={500}
+                        placeholder={t('admin_purchases_close_note_placeholder')}
+                        className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-[12.5px] text-txt-primary placeholder:text-txt-tertiary focus:border-white/30 focus:outline-none"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void resolve('close')}
+                          disabled={busy}
+                          className="flex-1 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-[12px] font-bold text-txt-primary disabled:opacity-40"
+                        >
+                          {t('admin_purchases_close_confirm')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowCloseNote(false)}
+                          className="px-3 py-2 text-[12px] text-txt-tertiary hover:text-txt-secondary"
+                        >
+                          {t('recharge_cancel')}
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               )}
             </div>

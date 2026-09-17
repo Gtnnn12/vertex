@@ -24,12 +24,15 @@ import type {
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
-function systemBody(body: string): { kind: 'created' | 'approved' | 'rejected'; note?: string } {
+function systemBody(body: string): { kind: 'created' | 'approved' | 'rejected' | 'closed'; note?: string } {
   if (body.startsWith('SYSTEM_APPROVED')) {
     return { kind: 'approved', note: body.slice('SYSTEM_APPROVED'.length + 1) || undefined };
   }
   if (body.startsWith('SYSTEM_REJECTED')) {
     return { kind: 'rejected', note: body.slice('SYSTEM_REJECTED'.length + 1) || undefined };
+  }
+  if (body.startsWith('SYSTEM_CLOSED')) {
+    return { kind: 'closed', note: body.slice('SYSTEM_CLOSED'.length + 1) || undefined };
   }
   return { kind: 'created' };
 }
@@ -37,10 +40,13 @@ function systemBody(body: string): { kind: 'created' | 'approved' | 'rejected'; 
 export function RechargeChat({
   onResolved,
   onRefreshBalance,
+  pollMs = 10000,
 }: {
   /** Se llama cuando el ticket pasa a approved/rejected (para refrescar saldo). */
   onResolved?: () => void;
   onRefreshBalance?: () => void;
+  /** Intervalo de polling (ms) — inyectable para tests. */
+  pollMs?: number;
 }) {
   const { t } = useLanguage();
   const addToast = useUIStore((s) => s.addToast);
@@ -55,6 +61,7 @@ export function RechargeChat({
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const resolvedRef = useRef(false);
+  const [confirmClose, setConfirmClose] = useState(false);
   // Evita toasts duplicados por el poll: solo anunciamos transiciones nuevas.
   const lastKnownStatus = useRef<string | null>(null);
 
@@ -62,6 +69,8 @@ export function RechargeChat({
     try {
       const res = await api.spaces.rechargeMy();
       setData(res);
+      // Marca el chat como "visto" para el badge del chip del sidebar.
+      localStorage.setItem('recharge_chat_last_seen', String(Date.now()));
       const status = res.ticket?.status ?? null;
       if (status && lastKnownStatus.current && status !== lastKnownStatus.current) {
         if (status === 'approved') {
@@ -87,9 +96,10 @@ export function RechargeChat({
 
   useEffect(() => {
     void refresh();
+    // Poll: las respuestas del staff aparecen sin reabrir nada.
     const interval = setInterval(() => {
       if (document.visibilityState === 'visible') void refresh();
-    }, 5000);
+    }, pollMs);
     const onVisible = () => {
       if (document.visibilityState === 'visible') void refresh();
     };
@@ -98,7 +108,7 @@ export function RechargeChat({
       clearInterval(interval);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [refresh]);
+  }, [refresh, pollMs]);
 
   // Autoscroll al último mensaje.
   useEffect(() => {
@@ -106,10 +116,23 @@ export function RechargeChat({
     if (el) el.scrollTop = el.scrollHeight;
   }, [data?.messages.length]);
 
+  const closeTicket = async () => {
+    try {
+      await api.spaces.rechargeClose();
+      setConfirmClose(false);
+      await refresh();
+    } catch {
+      addToast(t('recharge_err_close'), 'warning');
+    }
+  };
+
   const send = async (payload: { body?: string; imageUrl?: string }) => {
     setSending(true);
     try {
-      await api.spaces.rechargeSendMessage(payload);
+      const res = await api.spaces.rechargeSendMessage(payload);
+      // Optimista: el mensaje enviado aparece al instante (el refresh trae
+      // la lista canónica del server, con la respuesta del staff cuando llegue).
+      setData((prev) => (prev ? { ...prev, messages: [...prev.messages, res.message] } : prev));
       setDraft('');
       await refresh();
     } catch (err: unknown) {
@@ -196,14 +219,16 @@ export function RechargeChat({
         }`}
       >
         <span aria-hidden="true">
-          {ticket.status === 'approved' ? '✅' : ticket.status === 'rejected' ? '❌' : '⏳'}
+          {ticket.status === 'approved' ? '✅' : ticket.status === 'rejected' ? '❌' : ticket.status === 'closed' ? '📁' : '⏳'}
         </span>
         <span>
           {ticket.status === 'approved'
             ? t('recharge_status_approved').replace('{credits}', String(packEuros === '2' ? 100 : packEuros === '5' ? 275 : 600))
             : ticket.status === 'rejected'
               ? t('recharge_status_rejected')
-              : t('recharge_status_open')}
+              : ticket.status === 'closed'
+                ? t('recharge_status_closed')
+                : t('recharge_status_open')}
         </span>
         <span className="ml-auto font-mono text-[10px] font-normal text-txt-tertiary">
           {t('recharge_pack_label').replace('{euros}', packEuros)}
@@ -223,12 +248,15 @@ export function RechargeChat({
                       ? 'bg-accent-mint/15 text-accent-mint'
                       : info.kind === 'rejected'
                         ? 'bg-accent-rose/15 text-accent-rose'
-                        : 'bg-white/[0.05] text-txt-tertiary'
+                        : info.kind === 'closed'
+                          ? 'bg-white/[0.07] text-txt-secondary'
+                          : 'bg-white/[0.05] text-txt-tertiary'
                   }`}
                 >
                   {info.kind === 'created' && t('recharge_system_created')}
                   {info.kind === 'approved' && t('recharge_system_approved')}
                   {info.kind === 'rejected' && `${t('recharge_system_rejected')}${info.note ? `: ${info.note}` : ''}`}
+                  {info.kind === 'closed' && `${t('recharge_system_closed')}${info.note ? `: ${info.note}` : ''}`}
                 </div>
               </div>
             );
@@ -266,8 +294,28 @@ export function RechargeChat({
         })}
       </div>
 
-      {/* Composer (solo con ticket abierto) */}
-      {isOpen ? (
+      {/* Composer (solo con ticket abierto) + cierre por el usuario */}
+      {isOpen && confirmClose ? (
+        <div className="flex items-center justify-between gap-2 border-t border-white/[0.06] bg-white/[0.02] px-3 py-2.5">
+          <span className="text-[11.5px] text-txt-secondary">{t('recharge_close_confirm')}</span>
+          <div className="flex shrink-0 gap-2">
+            <button
+              type="button"
+              onClick={() => void closeTicket()}
+              className="rounded-lg border border-accent-rose/40 px-2.5 py-1.5 text-[11.5px] font-semibold text-accent-rose transition-colors hover:bg-accent-rose/10 motion-reduce:transition-none"
+            >
+              {t('recharge_close_yes')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmClose(false)}
+              className="px-2 py-1.5 text-[11.5px] text-txt-tertiary transition-colors hover:text-txt-secondary motion-reduce:transition-none"
+            >
+              {t('recharge_cancel')}
+            </button>
+          </div>
+        </div>
+      ) : isOpen ? (
         <div className="flex items-center gap-2 border-t border-white/[0.06] px-3 py-2.5">
           <input
             ref={fileInputRef}
@@ -312,6 +360,17 @@ export function RechargeChat({
             className="rounded-lg bg-accent-mint px-3 py-2 text-[12px] font-bold text-black transition-opacity hover:opacity-90 disabled:opacity-40 motion-reduce:transition-none"
           >
             {t('recharge_send')}
+          </button>
+          <button
+            type="button"
+            onClick={() => setConfirmClose(true)}
+            className="p-1.5 text-txt-tertiary transition-colors hover:text-accent-rose motion-reduce:transition-none"
+            title={t('recharge_close_title')}
+            aria-label={t('recharge_close_title')}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
           </button>
         </div>
       ) : (
