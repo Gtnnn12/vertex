@@ -113,8 +113,29 @@ export function CreditsShopContent({ onPurchased }: { onPurchased?: () => void }
     })();
   }, []);
 
+  const openFirstPack = () => {
+    const pack = packs[0];
+    if (pack) handleBuy(pack);
+  };
+
   return (
     <div className="space-y-5">
+      {/* Banner de recarga (T4): saldo a 0 y sin flujo ni chat activos. */}
+      {balance === 0 && !rechargePack && !showChat && (
+        <button
+          type="button"
+          onClick={openFirstPack}
+          className="flex w-full items-center gap-3 rounded-xl border border-accent-mint/30 bg-gradient-to-r from-accent-mint/[0.08] to-transparent px-4 py-3 text-left transition-colors hover:border-accent-mint/50 motion-reduce:transition-none"
+        >
+          <span aria-hidden="true" className="text-xl">💎</span>
+          <span>
+            <span className="block text-[12.5px] font-semibold text-txt-primary">{t('recharge_banner_title')}</span>
+            <span className="block text-[11px] text-txt-tertiary">{t('recharge_banner_sub')}</span>
+          </span>
+          <span aria-hidden="true" className="ml-auto text-txt-tertiary">→</span>
+        </button>
+      )}
+
       {/* Saldo */}
       <div className="rounded-lg border border-accent-mint/25 bg-accent-mint/[0.06] p-4 flex items-center gap-3">
         <span aria-hidden="true" className="text-2xl">💎</span>

@@ -641,6 +641,8 @@
   "admin_purchases_err_send": "No se pudo enviar la respuesta.",
   "admin_purchases_err_resolve": "No se pudo resolver el ticket.",
   "admin_purchases_err_resolved": "El ticket ya estaba resuelto — actualizando.",
+  "recharge_banner_title": "Recarga por PayPal — segura y verificada",
+  "recharge_banner_sub": "Paga con tu cuenta de PayPal y chatea con el staff para verificar el pago. Sin salir de VERTEX.",
   "credits_amount_positive": "Créditos añadidos",
   "credits_amount_negative": "Créditos gastados",
   "evo_boost_cta": "Mejorar server — 2€/mes",
