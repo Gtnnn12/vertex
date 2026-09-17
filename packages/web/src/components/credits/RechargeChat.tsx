@@ -165,6 +165,16 @@ export function RechargeChat({
 
   const handlePickFile = () => fileInputRef.current?.click();
 
+  // Ctrl+V de una captura desde el portapapeles: se sube y envía igual que
+  // con el botón 📎. Ignora pegados de texto (esos van por el input normal).
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const item = Array.from(e.clipboardData.items).find((i) => IMAGE_TYPES.includes(i.type));
+    if (!item) return;
+    e.preventDefault();
+    const file = item.getAsFile();
+    if (file) void handleFile(new File([file], file.name || 'captura.png', { type: file.type }));
+  };
+
   const handleFile = async (file: File | undefined) => {
     if (!file) return;
     if (!IMAGE_TYPES.includes(file.type)) {
@@ -392,6 +402,7 @@ export function RechargeChat({
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
+            onPaste={handlePaste}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
