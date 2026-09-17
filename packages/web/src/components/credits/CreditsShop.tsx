@@ -6,6 +6,7 @@ import { useAuthStore } from '../../stores/authStore';
 import type { CreditPack, CreditTransaction } from '@backspace/shared';
 import { BOOST_CREDIT_COST } from '@backspace/shared/src/evoConstants.js';
 import { RechargeChat } from './RechargeChat';
+import { LegalLinks } from '../legal/LegalPage';
 
 /**
  * Tienda e historial de créditos (monedero VERTEX). Se usa en dos sitios:
@@ -265,6 +266,10 @@ export function CreditsShopContent({
             <span aria-hidden="true">⏳</span>
             {t('recharge_step2_limit')}
           </p>
+          <p className="mt-1.5 text-[10.5px] text-txt-tertiary/80">
+            {t('legal_continue_accepts')}{' '}
+            <LegalLinks className="text-txt-tertiary" />
+          </p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <a
               href="https://paypal.me/MarioCortes1"
@@ -344,6 +349,10 @@ export function CreditsShopContent({
         </div>
         {error && <p className="mt-2 text-xs text-accent-rose">{error}</p>}
         <p className="mt-2 text-[11px] text-txt-tertiary">{t('credits_webhook_note')}</p>
+        <p className="mt-1.5 text-[11px] text-txt-tertiary">
+          {t('legal_buy_accepts')}{' '}
+          <LegalLinks className="text-txt-secondary" />
+        </p>
       </div>
       )}
 
@@ -477,6 +486,9 @@ export function CreditsShopModal() {
           <h3 className="text-[13px] font-semibold text-txt-primary mb-2">{t('credits_history_title')}</h3>
           <CreditHistoryList />
         </div>
+        <p className="mt-4 border-t border-white/[0.05] pt-3 text-center text-[10px] text-txt-tertiary/70">
+          <LegalLinks />
+        </p>
       </div>
     </div>
   );

@@ -7,6 +7,7 @@ import { JoinPage } from './components/JoinPage';
 import { SwAutoUpdate } from './components/ui/SwUpdatePrompt';
 import { ScreenSharePicker } from './components/voice/ScreenSharePicker';
 import { SpotifyCallbackPage } from './components/spotify/SpotifyCallbackPage';
+import { LegalPage } from './components/legal/LegalPage';
 import { useAuthStore } from './stores/authStore';
 import { refreshNetrexEntitlement } from './stores/netrexLicenseStore';
 import { isElectron } from './platform/platform';
@@ -100,6 +101,9 @@ export function App() {
             path="/auth/spotify/callback"
             element={<SpotifyCallbackPage />}
           />
+          {/* Legales — SIN sesión, visibles desde login/registro. */}
+          <Route path="/terms" element={<LegalPage doc="terms" />} />
+          <Route path="/privacy" element={<LegalPage doc="privacy" />} />
           <Route
             path="/explore"
             element={

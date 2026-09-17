@@ -4,6 +4,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { api, RateLimitError, NetworkError } from '../../api/client';
 import type { InstanceInfoResponse } from '@backspace/shared';
 import { SourceCodeLink } from '../ui/SourceCodeLink';
+import { LegalLinks } from '../legal/LegalPage';
 import { requestPostLoginCards } from './postLoginCardsHost';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { Mascot, type MascotState } from '../mascot/Mascot';
@@ -187,7 +188,7 @@ export function LoginPage() {
       </div>
 
       <p className="absolute bottom-4 inset-x-0 text-center text-[11px] text-txt-tertiary/70 select-none">
-        created by gitano
+        created by gitano · <LegalLinks className="select-text" />
       </p>
     </div>
   );

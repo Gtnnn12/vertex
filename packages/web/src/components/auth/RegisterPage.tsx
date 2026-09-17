@@ -8,6 +8,7 @@ import { AVATAR_COLORS } from '@backspace/shared';
 import type { AvatarColor, CheckInviteResponse, InstanceInfoResponse } from '@backspace/shared';
 import { api, RateLimitError } from '../../api/client';
 import { useTransferStore } from '../../stores/transferStore';
+import { LegalLinks } from '../legal/LegalPage';
 import { waitForTransferAttachment } from '../../utils/waitForTransfer';
 import { SourceCodeLink } from '../ui/SourceCodeLink';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -61,6 +62,8 @@ export function RegisterPage() {
   const [error, setError] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
   const [retryAfter, setRetryAfter] = useState(0);
+  // TOS/privacidad: obligatorio marcar en el paso 1 para continuar.
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const initSession = useAuthStore((s) => s.initSession);
   const navigate = useNavigate();
@@ -398,7 +401,8 @@ export function RegisterPage() {
   const continueDisabled =
     usernameStatus === 'taken' ||
     usernameStatus === 'invalid' ||
-    (inviteRequired && !inviteValid);
+    (inviteRequired && !inviteValid) ||
+    !acceptedTerms;
 
   return (
     // Outer scroll container — root is `h-full overflow-hidden`, so this page must own
@@ -570,6 +574,20 @@ export function RegisterPage() {
                 />
               </div>
 
+              <label className="mb-4 flex cursor-pointer items-start gap-2.5 text-[12.5px] text-txt-secondary">
+                <input
+                  type="checkbox"
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-[var(--accent-primary)]"
+                  required
+                />
+                <span>
+                  {t('legal_accept_terms')}{' '}
+                  <LegalLinks newTab className="text-accent-primary" />
+                </span>
+              </label>
+
               <button
                 type="submit"
                 disabled={continueDisabled}
@@ -737,6 +755,9 @@ export function RegisterPage() {
             <SourceCodeLink sourceCodeUrl={instanceInfo.sourceCodeUrl} version={instanceInfo.version} commit={instanceInfo.commit} />
           </div>
         )}
+        <p className="mt-3 text-center text-[11px] text-txt-tertiary">
+          <LegalLinks />
+        </p>
         </div>
       </div>
 
