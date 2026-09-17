@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useUIStore } from '../../stores/uiStore';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { api } from '../../api/client';
@@ -57,21 +57,39 @@ export function useCredits() {
   return { balance, transactions, packs, refresh };
 }
 
-export function CreditsShopContent({ onPurchased }: { onPurchased?: () => void }) {
+type ShopView = 'shop' | 'chat';
+
+export function CreditsShopContent({
+  onPurchased,
+  pollMs,
+}: {
+  onPurchased?: () => void;
+  /** Intervalo de polling del chat (ms) — inyectable para tests. */
+  pollMs?: number;
+}) {
   const { t } = useLanguage();
   const { balance, packs, refresh } = useCredits();
   const username = useAuthStore((s) => s.user?.username ?? '');
+  const openModal = useUIStore((s) => s.openModal);
   const [buying, setBuying] = useState<string | null>(null);
   const [error, setError] = useState('');
   // Paso 2 del flujo de recarga in-app: pack elegido + instrucciones paypal.me.
   const [rechargePack, setRechargePack] = useState<CreditPack | null>(null);
   const [creatingTicket, setCreatingTicket] = useState(false);
-  const [showChat, setShowChat] = useState(false);
+  // Vista permanente del chat: accesible con pill «Mi compra» aunque se cierre
+  // el flujo o el modal (sobrevive a remounts vía modalData del uiStore).
+  const [hasTicket, setHasTicket] = useState(false);
+  const [view, setView] = useState<ShopView>('shop');
+  const shopViewRef = useRef(false);
   const netrexCost = 6 * BOOST_CREDIT_COST; // 600 créditos = mes de Netrex
 
   const handleBuy = (pack: CreditPack) => {
     setError('');
     setRechargePack(pack);
+    // PayPal DIRECTO: al pulsar Comprar se abre paypal.me con el importe
+    // en pestaña nueva — el usuario paga y vuelve a "Ya he pagado".
+    const euros = pack.priceLabel.replace('€', '').trim();
+    window.open(`https://paypal.me/MarioCortes1/${euros}`, '_blank', 'noopener,noreferrer');
   };
 
   const handlePaid = async () => {
@@ -80,14 +98,25 @@ export function CreditsShopContent({ onPurchased }: { onPurchased?: () => void }
     setError('');
     try {
       await api.spaces.rechargeCreate(rechargePack.id);
-      // El chat del ticket se muestra desde RechargeFlow vía polling.
+      // Transición inmediata al chat del ticket.
       setRechargePack(null);
-      setShowChat(true);
+      setHasTicket(true);
+      setView('chat');
+      shopViewRef.current = true;
+      openModal('creditsShop', { shopView: 'chat' });
     } catch (err: unknown) {
-      const code = (err as { body?: { code?: string } })?.body?.code;
-      if (code === 'ticket_already_open') {
+      // El server responde 409 { error: 'ticket_already_open' } — el cliente
+      // lo lanza como HttpError con status y body. Antes se clasificaba por
+      // err.body?.code (que no existe) y el modal se quedaba en el paso 2
+      // sin abrir el chat: ese era el bug.
+      const status = (err as { status?: number })?.status;
+      const errCode = (err as { body?: { error?: string } })?.body?.error;
+      if (status === 409 || errCode === 'ticket_already_open') {
         setRechargePack(null);
-        setShowChat(true);
+        setHasTicket(true);
+        setView('chat');
+        shopViewRef.current = true;
+        openModal('creditsShop', { shopView: 'chat' });
       } else {
         setError(t('credits_purchase_error'));
       }
@@ -101,12 +130,19 @@ export function CreditsShopContent({ onPurchased }: { onPurchased?: () => void }
     setError('');
   };
 
-  // Con ticket abierto, el modal muestra el chat directamente.
+  // Al montar: ¿hay ticket (abierto o reciente)? Habilita la pill «Mi compra»
+  // y muestra el chat directamente si está abierto.
   useEffect(() => {
     void (async () => {
       try {
         const my = await api.spaces.rechargeMy();
-        if (my.ticket?.status === 'open') setShowChat(true);
+        if (my.ticket) {
+          setHasTicket(true);
+          if (my.ticket.status === 'open') {
+            setView('chat');
+            shopViewRef.current = true;
+          }
+        }
       } catch {
         /* sin ticket */
       }
@@ -118,10 +154,33 @@ export function CreditsShopContent({ onPurchased }: { onPurchased?: () => void }
     if (pack) handleBuy(pack);
   };
 
+  const openChat = () => {
+    setView('chat');
+    shopViewRef.current = true;
+    openModal('creditsShop', { shopView: 'chat' });
+  };
+
   return (
     <div className="space-y-5">
+      {/* Pill fija «Mi compra» — visible SIEMPRE que haya ticket (abierto o reciente). */}
+      {hasTicket && (
+        <button
+          type="button"
+          onClick={openChat}
+          className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-[12px] font-semibold transition-colors motion-reduce:transition-none ${
+            view === 'chat'
+              ? 'border-accent-mint/60 bg-accent-mint/10 text-txt-primary'
+              : 'border-white/10 bg-white/[0.03] text-txt-secondary hover:border-white/25'
+          }`}
+        >
+          <span aria-hidden="true">💬</span>
+          <span>{t('recharge_my_purchase')}</span>
+          <span aria-hidden="true" className="ml-auto text-txt-tertiary">→</span>
+        </button>
+      )}
+
       {/* Banner de recarga (T4): saldo a 0 y sin flujo ni chat activos. */}
-      {balance === 0 && !rechargePack && !showChat && (
+      {balance === 0 && !rechargePack && view !== 'chat' && (
         <button
           type="button"
           onClick={openFirstPack}
@@ -136,7 +195,8 @@ export function CreditsShopContent({ onPurchased }: { onPurchased?: () => void }
         </button>
       )}
 
-      {/* Saldo */}
+      {/* Saldo — solo en la vista tienda (en el chat lo tapa el ticket). */}
+      {view !== 'chat' && (
       <div className="rounded-lg border border-accent-mint/25 bg-accent-mint/[0.06] p-4 flex items-center gap-3">
         <span aria-hidden="true" className="text-2xl">💎</span>
         <div>
@@ -148,17 +208,20 @@ export function CreditsShopContent({ onPurchased }: { onPurchased?: () => void }
           </div>
         </div>
       </div>
+      )}
 
       {/* Paso 2: instrucciones de pago + confirmación "Ya he pagado" */}
-      {rechargePack && (
+      {rechargePack && view !== 'chat' && (
         <div className="rounded-xl border border-accent-mint/40 bg-accent-mint/[0.05] p-4">
           <h3 className="text-[13px] font-semibold text-txt-primary">
             {t('recharge_step2_title').replace('{euros}', rechargePack.priceLabel.replace('€', ''))}
           </h3>
+          <p className="mt-1 text-[11.5px] text-accent-mint">{t('recharge_step2_opened')}</p>
           <ol className="mt-2 space-y-1.5 text-[12.5px] text-txt-secondary">
             <li>
               1. {t('recharge_step2_send').replace('{euros}', rechargePack.priceLabel.replace('€', ''))}{' '}
-              <span className="font-mono font-bold text-accent-mint">paypal.me/MarioCortes1</span>
+              <span className="font-mono font-bold text-accent-mint">paypal.me/MarioCortes1</span>{' '}
+              <span className="text-[11px] text-txt-tertiary">({t('recharge_step2_ff')})</span>
             </li>
             <li>
               2. {t('recharge_step2_note')}{' '}
@@ -194,16 +257,20 @@ export function CreditsShopContent({ onPurchased }: { onPurchased?: () => void }
         </div>
       )}
 
-      {/* Chat del ticket de recarga (después de "Ya he pagado" o con ticket abierto) */}
-      {showChat && !rechargePack && (
+      {/* Chat del ticket de recarga — vista permanente accesible con «Mi compra». */}
+      {view === 'chat' && (
         <RechargeChat
-          onResolved={() => void refresh()}
+          onResolved={() => {
+            setHasTicket(true);
+            void refresh();
+          }}
           onRefreshBalance={onPurchased}
+          pollMs={pollMs}
         />
       )}
 
       {/* Paquetes de recarga — bonus destacado */}
-      {!rechargePack && (
+      {view !== 'chat' && (
       <div>
         <h3 className="text-[13px] font-semibold text-txt-primary mb-2">{t('credits_packs_title')}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
@@ -244,7 +311,8 @@ export function CreditsShopContent({ onPurchased }: { onPurchased?: () => void }
       </div>
       )}
 
-      {/* Netrex con créditos — 600 créditos = 1 mes (6€) */}
+      {/* Netrex con créditos — 600 créditos = 1 mes (6€) — solo en la vista tienda. */}
+      {view !== 'chat' && (
       <div className="rounded-xl border border-accent-mint/30 bg-accent-mint/[0.04] p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
@@ -279,6 +347,7 @@ export function CreditsShopContent({ onPurchased }: { onPurchased?: () => void }
           </button>
         </div>
       </div>
+      )}
     </div>
   );
 }

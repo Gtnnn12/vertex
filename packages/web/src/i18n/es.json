@@ -595,6 +595,7 @@
   "credits_netrex_success": "¡Netrex activado durante un mes! Gracias por apoyar.",
   "credits_netrex_insufficient": "Saldo insuficiente: Netrex cuesta 600 créditos al mes.",
   "recharge_step2_title": "Recargar {euros}€ — paso 2: paga y confirma",
+  "recharge_step2_opened": "PayPal se ha abierto en una pestaña nueva — completa el pago allí y vuelve aquí para confirmar.",
   "recharge_step2_send": "Envía {euros}€ como AMIGOS Y FAMILIARES a",
   "recharge_step2_ff": "así no hay comisiones",
   "recharge_step2_note": "con la nota",

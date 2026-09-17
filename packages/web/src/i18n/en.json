@@ -596,6 +596,7 @@
   "credits_netrex_insufficient": "Insufficient balance: Netrex costs 600 credits per month.",
   "recharge_step2_title": "Top up {euros}€ — step 2: pay and confirm",
   "recharge_step2_send": "Send {euros}€ as FRIENDS AND FAMILY to",
+  "recharge_step2_opened": "PayPal has opened in a new tab — complete the payment there and come back to confirm.",
   "recharge_step2_ff": "no fees that way",
   "recharge_step2_note": "with the note",
   "recharge_step2_confirm": "Come back here and press \"I've paid\" — a chat with staff will open to verify your payment.",
