@@ -6,6 +6,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { useTransferStore } from '../../stores/transferStore';
 import { attUrlOf } from '../chat/AttachmentRenderer';
 import { formatRelative } from '../admin/adminShared';
+import { Avatar } from '../ui/Avatar';
 import type {
   RechargeMessage,
   RechargeTicket,
@@ -266,7 +267,7 @@ export function RechargeChat({
             return (
               <div key={m.id} className="flex justify-center">
                 <div
-                  className={`max-w-[85%] rounded-full px-3 py-1 text-center text-[11px] ${
+                  className={`inline-flex max-w-[85%] items-center gap-1.5 rounded-full px-3 py-1 text-center text-[11px] ${
                     info.kind === 'approved'
                       ? 'bg-accent-mint/15 text-accent-mint'
                       : info.kind === 'rejected'
@@ -276,30 +277,45 @@ export function RechargeChat({
                           : 'bg-white/[0.05] text-txt-tertiary'
                   }`}
                 >
-                  {info.kind === 'created' && t('recharge_system_created')}
-                  {info.kind === 'approved' && t('recharge_system_approved')}
-                  {info.kind === 'rejected' && `${t('recharge_system_rejected')}${info.note ? `: ${info.note}` : ''}`}
-                  {info.kind === 'closed' && `${t('recharge_system_closed')}${info.note ? `: ${info.note}` : ''}`}
+                  <span aria-hidden="true">
+                    {info.kind === 'approved' ? '✅' : info.kind === 'rejected' ? '❌' : info.kind === 'closed' ? '📁' : '⏳'}
+                  </span>
+                  <span>
+                    {info.kind === 'created' && t('recharge_system_created')}
+                    {info.kind === 'approved' && t('recharge_system_approved')}
+                    {info.kind === 'rejected' && `${t('recharge_system_rejected')}${info.note ? `: ${info.note}` : ''}`}
+                    {info.kind === 'closed' && `${t('recharge_system_closed')}${info.note ? `: ${info.note}` : ''}`}
+                  </span>
                 </div>
               </div>
             );
           }
-          const mine = m.senderUserId === myUserId;
+          // El rol manda: staff SIEMPRE a la izquierda aunque estés viendo el
+          // ticket desde la cuenta admin (la comparación de ids lo rompía).
+          const mine = m.senderRole !== 'admin' && m.senderUserId === myUserId;
+          const isStaff = m.senderRole === 'admin';
           return (
-            <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
+            <div key={m.id} className={`flex gap-2 ${mine ? 'justify-end' : 'justify-start'}`}>
+              {isStaff && (
+                <span className="mt-auto shrink-0" title={t('recharge_staff_label')}>
+                  <Avatar name="Staff" size={22} />
+                </span>
+              )}
               <div
                 className={`max-w-[80%] rounded-2xl px-3 py-2 text-[13px] leading-snug ${
                   mine
                     ? 'rounded-br-sm bg-accent-mint/20 text-txt-primary'
-                    : 'rounded-bl-sm bg-white/[0.06] text-txt-secondary'
+                    : isStaff
+                      ? 'rounded-bl-sm border border-accent-sky/20 bg-accent-sky/[0.08] text-txt-primary'
+                      : 'rounded-bl-sm bg-white/[0.06] text-txt-secondary'
                 }`}
               >
-                {!mine && (
-                  <div className="mb-0.5 text-[10px] font-bold uppercase tracking-wide text-accent-mint">
+                {isStaff && (
+                  <div className="mb-0.5 text-[10px] font-bold uppercase tracking-wide text-accent-sky">
                     {t('recharge_staff_label')}
                   </div>
                 )}
-                {m.body && <p className="whitespace-pre-wrap break-words">{m.body}</p>}
+                {m.body && <p className="whitespace-pre-wrap break-words select-text">{m.body}</p>}
                 {m.imageUrl && (
                   <button
                     type="button"
