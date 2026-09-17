@@ -2,8 +2,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { useUIStore } from '../../stores/uiStore';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { api } from '../../api/client';
+import { useAuthStore } from '../../stores/authStore';
 import type { CreditPack, CreditTransaction } from '@backspace/shared';
 import { BOOST_CREDIT_COST } from '@backspace/shared/src/evoConstants.js';
+import { RechargeChat } from './RechargeChat';
 
 /**
  * Tienda e historial de créditos (monedero VERTEX). Se usa en dos sitios:
@@ -58,28 +60,58 @@ export function useCredits() {
 export function CreditsShopContent({ onPurchased }: { onPurchased?: () => void }) {
   const { t } = useLanguage();
   const { balance, packs, refresh } = useCredits();
+  const username = useAuthStore((s) => s.user?.username ?? '');
   const [buying, setBuying] = useState<string | null>(null);
   const [error, setError] = useState('');
+  // Paso 2 del flujo de recarga in-app: pack elegido + instrucciones paypal.me.
+  const [rechargePack, setRechargePack] = useState<CreditPack | null>(null);
+  const [creatingTicket, setCreatingTicket] = useState(false);
+  const [showChat, setShowChat] = useState(false);
   const netrexCost = 6 * BOOST_CREDIT_COST; // 600 créditos = mes de Netrex
 
-  const handleBuy = async (packId: CreditPack['id']) => {
-    setBuying(packId);
+  const handleBuy = (pack: CreditPack) => {
+    setError('');
+    setRechargePack(pack);
+  };
+
+  const handlePaid = async () => {
+    if (!rechargePack) return;
+    setCreatingTicket(true);
     setError('');
     try {
-      const res = await api.spaces.purchaseCredits(packId);
-      if (res.checkoutUrl) {
-        window.open(res.checkoutUrl, '_blank', 'noopener');
+      await api.spaces.rechargeCreate(rechargePack.id);
+      // El chat del ticket se muestra desde RechargeFlow vía polling.
+      setRechargePack(null);
+      setShowChat(true);
+    } catch (err: unknown) {
+      const code = (err as { body?: { code?: string } })?.body?.code;
+      if (code === 'ticket_already_open') {
+        setRechargePack(null);
+        setShowChat(true);
       } else {
-        setError(t('credits_pack_not_configured'));
+        setError(t('credits_purchase_error'));
       }
-    } catch {
-      setError(t('credits_purchase_error'));
     } finally {
-      setBuying(null);
-      void refresh();
-      onPurchased?.();
+      setCreatingTicket(false);
     }
   };
+
+  const handleCancelRecharge = () => {
+    setRechargePack(null);
+    setError('');
+  };
+
+  // Con ticket abierto, el modal muestra el chat directamente.
+  useEffect(() => {
+    void (async () => {
+      try {
+        const my = await api.spaces.rechargeMy();
+        if (my.ticket?.status === 'open') setShowChat(true);
+      } catch {
+        /* sin ticket */
+      }
+    })();
+  }, []);
 
   return (
     <div className="space-y-5">
@@ -96,7 +128,61 @@ export function CreditsShopContent({ onPurchased }: { onPurchased?: () => void }
         </div>
       </div>
 
+      {/* Paso 2: instrucciones de pago + confirmación "Ya he pagado" */}
+      {rechargePack && (
+        <div className="rounded-xl border border-accent-mint/40 bg-accent-mint/[0.05] p-4">
+          <h3 className="text-[13px] font-semibold text-txt-primary">
+            {t('recharge_step2_title').replace('{euros}', rechargePack.priceLabel.replace('€', ''))}
+          </h3>
+          <ol className="mt-2 space-y-1.5 text-[12.5px] text-txt-secondary">
+            <li>
+              1. {t('recharge_step2_send').replace('{euros}', rechargePack.priceLabel.replace('€', ''))}{' '}
+              <span className="font-mono font-bold text-accent-mint">paypal.me/MarioCortes1</span>
+            </li>
+            <li>
+              2. {t('recharge_step2_note')}{' '}
+              <span className="font-mono font-bold text-accent-mint">VERTEX-{username}</span>
+            </li>
+            <li>3. {t('recharge_step2_confirm')}</li>
+          </ol>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <a
+              href="https://paypal.me/MarioCortes1"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-lg border border-white/15 bg-white/[0.04] px-3.5 py-2 text-[12px] font-semibold text-txt-primary transition-colors hover:border-white/30 motion-reduce:transition-none"
+            >
+              {t('recharge_open_paypal')} ↗
+            </a>
+            <button
+              type="button"
+              onClick={() => void handlePaid()}
+              disabled={creatingTicket}
+              className="rounded-lg bg-accent-mint px-3.5 py-2 text-[12px] font-bold text-black transition-opacity hover:opacity-90 disabled:opacity-50 motion-reduce:transition-none"
+            >
+              {creatingTicket ? t('recharge_creating_ticket') : t('recharge_already_paid')}
+            </button>
+            <button
+              type="button"
+              onClick={handleCancelRecharge}
+              className="px-2 py-2 text-[12px] text-txt-tertiary transition-colors hover:text-txt-secondary motion-reduce:transition-none"
+            >
+              {t('recharge_cancel')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Chat del ticket de recarga (después de "Ya he pagado" o con ticket abierto) */}
+      {showChat && !rechargePack && (
+        <RechargeChat
+          onResolved={() => void refresh()}
+          onRefreshBalance={onPurchased}
+        />
+      )}
+
       {/* Paquetes de recarga — bonus destacado */}
+      {!rechargePack && (
       <div>
         <h3 className="text-[13px] font-semibold text-txt-primary mb-2">{t('credits_packs_title')}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
@@ -104,7 +190,7 @@ export function CreditsShopContent({ onPurchased }: { onPurchased?: () => void }
             <button
               key={pack.id}
               type="button"
-              onClick={() => handleBuy(pack.id)}
+              onClick={() => handleBuy(pack)}
               disabled={buying !== null}
               className={`relative rounded-xl border p-4 text-left transition-colors motion-reduce:transition-none disabled:opacity-50 ${
                 pack.bonusPercent > 0
@@ -127,7 +213,7 @@ export function CreditsShopContent({ onPurchased }: { onPurchased?: () => void }
                 <span className="text-[11px] text-txt-tertiary">{t('credits_unit')}</span>
               </span>
               <span className="mt-2 block w-full rounded-md bg-accent-mint py-1.5 text-center text-[12px] font-bold text-black">
-                {buying === pack.id ? t('credits_opening_checkout') : t('credits_buy')}
+                {t('credits_buy')}
               </span>
             </button>
           ))}
@@ -135,6 +221,7 @@ export function CreditsShopContent({ onPurchased }: { onPurchased?: () => void }
         {error && <p className="mt-2 text-xs text-accent-rose">{error}</p>}
         <p className="mt-2 text-[11px] text-txt-tertiary">{t('credits_webhook_note')}</p>
       </div>
+      )}
 
       {/* Netrex con créditos — 600 créditos = 1 mes (6€) */}
       <div className="rounded-xl border border-accent-mint/30 bg-accent-mint/[0.04] p-4">
