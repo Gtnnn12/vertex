@@ -5,6 +5,7 @@ import { api } from '../../api/client';
 import { useAuthStore } from '../../stores/authStore';
 import { useTransferStore } from '../../stores/transferStore';
 import { attUrlOf } from '../chat/AttachmentRenderer';
+import { formatRelative } from '../admin/adminShared';
 import type {
   RechargeMessage,
   RechargeTicket,
@@ -48,7 +49,7 @@ export function RechargeChat({
   /** Intervalo de polling (ms) — inyectable para tests. */
   pollMs?: number;
 }) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const addToast = useUIStore((s) => s.addToast);
   const myUserId = useAuthStore((s) => s.user?.id);
   const startUpload = useTransferStore((s) => s.startUpload);
@@ -62,6 +63,8 @@ export function RechargeChat({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const resolvedRef = useRef(false);
   const [confirmClose, setConfirmClose] = useState(false);
+  // Lightbox: captura ampliada (click en la miniatura) — cierra con click o Escape.
+  const [lightbox, setLightbox] = useState<string | null>(null);
   // Evita toasts duplicados por el poll: solo anunciamos transiciones nuevas.
   const lastKnownStatus = useRef<string | null>(null);
 
@@ -115,6 +118,16 @@ export function RechargeChat({
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [data?.messages.length]);
+
+  // Lightbox: Escape cierra.
+  useEffect(() => {
+    if (!lightbox) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLightbox(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [lightbox]);
 
   const closeTicket = async () => {
     try {
@@ -215,7 +228,9 @@ export function RechargeChat({
             ? 'bg-accent-mint/10 text-accent-mint'
             : ticket.status === 'rejected'
               ? 'bg-accent-rose/10 text-accent-rose'
-              : 'bg-white/[0.03] text-txt-secondary'
+              : ticket.status === 'open'
+                ? 'bg-accent-amber/10 text-accent-amber'
+                : 'bg-white/[0.03] text-txt-secondary'
         }`}
       >
         <span aria-hidden="true">
@@ -237,6 +252,14 @@ export function RechargeChat({
 
       {/* Mensajes */}
       <div ref={scrollRef} className="max-h-[300px] min-h-[160px] space-y-2 overflow-y-auto px-3 py-3 scrollbar-thin">
+        {messages.length === 0 && (
+          <div className="flex flex-col items-center gap-1.5 py-6 text-center">
+            <span aria-hidden="true" className="text-2xl opacity-60">💬</span>
+            <p className="max-w-[220px] text-[11.5px] leading-relaxed text-txt-tertiary">
+              {t('recharge_chat_empty')}
+            </p>
+          </div>
+        )}
         {messages.map((m) => {
           if (m.senderRole === 'system') {
             const info = systemBody(m.body ?? '');
@@ -278,15 +301,25 @@ export function RechargeChat({
                 )}
                 {m.body && <p className="whitespace-pre-wrap break-words">{m.body}</p>}
                 {m.imageUrl && (
-                  <img
-                    src={attUrlOf(m.imageUrl)}
-                    alt={t('recharge_attachment_alt')}
-                    className="mt-1.5 max-h-48 rounded-lg border border-white/10 object-contain"
-                    loading="lazy"
-                  />
+                  <button
+                    type="button"
+                    onClick={() => m.imageUrl && setLightbox(attUrlOf(m.imageUrl))}
+                    className="mt-1.5 block w-fit cursor-zoom-in"
+                    aria-label={t('recharge_lightbox_open')}
+                  >
+                    <img
+                      src={attUrlOf(m.imageUrl)}
+                      alt={t('recharge_attachment_alt')}
+                      className="max-h-48 rounded-lg border border-white/10 object-contain"
+                      loading="lazy"
+                    />
+                  </button>
                 )}
-                <div className={`mt-0.5 text-right text-[9.5px] text-txt-tertiary ${mine ? '' : 'text-left'}`}>
-                  {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                <div
+                  className={`mt-0.5 text-right text-[9.5px] text-txt-tertiary ${mine ? '' : 'text-left'}`}
+                  title={new Date(m.createdAt).toLocaleString(language, { dateStyle: 'long', timeStyle: 'short' })}
+                >
+                  {formatRelative(new Date(m.createdAt).getTime(), language)}
                 </div>
               </div>
             </div>
@@ -377,6 +410,22 @@ export function RechargeChat({
         <div className="border-t border-white/[0.06] px-3 py-2 text-center text-[11px] text-txt-tertiary">
           {t('recharge_chat_closed_note')}
         </div>
+      )}
+
+      {/* Lightbox de capturas: click o Escape para cerrar. */}
+      {lightbox && (
+        <button
+          type="button"
+          onClick={() => setLightbox(null)}
+          className="fixed inset-0 z-50 flex cursor-zoom-out items-center justify-center bg-black/80 p-6"
+          aria-label={t('recharge_lightbox_close')}
+        >
+          <img
+            src={lightbox}
+            alt={t('recharge_attachment_alt')}
+            className="max-h-full max-w-full rounded-lg object-contain shadow-2xl"
+          />
+        </button>
       )}
     </div>
   );
