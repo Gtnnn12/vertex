@@ -175,6 +175,10 @@ export class BackspaceApiClient {
     boosts: (spaceId: string) => Promise<import('@backspace/shared').BoostState>;
     boostList: (spaceId: string) => Promise<{ boosts: import('@backspace/shared').SpaceBoost[] }>;
     boost: (spaceId: string) => Promise<{ boost: import('@backspace/shared').SpaceBoost; activeBoosts: number; serverEvoLevel: number; previousLevel: number }>;
+    creditBalance: () => Promise<import('@backspace/shared').CreditBalance>;
+    creditTransactions: () => Promise<import('@backspace/shared').CreditHistory>;
+    creditPacks: () => Promise<{ packs: import('@backspace/shared').CreditPack[] }>;
+    purchaseCredits: (packId: 'pack_2' | 'pack_5' | 'pack_10') => Promise<import('@backspace/shared').CreditPurchaseResponse>;
     emojis: (spaceId: string) => Promise<{ emojis: import('@backspace/shared').SpaceEmoji[]; limit: number }>;
     createEmoji: (spaceId: string, data: { name: string; file: string }) => Promise<{ emoji: import('@backspace/shared').SpaceEmoji | null; limit: number }>;
     deleteEmoji: (spaceId: string, emojiId: string) => Promise<{ success: boolean }>;
@@ -566,6 +570,14 @@ export class BackspaceApiClient {
         request<{ boosts: import('@backspace/shared').SpaceBoost[] }>('GET', `/spaces/${spaceId}/boosts/list`),
       boost: (spaceId: string) =>
         request<{ boost: import('@backspace/shared').SpaceBoost; activeBoosts: number; serverEvoLevel: number; previousLevel: number }>('POST', `/spaces/${spaceId}/boost`, {}),
+      creditBalance: () =>
+        request<import('@backspace/shared').CreditBalance>('GET', '/credits/balance'),
+      creditTransactions: () =>
+        request<import('@backspace/shared').CreditHistory>('GET', '/credits/transactions'),
+      creditPacks: () =>
+        request<{ packs: import('@backspace/shared').CreditPack[] }>('GET', '/credits/packs'),
+      purchaseCredits: (packId: 'pack_2' | 'pack_5' | 'pack_10') =>
+        request<import('@backspace/shared').CreditPurchaseResponse>('POST', '/credits/purchase', { packId }),
       emojis: (spaceId: string) =>
         request<{ emojis: import('@backspace/shared').SpaceEmoji[]; limit: number }>('GET', `/spaces/${spaceId}/emojis`),
       createEmoji: (spaceId: string, data: { name: string; file: string }) =>

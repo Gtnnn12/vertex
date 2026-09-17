@@ -752,6 +752,9 @@ export interface CreditBalance {
   balance: number;
 }
 
+/** Re-export del catálogo de paquetes (definido en evoConstants). */
+export type { CreditPack } from './evoConstants.js';
+
 /** Un movimiento auditado del monedero (credit_transactions row). */
 export interface CreditTransaction {
   id: string;

@@ -15,13 +15,14 @@ import { InstancePanel } from './settingsPanels/InstancePanel';
 import { KeybindsPanel } from './settingsPanels/KeybindsPanel';
 import { LanguagePanel } from './settingsPanels/LanguagePanel';
 import { BillingPanel } from './settingsPanels/BillingPanel';
+import { CreditsPanel } from '../credits/CreditsShop';
 import { AdminDiscountsPanel } from './settingsPanels/AdminDiscountsPanel';
 import { AdminCenter } from '../admin/AdminCenter';
 import { isElectron } from '../../platform/platform';
 import { SettingsSectionsProvider, useSettingsSectionsContext } from './SettingsSectionsContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 
-type SettingsTab = 'account' | 'voice' | 'privacy' | 'connections' | 'keybinds' | 'desktop' | 'instance' | 'language' | 'billing' | 'adminDiscounts' | 'adminCenter';
+type SettingsTab = 'account' | 'voice' | 'privacy' | 'connections' | 'keybinds' | 'desktop' | 'instance' | 'language' | 'billing' | 'credits' | 'adminDiscounts' | 'adminCenter';
 
 function SidebarSubLinks() {
   const ctx = useSettingsSectionsContext();
@@ -154,6 +155,7 @@ export function UserSettingsModal() {
             <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-3 py-1">{t('app_settings')}</div>
             <button onClick={() => handleTabClick('connections')} className={tabClass('connections')}>{t('connections')}</button>
             <button onClick={() => handleTabClick('billing')} className={tabClass('billing')}>{t('billing_tab')}</button>
+            <button onClick={() => handleTabClick('credits')} className={tabClass('credits')}>{t('credits_title')}</button>
             <button onClick={() => handleTabClick('keybinds')} className={tabClass('keybinds')}>{t('keybinds')}</button>
             {isElectron() && <button onClick={() => handleTabClick('desktop')} className={tabClass('desktop')}>{t('desktop')}</button>}
             <button onClick={() => handleTabClick('language')} className={tabClass('language')}>{t('language')}</button>
@@ -215,6 +217,7 @@ export function UserSettingsModal() {
               <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-3 py-1">{t('app_settings')}</div>
               <button onClick={() => handleTabClick('connections')} className={tabClass('connections')}>{t('connections')}</button>
               <button onClick={() => handleTabClick('billing')} className={tabClass('billing')}>{t('billing_tab')}</button>
+            <button onClick={() => handleTabClick('credits')} className={tabClass('credits')}>{t('credits_title')}</button>
               <button onClick={() => handleTabClick('keybinds')} className={tabClass('keybinds')}>{t('keybinds')}</button>
               {isElectron() && <button onClick={() => handleTabClick('desktop')} className={tabClass('desktop')}>{t('desktop')}</button>}
               <button onClick={() => handleTabClick('language')} className={tabClass('language')}>{t('language')}</button>
@@ -271,6 +274,7 @@ export function UserSettingsModal() {
               {tab === 'instance' && isAdmin && <InstancePanel />}
               {tab === 'language' && <LanguagePanel />}
               {tab === 'billing' && <BillingPanel />}
+              {tab === 'credits' && <CreditsPanel />}
               {tab === 'adminDiscounts' && <AdminDiscountsPanel />}
               {tab === 'adminCenter' && canAdminCenter && <AdminCenter />}
             </div>

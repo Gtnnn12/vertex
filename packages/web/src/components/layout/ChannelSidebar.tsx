@@ -20,6 +20,7 @@ import { useContextMenuStore, type ContextMenuItem } from '../../stores/contextM
 import { usePresenceMenuItems } from './PresenceMenu';
 import { UserPanel } from '../ui/UserPanel';
 import { NetrexNavChip } from './NetrexNavChip';
+import { CreditsNavChip } from './CreditsNavChip';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { DmSearchBar } from './DmSearchBar';
 import { DmListItem } from './DmListItem';
@@ -563,6 +564,9 @@ export function ChannelSidebar() {
             <NetrexNavChip
               isCurrentPage={isNetrexPage}
             />
+
+            {/* Monedero de créditos — chip pequeño con el saldo. */}
+            <CreditsNavChip />
           </div>
         </div>
 

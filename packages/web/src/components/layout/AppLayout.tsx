@@ -22,6 +22,7 @@ import { GroupDmSettings } from '../modals/GroupDmSettings';
 import { UserProfileModal } from '../modals/UserProfileModal';
 import { PersonalizationEditorModal } from '../netrex/PersonalizationEditorModal';
 import { PremiumBlockModal } from '../netrex/PremiumBlockModal';
+import { CreditsShopModal } from '../credits/CreditsShop';
 import { PictureInPicture } from '../voice/PictureInPicture';
 import { SoundController } from '../voice/SoundController';
 import { GlobalAudioRenderer } from '../voice/GlobalAudioRenderer';
@@ -502,6 +503,7 @@ export function AppLayout() {
       <UserProfileModal />
       <PersonalizationEditorModal />
       <PremiumBlockModal />
+      <CreditsShopModal />
       <ImagePreview />
       <PictureInPicture />
       <SoundController />
