@@ -236,19 +236,35 @@ export function CreditsShopContent({
           <h3 className="text-[13px] font-semibold text-txt-primary">
             {t('recharge_step2_title').replace('{euros}', rechargePack.priceLabel.replace('€', ''))}
           </h3>
-          <p className="mt-1 text-[11.5px] text-accent-mint">{t('recharge_step2_opened')}</p>
-          <ol className="mt-2 space-y-1.5 text-[12.5px] text-txt-secondary">
-            <li>
-              1. {t('recharge_step2_send').replace('{euros}', rechargePack.priceLabel.replace('€', ''))}{' '}
-              <span className="font-mono font-bold text-accent-mint">paypal.me/MarioCortes1</span>{' '}
-              <span className="text-[11px] text-txt-tertiary">({t('recharge_step2_ff')})</span>
+          <ol className="mt-2 space-y-2.5 text-[12.5px] text-txt-secondary">
+            <li className="flex gap-2">
+              <span aria-hidden="true" className="shrink-0">1️⃣</span>
+              <span>
+                <span className="font-semibold text-txt-primary">{t('recharge_step1_pay').replace('{euros}', rechargePack.priceLabel.replace('€', ''))} </span>
+                <span className="font-mono font-bold text-accent-mint">@MarioCortes1</span>{' '}
+                <span className="text-[11px] text-txt-tertiary">({t('recharge_step2_ff')})</span>
+              </span>
             </li>
-            <li>
-              2. {t('recharge_step2_note')}{' '}
-              <span className="font-mono font-bold text-accent-mint">VERTEX-{username}</span>
+            <li className="flex gap-2">
+              <span aria-hidden="true" className="shrink-0">2️⃣</span>
+              <span>
+                <span className="font-semibold text-txt-primary">{t('recharge_step2_important')} </span>
+                <span className="font-mono font-bold text-accent-mint">VERTEX-{username}</span>{' '}
+                <span className="text-[11px] text-txt-tertiary">({t('recharge_step2_why')})</span>
+              </span>
             </li>
-            <li>3. {t('recharge_step2_confirm')}</li>
+            <li className="flex gap-2">
+              <span aria-hidden="true" className="shrink-0">3️⃣</span>
+              <span>
+                <span className="font-semibold text-txt-primary">{t('recharge_step3_confirm')} </span>
+                {t('recharge_step3_detail')}
+              </span>
+            </li>
           </ol>
+          <p className="mt-2.5 flex items-center gap-1.5 rounded-lg bg-white/[0.04] px-2.5 py-1.5 text-[11px] text-txt-tertiary">
+            <span aria-hidden="true">⏳</span>
+            {t('recharge_step2_limit')}
+          </p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <a
               href="https://paypal.me/MarioCortes1"
