@@ -80,7 +80,7 @@ export function ensureDefaults(db: Database.Database): void {
     db.prepare(`CREATE TABLE IF NOT EXISTS recharge_messages (
       id TEXT PRIMARY KEY NOT NULL,
       ticket_id TEXT NOT NULL REFERENCES recharge_tickets(id) ON DELETE CASCADE,
-      sender_user_id TEXT NOT NULL REFERENCES users(id),
+      sender_user_id TEXT REFERENCES users(id),
       sender_role TEXT NOT NULL,
       body TEXT,
       image_url TEXT,
@@ -89,6 +89,32 @@ export function ensureDefaults(db: Database.Database): void {
     db.prepare('CREATE INDEX IF NOT EXISTS idx_recharge_tickets_user_id ON recharge_tickets (user_id)').run();
     db.prepare('CREATE INDEX IF NOT EXISTS idx_recharge_tickets_status ON recharge_tickets (status)').run();
     db.prepare('CREATE INDEX IF NOT EXISTS idx_recharge_messages_ticket_id ON recharge_messages (ticket_id)').run();
+
+    // Rebuild one-shot: las BDs creadas con la versión antigua tienen
+    // sender_user_id NOT NULL, lo que rompe TODOS los mensajes de sistema
+    // (creación, aprobación, rechazo, cierre → SQLITE_CONSTRAINT_NOTNULL).
+    // SQLite no puede relajar una columna con ALTER: reconstruimos la tabla.
+    const msgCols = db.prepare('PRAGMA table_info(recharge_messages)').all() as { name: string; notnull: number }[];
+    const senderCol = msgCols.find((c) => c.name === 'sender_user_id');
+    if (senderCol && senderCol.notnull === 1) {
+      console.log('[defaults] Rebuilding recharge_messages: relaxing sender_user_id to nullable');
+      db.transaction(() => {
+        db.prepare(`CREATE TABLE recharge_messages_rebuild (
+          id TEXT PRIMARY KEY NOT NULL,
+          ticket_id TEXT NOT NULL REFERENCES recharge_tickets(id) ON DELETE CASCADE,
+          sender_user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+          sender_role TEXT NOT NULL,
+          body TEXT,
+          image_url TEXT,
+          created_at INTEGER NOT NULL
+        )`).run();
+        db.prepare(`INSERT INTO recharge_messages_rebuild (id, ticket_id, sender_user_id, sender_role, body, image_url, created_at)
+                    SELECT id, ticket_id, sender_user_id, sender_role, body, image_url, created_at FROM recharge_messages`).run();
+        db.prepare('DROP TABLE recharge_messages').run();
+        db.prepare('ALTER TABLE recharge_messages_rebuild RENAME TO recharge_messages').run();
+      })();
+      db.prepare('CREATE INDEX IF NOT EXISTS idx_recharge_messages_ticket_id ON recharge_messages (ticket_id)').run();
+    }
   } catch (err) {
     console.warn('[defaults] Could not create recharge_tickets tables:', err);
   }

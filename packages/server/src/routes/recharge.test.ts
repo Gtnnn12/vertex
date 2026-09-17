@@ -477,6 +477,14 @@ describe('recharge purchase chat (T1 backend)', () => {
     });
     const ticketId = created.json().ticket.id;
 
+    // Ownership: otro usuario NO puede cerrar el ticket ajeno vía admin-close.
+    const stranger = await app.inject({
+      method: 'POST',
+      url: `/api/admin/recharge/${ticketId}/close`,
+      headers: { authorization: `Bearer ${tokenFor(USER_ID)}` },
+    });
+    expect(stranger.statusCode).toBe(403);
+
     const res = await app.inject({
       method: 'POST',
       url: '/api/credits/recharge/my/close',
