@@ -230,6 +230,63 @@ describe('Webhook — credit packs acreditan el monedero', () => {
   });
 });
 
+describe('POST /api/credits/purchase-netrex', () => {
+  it('600 credits → 1 month of Netrex, audited, entitlement extended', async () => {
+    const { creditWallet } = await import('./credits.js');
+    creditWallet({ userId: USER_ID, amount: 600, reason: 'topup:pack_10' });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/credits/purchase-netrex',
+      headers: { Authorization: `Bearer ${tokenFor(USER_ID)}` },
+      payload: {},
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.plan).toBe('monthly');
+    expect(body.spent).toBe(600);
+    expect(balance()).toBe(0);
+    const user = testDb.select().from(schema.users).where(eq(schema.users.id, USER_ID)).get()!;
+    expect(user.netrexEnabled).toBe(1);
+    expect(user.netrexPlan).toBe('monthly');
+    expect(user.netrexUntil).toBeGreaterThan(Date.now());
+    const txns = testDb.select().from(schema.creditTransactions)
+      .where(eq(schema.creditTransactions.userId, USER_ID)).all();
+    expect(txns.some((t) => t.reason === 'spend:netrex:monthly' && t.amount === -600)).toBe(true);
+  });
+
+  it('insufficient balance → 400 insufficient_credits, entitlement untouched', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/credits/purchase-netrex',
+      headers: { Authorization: `Bearer ${tokenFor(USER_ID)}` },
+      payload: {},
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().code).toBe('insufficient_credits');
+    const user = testDb.select().from(schema.users).where(eq(schema.users.id, USER_ID)).get()!;
+    expect(user.netrexEnabled).toBe(0);
+  });
+
+  it('extends from current expiry when Netrex is already active', async () => {
+    const { creditWallet } = await import('./credits.js');
+    const futureUntil = Date.now() + 10 * 24 * 60 * 60 * 1000;
+    testDb.update(schema.users)
+      .set({ netrexEnabled: 1, netrexPlan: 'monthly', netrexUntil: futureUntil })
+      .where(eq(schema.users.id, USER_ID)).run();
+    creditWallet({ userId: USER_ID, amount: 600, reason: 'topup:pack_10' });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/credits/purchase-netrex',
+      headers: { Authorization: `Bearer ${tokenFor(USER_ID)}` },
+      payload: {},
+    });
+    expect(res.statusCode).toBe(200);
+    const user = testDb.select().from(schema.users).where(eq(schema.users.id, USER_ID)).get()!;
+    // Extended from the remaining time, not from now (~10d + 30d)
+    expect(user.netrexUntil).toBeGreaterThan(futureUntil + 29 * 24 * 60 * 60 * 1000);
+  });
+});
+
 describe('creditWallet helper', () => {
   it('rejects overdraft with 400 insufficient_credits and writes nothing', async () => {
     const { creditWallet } = await import('./credits.js');

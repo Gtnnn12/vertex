@@ -3,7 +3,7 @@ import { eq, desc } from 'drizzle-orm';
 import { getDb, schema, type DB } from '../db/index.js';
 import { authenticate } from '../utils/auth.js';
 import { generateSnowflake } from '../utils/snowflake.js';
-import { CREDIT_PACKS, CREDIT_PACKS_BY_ID, isCreditPackId } from '@backspace/shared/src/evoConstants.js';
+import { CREDIT_PACKS, CREDIT_PACKS_BY_ID, isCreditPackId, BOOST_CREDIT_COST } from '@backspace/shared/src/evoConstants.js';
 import type {
   CreditBalance,
   CreditHistory,
@@ -143,5 +143,55 @@ export async function creditsRoutes(app: FastifyInstance): Promise<void> {
   // GET /api/credits/packs — catálogo de paquetes para la tienda (single source: shared).
   app.get('/api/credits/packs', { preHandler: authenticate }, async (_request, reply) => {
     return reply.code(200).send({ packs: CREDIT_PACKS });
+  });
+
+  // POST /api/credits/purchase-netrex — compra un mes de Netrex con créditos
+  // del monedero (600 créditos = 6€ = plan monthly). Reutiliza el flujo de
+  // entitlement completo: extiende netrexUntil desde ahora (o desde la
+  // expiración actual si sigue activa) y marca netrexEnabled=1. Débito
+  // auditado con reason spend:netrex:monthly. 400 insufficient_credits si
+  // el saldo no llega.
+  app.post('/api/credits/purchase-netrex', { preHandler: authenticate }, async (request, reply) => {
+    const cost = 6 * BOOST_CREDIT_COST; // 600 créditos = 1 mes (6€)
+    const db = getDb();
+    const user = db.select({
+      netrexEnabled: schema.users.netrexEnabled,
+      netrexUntil: schema.users.netrexUntil,
+    }).from(schema.users).where(eq(schema.users.id, request.userId)).get();
+    if (!user) {
+      return reply.code(404).send({ error: 'User not found', statusCode: 404 });
+    }
+
+    const now = Date.now();
+    // Extiende desde la expiración actual si sigue activa; si no, desde ahora.
+    const currentUntil = user.netrexUntil ?? 0;
+    const base = user.netrexEnabled === 1 && currentUntil > now ? currentUntil : now;
+    const newUntil = base + 30 * 24 * 60 * 60 * 1000;
+
+    try {
+      db.transaction((tx) => {
+        applyWalletDelta(tx, {
+          userId: request.userId,
+          amount: -cost,
+          reason: 'spend:netrex:monthly',
+        });
+        tx.update(schema.users)
+          .set({ netrexEnabled: 1, netrexPlan: 'monthly', netrexUntil: newUntil })
+          .where(eq(schema.users.id, request.userId))
+          .run();
+      });
+    } catch (e) {
+      const ev = e as Error & { statusCode?: number; code?: string };
+      if (ev.statusCode === 400 && ev.code === 'insufficient_credits') {
+        return reply.code(400).send({
+          error: 'Insufficient credits — Netrex costs 600 credits per month',
+          code: 'insufficient_credits',
+          statusCode: 400,
+        });
+      }
+      throw e;
+    }
+
+    return reply.code(200).send({ ok: true, plan: 'monthly', until: newUntil, spent: cost });
   });
 }

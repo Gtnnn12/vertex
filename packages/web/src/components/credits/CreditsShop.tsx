@@ -3,6 +3,7 @@ import { useUIStore } from '../../stores/uiStore';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { api } from '../../api/client';
 import type { CreditPack, CreditTransaction } from '@backspace/shared';
+import { BOOST_CREDIT_COST } from '@backspace/shared/src/evoConstants.js';
 
 /**
  * Tienda e historial de créditos (monedero VERTEX). Se usa en dos sitios:
@@ -59,6 +60,7 @@ export function CreditsShopContent({ onPurchased }: { onPurchased?: () => void }
   const { balance, packs, refresh } = useCredits();
   const [buying, setBuying] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const netrexCost = 6 * BOOST_CREDIT_COST; // 600 créditos = mes de Netrex
 
   const handleBuy = async (packId: CreditPack['id']) => {
     setBuying(packId);
@@ -132,6 +134,42 @@ export function CreditsShopContent({ onPurchased }: { onPurchased?: () => void }
         </div>
         {error && <p className="mt-2 text-xs text-accent-rose">{error}</p>}
         <p className="mt-2 text-[11px] text-txt-tertiary">{t('credits_webhook_note')}</p>
+      </div>
+
+      {/* Netrex con créditos — 600 créditos = 1 mes (6€) */}
+      <div className="rounded-xl border border-accent-mint/30 bg-accent-mint/[0.04] p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-[13px] font-semibold text-txt-primary">{t('credits_netrex_title')}</div>
+            <div className="text-[11.5px] text-txt-tertiary">
+              {t('credits_netrex_price').replace('{credits}', String(netrexCost))}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={async () => {
+              setBuying('netrex');
+              setError('');
+              try {
+                const res = await api.spaces.purchaseNetrexWithCredits();
+                onPurchased?.();
+                void refresh();
+                if (res.ok) setError(t('credits_netrex_success'));
+              } catch (err: unknown) {
+                const code = (err as { body?: { code?: string } })?.body?.code;
+                setError(code === 'insufficient_credits'
+                  ? t('credits_netrex_insufficient')
+                  : t('credits_purchase_error'));
+              } finally {
+                setBuying(null);
+              }
+            }}
+            disabled={buying !== null}
+            className="rounded-md bg-accent-mint px-3 py-2 text-[12px] font-bold text-black hover:opacity-90 disabled:opacity-50 transition-opacity motion-reduce:transition-none"
+          >
+            {buying === 'netrex' ? t('credits_opening_checkout') : t('credits_netrex_buy')}
+          </button>
+        </div>
       </div>
     </div>
   );

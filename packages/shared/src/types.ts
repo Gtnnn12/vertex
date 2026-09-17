@@ -754,6 +754,7 @@ export interface CreditBalance {
 
 /** Re-export del catálogo de paquetes (definido en evoConstants). */
 export type { CreditPack } from './evoConstants.js';
+export { CREDIT_PACKS, CREDIT_PACKS_BY_ID, isCreditPackId, BOOST_CREDIT_COST } from './evoConstants.js';
 
 /** Un movimiento auditado del monedero (credit_transactions row). */
 export interface CreditTransaction {
@@ -782,6 +783,14 @@ export interface CreditPurchaseResponse {
   ok: boolean;
   packId: string;
   checkoutUrl: string | null;
+}
+
+/** POST /api/credits/purchase-netrex — compra un mes de Netrex con créditos (600). */
+export interface NetrexWithCreditsResponse {
+  ok: boolean;
+  plan: 'monthly';
+  until: number;
+  spent: number;
 }
 
 /** GET /api/spaces/:id/boosts — estado de mejoras del server, visible para todos los miembros. */

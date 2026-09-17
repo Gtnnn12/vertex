@@ -179,6 +179,7 @@ export class BackspaceApiClient {
     creditTransactions: () => Promise<import('@backspace/shared').CreditHistory>;
     creditPacks: () => Promise<{ packs: import('@backspace/shared').CreditPack[] }>;
     purchaseCredits: (packId: 'pack_2' | 'pack_5' | 'pack_10') => Promise<import('@backspace/shared').CreditPurchaseResponse>;
+    purchaseNetrexWithCredits: () => Promise<import('@backspace/shared').NetrexWithCreditsResponse>;
     emojis: (spaceId: string) => Promise<{ emojis: import('@backspace/shared').SpaceEmoji[]; limit: number }>;
     createEmoji: (spaceId: string, data: { name: string; file: string }) => Promise<{ emoji: import('@backspace/shared').SpaceEmoji | null; limit: number }>;
     deleteEmoji: (spaceId: string, emojiId: string) => Promise<{ success: boolean }>;
@@ -578,6 +579,8 @@ export class BackspaceApiClient {
         request<{ packs: import('@backspace/shared').CreditPack[] }>('GET', '/credits/packs'),
       purchaseCredits: (packId: 'pack_2' | 'pack_5' | 'pack_10') =>
         request<import('@backspace/shared').CreditPurchaseResponse>('POST', '/credits/purchase', { packId }),
+      purchaseNetrexWithCredits: () =>
+        request<import('@backspace/shared').NetrexWithCreditsResponse>('POST', '/credits/purchase-netrex', {}),
       emojis: (spaceId: string) =>
         request<{ emojis: import('@backspace/shared').SpaceEmoji[]; limit: number }>('GET', `/spaces/${spaceId}/emojis`),
       createEmoji: (spaceId: string, data: { name: string; file: string }) =>
