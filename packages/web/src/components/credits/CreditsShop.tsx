@@ -83,41 +83,61 @@ export function CreditsShopContent({
   const shopViewRef = useRef(false);
   const netrexCost = 6 * BOOST_CREDIT_COST; // 600 créditos = mes de Netrex
 
+  // Entra en el chat del ticket desde cualquier rama (creación, 409 o sondeo).
+  const enterChat = () => {
+    setRechargePack(null);
+    setHasTicket(true);
+    setView('chat');
+    shopViewRef.current = true;
+    openModal('creditsShop', { shopView: 'chat' });
+  };
+
   const handleBuy = (pack: CreditPack) => {
+    // El error SOLO se decide aquí — en un click real del usuario. Nada de
+    // listeners de focus/visibility: al volver de la pestaña de PayPal no se
+    // vuelve a disparar nada ni se muestran errores fantasma.
     setError('');
     setRechargePack(pack);
     // PayPal DIRECTO: al pulsar Comprar se abre paypal.me con el importe
     // en pestaña nueva — el usuario paga y vuelve a "Ya he pagado".
     const euros = pack.priceLabel.replace('€', '').trim();
-    window.open(`https://paypal.me/MarioCortes1/${euros}`, '_blank', 'noopener,noreferrer');
+    const win = window.open(`https://paypal.me/MarioCortes1/${euros}`, '_blank', 'noopener,noreferrer');
+    if (!win) {
+      // Pop-up bloqueado por el navegador/Electron: aviso específico, no el
+      // error genérico — el usuario tiene el botón "Abrir PayPal" como salida.
+      setError(t('recharge_paypal_blocked'));
+    }
   };
 
   const handlePaid = async () => {
-    if (!rechargePack) return;
+    if (!rechargePack || creatingTicket) return;
     setCreatingTicket(true);
     setError('');
     try {
       await api.spaces.rechargeCreate(rechargePack.id);
       // Transición inmediata al chat del ticket.
-      setRechargePack(null);
-      setHasTicket(true);
-      setView('chat');
-      shopViewRef.current = true;
-      openModal('creditsShop', { shopView: 'chat' });
+      enterChat();
     } catch (err: unknown) {
-      // El server responde 409 { error: 'ticket_already_open' } — el cliente
-      // lo lanza como HttpError con status y body. Antes se clasificaba por
-      // err.body?.code (que no existe) y el modal se quedaba en el paso 2
-      // sin abrir el chat: ese era el bug.
+      // El server responde 409 { error: 'ticket_already_open' } — el guard de
+      // máx 1 abierto cubre los dobles clicks: NUNCA se crean tickets duplicados,
+      // el reintento simplemente entra al chat del existente.
       const status = (err as { status?: number })?.status;
       const errCode = (err as { body?: { error?: string } })?.body?.error;
       if (status === 409 || errCode === 'ticket_already_open') {
-        setRechargePack(null);
-        setHasTicket(true);
-        setView('chat');
-        shopViewRef.current = true;
-        openModal('creditsShop', { shopView: 'chat' });
+        enterChat();
       } else {
+        // Fallo transitorio (p. ej. el server reiniciando a mitad de respuesta):
+        // puede que el ticket SÍ se creara y la respuesta se perdiera. Sondeamos
+        // antes de mostrar error — si hay ticket abierto, entramos al chat.
+        try {
+          const my = await api.spaces.rechargeMy();
+          if (my.ticket && my.ticket.status === 'open') {
+            enterChat();
+            return;
+          }
+        } catch {
+          /* sin ticket — error real */
+        }
         setError(t('credits_purchase_error'));
       }
     } finally {

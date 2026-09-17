@@ -581,6 +581,7 @@
   "credits_opening_checkout": "Abriendo pago…",
   "credits_pack_not_configured": "Este paquete aún no está disponible — prueba otro.",
   "credits_purchase_error": "No se pudo iniciar el pago. Inténtalo de nuevo.",
+  "recharge_paypal_blocked": "PayPal fue bloqueado por tu navegador — usa el botón «Abrir PayPal».",
   "credits_webhook_note": "Pago seguro · los créditos se acreditan al confirmar el pago (puede tardar unos segundos).",
   "credits_history_title": "Historial de movimientos",
   "credits_history_empty": "Todavía no hay movimientos.",
