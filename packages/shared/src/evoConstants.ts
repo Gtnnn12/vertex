@@ -53,6 +53,41 @@ export const BOOST_THRESHOLDS: readonly [4, 10] = [4, 10];
 export const BOOSTS_FOR_LEVEL_1 = BOOST_THRESHOLDS[0];
 export const BOOSTS_FOR_LEVEL_2 = BOOST_THRESHOLDS[1];
 
+// ─── Monedero de créditos (wallet) ─────────────────────────────────────────
+
+/** Coste de UNA mejora de server pagada con el monedero. */
+export const BOOST_CREDIT_COST = 100;
+
+/**
+ * Paquetes de recarga (productos del billing Gumroad existente).
+ * `productId` se configura en GUMROAD_PRODUCT_PLAN_MAP vía env BOOST_PACK_*
+ * — la venta se detecta por product_id en el webhook y nunca por el front.
+ */
+export interface CreditPack {
+  id: 'pack_2' | 'pack_5' | 'pack_10';
+  priceLabel: string;
+  credits: number;
+  /** Porcentaje de bonus incluido (0 = precio base). */
+  bonusPercent: number;
+}
+
+export const CREDIT_PACKS: readonly CreditPack[] = [
+  { id: 'pack_2', priceLabel: '2€', credits: 100, bonusPercent: 0 },
+  { id: 'pack_5', priceLabel: '5€', credits: 275, bonusPercent: 10 },
+  { id: 'pack_10', priceLabel: '10€', credits: 600, bonusPercent: 20 },
+] as const;
+
+/** Packs por id — lookup para el webhook (amount credited per product). */
+export const CREDIT_PACKS_BY_ID: Record<CreditPack['id'], CreditPack> = {
+  pack_2: CREDIT_PACKS[0]!,
+  pack_5: CREDIT_PACKS[1]!,
+  pack_10: CREDIT_PACKS[2]!,
+};
+
+export function isCreditPackId(value: string): value is CreditPack['id'] {
+  return value === 'pack_2' || value === 'pack_5' || value === 'pack_10';
+}
+
 /** Rol cosmético asignado al miembro que compra una mejora. CERO permisos. */
 export const BOOSTER_ROLE_DEFAULT_NAME = 'Server Booster';
 export const BOOSTER_ROLE_COLOR = '#ff73fa';

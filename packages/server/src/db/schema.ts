@@ -41,6 +41,8 @@ export const users = sqliteTable('users', {
   profileBoard: text('profile_board'),
   /** Personal profile tint (hex) — colors panel, banner glow and borders. */
   profileAccent: text('profile_accent'),
+  /** Monedero de créditos (wallet). Solo se mueve vía credit_transactions. */
+  creditBalance: integer('credit_balance').notNull().default(0),
   staffRole: text('staff_role'),
   lastSeenAt: integer('last_seen_at'),  bannedUntil: integer('banned_until'),
   banReason: text('ban_reason'),
@@ -67,6 +69,22 @@ export const spaces = sqliteTable('spaces', {
   bannerContentType: text('banner_content_type'),
   createdAt: integer('created_at').notNull(),
 });
+
+/**
+ * Audit trail de TODO movimiento de créditos: amount con signo (+ recarga,
+ * − gasto) y reason. Nunca créditos de la nada sin registro.
+ */
+export const creditTransactions = sqliteTable('credit_transactions', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  /** Signed delta: positive = top-up, negative = spend. */
+  amount: integer('amount').notNull(),
+  /** e.g. 'topup:pack_2' | 'spend:boost:<spaceId>' | 'spend:netrex:monthly' */
+  reason: text('reason').notNull(),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  userIdx: index('idx_credit_transactions_user_id').on(table.userId),
+}));
 
 export const spaceBoosts = sqliteTable('space_boosts', {
   id: text('id').primaryKey(),

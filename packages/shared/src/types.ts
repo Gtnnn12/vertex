@@ -745,6 +745,42 @@ export interface SpaceBoost {
   expiresAt: number;
 }
 
+// ─── Monedero de créditos (wallet) ───────────────────────────────────────────
+
+/** GET /api/credits/balance — saldo + créditos ya canjeables del usuario. */
+export interface CreditBalance {
+  balance: number;
+}
+
+/** Un movimiento auditado del monedero (credit_transactions row). */
+export interface CreditTransaction {
+  id: string;
+  amount: number;
+  reason: string;
+  createdAt: number;
+}
+
+/** GET /api/credits/transactions — historial de movimientos (más reciente primero). */
+export interface CreditHistory {
+  transactions: CreditTransaction[];
+}
+
+/** POST /api/credits/purchase — inicia la compra de un paquete de recarga. */
+export interface CreditPurchaseRequest {
+  packId: 'pack_2' | 'pack_5' | 'pack_10';
+}
+
+/**
+ * Respuesta de compra: la TIENDA (Gumroad) cobra al usuario; los créditos
+ * solo se acreditan cuando el webhook del billing confirma la venta.
+ * `checkoutUrl` apunta al producto del pack para abrir el pago.
+ */
+export interface CreditPurchaseResponse {
+  ok: boolean;
+  packId: string;
+  checkoutUrl: string | null;
+}
+
 /** GET /api/spaces/:id/boosts — estado de mejoras del server, visible para todos los miembros. */
 export interface BoostState {
   /** Boosts no expirados (= nivel del server). */

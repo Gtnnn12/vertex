@@ -32,6 +32,7 @@ export function ensureDefaults(db: Database.Database): void {
   ensureColumn('users', 'banned_at', 'banned_at INTEGER');
   ensureColumn('users', 'banned_by', 'banned_by TEXT');
   ensureColumn('users', 'nickname_changed_at', 'nickname_changed_at INTEGER');
+  ensureColumn('users', 'credit_balance', 'credit_balance INTEGER NOT NULL DEFAULT 0');
   ensureColumn('spaces', 'server_evo_level', 'server_evo_level INTEGER NOT NULL DEFAULT 0');
   ensureColumn('spaces', 'custom_invite_slug', 'custom_invite_slug TEXT');
   ensureColumn('spaces', 'banner_content_type', 'banner_content_type TEXT');
@@ -49,6 +50,20 @@ export function ensureDefaults(db: Database.Database): void {
     db.prepare('CREATE UNIQUE INDEX IF NOT EXISTS space_emojis_space_name_unique ON space_emojis (space_id, name)').run();
   } catch (err) {
     console.warn('[defaults] Could not create space_emojis table:', err);
+  }
+
+  // Monedero de créditos: saldo en users + auditoría de movimientos.
+  try {
+    db.prepare(`CREATE TABLE IF NOT EXISTS credit_transactions (
+      id TEXT PRIMARY KEY NOT NULL,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      amount INTEGER NOT NULL,
+      reason TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    )`).run();
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_credit_transactions_user_id ON credit_transactions (user_id)').run();
+  } catch (err) {
+    console.warn('[defaults] Could not create credit_transactions table:', err);
   }
 
   // Server boosts (modelo estilo Discord): compras de mejora por miembro +

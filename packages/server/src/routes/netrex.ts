@@ -5,6 +5,8 @@ import { getDb, schema } from '../db/index.js';
 import { users } from '../db/schema.js';
 import { authenticate } from '../utils/auth.js';
 import { getBoosterRoleId } from '../utils/evoLimits.js';
+import { creditWallet } from './credits.js';
+import { CREDIT_PACKS_BY_ID, isCreditPackId } from '@backspace/shared/src/evoConstants.js';
 
 /**
  * Netrex Premium billing:
@@ -84,6 +86,21 @@ export function isBoostProduct(productId: string): boolean {
   return !!configured && productId === configured;
 }
 
+/**
+ * Credit-pack product routing: env CREDIT_PACK_PRODUCT_<PACKID> maps a Gumroad
+ * product id to a wallet pack (pack_2 / pack_5 / pack_10). A confirmed sale
+ * credits the buyer's wallet via creditWallet (with its audit row); a refund
+ * debits it back (balance floor 0 — never negative from a refund).
+ */
+export function creditPackForProduct(productId: string): 'pack_2' | 'pack_5' | 'pack_10' | null {
+  for (const packId of ['pack_2', 'pack_5', 'pack_10'] as const) {
+    if (process.env[`CREDIT_PACK_PRODUCT_${packId.toUpperCase()}`] === productId) {
+      return packId;
+    }
+  }
+  return null;
+}
+
 /** Next-charge epoch ms from a ping, when the product is a subscription. */
 function nextChargeAt(form: Record<string, string>): number | null {
   const raw = form.next_charge_date ?? form.next_charge_at ?? '';
@@ -158,6 +175,35 @@ export async function netrexRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const db = getDb();
+
+    // ── Credit packs (monedero): venta confirmada → acreditar wallet ────
+    const creditPackId = creditPackForProduct(productId);
+    if (creditPackId) {
+      const buyer = db.select({ id: users.id }).from(users).where(eq(users.billingEmail, email)).get();
+      if (!buyer) {
+        console.warn(`[gumroad-ping] credit pack sale for unknown user ${email.slice(0, 3)}***`);
+        return reply.code(200).send({ ok: false, error: 'unknown_user' });
+      }
+
+      if (refunded || disputed || chargebacked) {
+        // Refund → debitar el pack (auditado). El floor está en creditWallet,
+        // pero un reembolso puede dejar saldo negativo si ya se gastó: clampeamos.
+        const pack = CREDIT_PACKS_BY_ID[creditPackId];
+        const current = db.select({ creditBalance: users.creditBalance })
+          .from(users).where(eq(users.id, buyer.id)).get()?.creditBalance ?? 0;
+        const debit = -Math.min(pack.credits, Math.max(current, 0));
+        if (debit < 0) {
+          creditWallet({ userId: buyer.id, amount: debit, reason: `refund:${creditPackId}` });
+        }
+        console.log(`[gumroad-ping] credit pack refund ${creditPackId} for ${email.slice(0, 3)}*** (${debit})`);
+        return reply.send({ ok: true, revoked: true });
+      }
+
+      const pack = CREDIT_PACKS_BY_ID[creditPackId];
+      creditWallet({ userId: buyer.id, amount: pack.credits, reason: `topup:${creditPackId}` });
+      console.log(`[gumroad-ping] CREDITED +${pack.credits} (${creditPackId}) for ${email.slice(0, 3)}***`);
+      return reply.send({ ok: true, creditPack: creditPackId, credits: pack.credits });
+    }
 
     // ── Server boost product: "Mejora de server — 2€/mes" ────────────────
     // Money goes to the platform (like Discord); each sale = 1 boost credit

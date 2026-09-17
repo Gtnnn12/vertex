@@ -31,6 +31,7 @@ import { adminCenterRoutes } from './routes/adminCenter.js';
 import { gifRoutes } from './routes/gif.js';
 import { federationRoutes } from './routes/federation.js';
 import { netrexRoutes } from './routes/netrex.js';
+import { creditsRoutes } from './routes/credits.js';
 import { spotifyRoutes } from './routes/spotify.js';
 import { registerAIRoutes } from './routes/ai.js';
 import { registerSuggestionRoutes } from './routes/suggestions.js';
@@ -153,6 +154,7 @@ async function main(): Promise<void> {
   await app.register(gifRoutes);
   await app.register(federationRoutes);
   await app.register(netrexRoutes);
+  await app.register(creditsRoutes);
   await app.register(spotifyRoutes);
   await registerAIRoutes(app);
   await registerSuggestionRoutes(app);
