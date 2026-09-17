@@ -148,6 +148,13 @@
       "when": 1791792000006,
       "tag": "0020_credit_wallet",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1791792000007,
+      "tag": "0021_recharge_tickets",
+      "breakpoints": true
     }
   ]
 }

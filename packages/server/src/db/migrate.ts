@@ -66,6 +66,33 @@ export function ensureDefaults(db: Database.Database): void {
     console.warn('[defaults] Could not create credit_transactions table:', err);
   }
 
+  // Chat de compra (recargas): tickets + mensajes con capturas.
+  try {
+    db.prepare(`CREATE TABLE IF NOT EXISTS recharge_tickets (
+      id TEXT PRIMARY KEY NOT NULL,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      pack_id TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'open',
+      created_at INTEGER NOT NULL,
+      resolved_at INTEGER,
+      admin_note TEXT
+    )`).run();
+    db.prepare(`CREATE TABLE IF NOT EXISTS recharge_messages (
+      id TEXT PRIMARY KEY NOT NULL,
+      ticket_id TEXT NOT NULL REFERENCES recharge_tickets(id) ON DELETE CASCADE,
+      sender_user_id TEXT NOT NULL REFERENCES users(id),
+      sender_role TEXT NOT NULL,
+      body TEXT,
+      image_url TEXT,
+      created_at INTEGER NOT NULL
+    )`).run();
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_recharge_tickets_user_id ON recharge_tickets (user_id)').run();
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_recharge_tickets_status ON recharge_tickets (status)').run();
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_recharge_messages_ticket_id ON recharge_messages (ticket_id)').run();
+  } catch (err) {
+    console.warn('[defaults] Could not create recharge_tickets tables:', err);
+  }
+
   // Server boosts (modelo estilo Discord): compras de mejora por miembro +
   // créditos de mejora pagados vía billing. Idempotente, seguro en cada boot.
   try {

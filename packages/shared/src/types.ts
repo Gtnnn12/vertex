@@ -793,6 +793,55 @@ export interface NetrexWithCreditsResponse {
   spent: number;
 }
 
+// ─── Chat de compra (recargas vía paypal.me in-app) ─────────────────────────
+
+export type RechargeTicketStatus = 'open' | 'approved' | 'rejected';
+export type RechargeSenderRole = 'user' | 'admin' | 'system';
+
+export interface RechargeTicket {
+  id: string;
+  userId: string;
+  /** '2' | '5' | '10' — euros del paquete elegido. */
+  packId: string;
+  status: RechargeTicketStatus;
+  createdAt: number;
+  resolvedAt: number | null;
+  adminNote: string | null;
+}
+
+export interface RechargeMessage {
+  id: string;
+  ticketId: string;
+  senderUserId: string;
+  senderRole: RechargeSenderRole;
+  body: string | null;
+  /** '/api/uploads/...' — captura adjunta (reutiliza la subida de la app). */
+  imageUrl: string | null;
+  createdAt: number;
+}
+
+export interface RechargeTicketWithMessages {
+  ticket: RechargeTicket;
+  messages: RechargeMessage[];
+}
+
+export interface CreateRechargeRequest {
+  packId: '2' | '5' | '10';
+}
+
+export interface RechargeMessageRequest {
+  body?: string | null;
+  imageUrl?: string | null;
+}
+
+export interface RechargeQueueResponse {
+  tickets: RechargeTicket[];
+}
+
+export interface AdminRechargeResolveRequest {
+  note?: string | null;
+}
+
 /** GET /api/spaces/:id/boosts — estado de mejoras del server, visible para todos los miembros. */
 export interface BoostState {
   /** Boosts no expirados (= nivel del server). */

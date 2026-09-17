@@ -86,6 +86,38 @@ export const creditTransactions = sqliteTable('credit_transactions', {
   userIdx: index('idx_credit_transactions_user_id').on(table.userId),
 }));
 
+/**
+ * Ticket de compra de créditos: el usuario confirma "Ya he pagado" (flujo
+ * paypal.me in-app) y conversa con el staff. status: open→approved|rejected.
+ * packId es '2' | '5' | '10' (euros del paquete).
+ */
+export const rechargeTickets = sqliteTable('recharge_tickets', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  packId: text('pack_id').notNull(),
+  status: text('status').notNull().default('open'),
+  createdAt: integer('created_at').notNull(),
+  resolvedAt: integer('resolved_at'),
+  adminNote: text('admin_note'),
+}, (table) => ({
+  userIdx: index('idx_recharge_tickets_user_id').on(table.userId),
+  statusIdx: index('idx_recharge_tickets_status').on(table.status),
+}));
+
+/** Mensaje del chat de un ticket (texto o captura; sender: 'user' | 'admin'). */
+export const rechargeMessages = sqliteTable('recharge_messages', {
+  id: text('id').primaryKey(),
+  ticketId: text('ticket_id').notNull().references(() => rechargeTickets.id, { onDelete: 'cascade' }),
+  /** NULL = mensaje de sistema (aprobado/rechazado/bienvenida). */
+  senderUserId: text('sender_user_id').references(() => users.id, { onDelete: 'cascade' }),
+  senderRole: text('sender_role').notNull(),
+  body: text('body'),
+  imageUrl: text('image_url'),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  ticketIdx: index('idx_recharge_messages_ticket_id').on(table.ticketId),
+}));
+
 export const spaceBoosts = sqliteTable('space_boosts', {
   id: text('id').primaryKey(),
   spaceId: text('space_id').notNull().references(() => spaces.id, { onDelete: 'cascade' }),
