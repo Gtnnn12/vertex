@@ -58,6 +58,8 @@ export function EvolutionsPanel({ spaceId }: EvolutionsPanelProps) {
   }, [refresh]);
 
   const handleBoost = async () => {
+    // Log temporal para repro: confirma que el click llega al handler.
+    console.log('[boost-click]', { userId: myUserId, spaceId });
     setBoosting(true);
     setError('');
     try {
@@ -137,12 +139,13 @@ export function EvolutionsPanel({ spaceId }: EvolutionsPanelProps) {
           </p>
         )}
 
-        {/* CTA de compra — cualquier MIEMBRO puede mejorar el server. */}
+        {/* CTA de compra — cualquier MIEMBRO puede mejorar el server. El
+            único gating es el procesado: sin créditos el click dispara el
+            request y el 402 muestra el aviso de compra inline. */}
         {boostState && (
           <button
             onClick={handleBoost}
-            disabled={boosting || boostState.myCredits < 1}
-            title={boostState.myCredits < 1 ? t('evo_error_no_credits') : undefined}
+            disabled={boosting}
             className="mt-3 w-full py-2 rounded-md bg-accent-primary text-white text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
           >
             {boosting

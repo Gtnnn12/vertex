@@ -243,6 +243,22 @@ describe('POST /api/spaces/:id/boost — compra por cualquier MIEMBRO', () => {
     expect(res.statusCode).toBe(201);
   });
 
+  it('a member WITHOUT Netrex can purchase: 201, boost registered, N1 at 4', async () => {
+    // Multicuenta-style member: never had Netrex, not the owner.
+    testDb.update(schema.users)
+      .set({ netrexEnabled: 0, netrexUntil: null, netrexExpiresAt: null })
+      .where(eq(schema.users.id, MEMBER_ID))
+      .run();
+    grantCredits(MEMBER_ID, 4);
+    for (let i = 0; i < 4; i++) {
+      const res = await boost(MEMBER_ID);
+      expect(res.statusCode).toBe(201);
+      expect(res.json().boost.userId).toBe(MEMBER_ID);
+    }
+    expect(activeBoostCount()).toBe(4);
+    expect((await getEvolution(MEMBER_ID)).json().effectiveLevel).toBe(1);
+  });
+
   it('expires 30 days out', async () => {
     grantCredits(MEMBER_ID, 1);
     const before = Date.now();
