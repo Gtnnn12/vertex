@@ -206,15 +206,39 @@ export async function registerRechargeRoutes(app: FastifyInstance): Promise<void
             .all()
         : db.select().from(schema.rechargeTickets).orderBy(desc(schema.rechargeTickets.createdAt)).all();
 
-    // Adjunta username para la bandeja.
+    // Adjunta username + último mensaje (para el indicador "sin responder" del staff).
     const userIds = [...new Set(rows.map((r) => r.userId))];
     const users = userIds.length
       ? db.select({ id: schema.users.id, username: schema.users.username }).from(schema.users).where(inArray(schema.users.id, userIds)).all()
       : [];
     const nameById = new Map(users.map((u) => [u.id, u.username]));
 
+    const ticketIds = rows.map((r) => r.id);
+    const lastMsgByTicket = new Map<string, { createdAt: number; senderRole: string }>();
+    if (ticketIds.length) {
+      const msgs = db
+        .select({
+          ticketId: schema.rechargeMessages.ticketId,
+          createdAt: schema.rechargeMessages.createdAt,
+          senderRole: schema.rechargeMessages.senderRole,
+        })
+        .from(schema.rechargeMessages)
+        .where(inArray(schema.rechargeMessages.ticketId, ticketIds))
+        .orderBy(asc(schema.rechargeMessages.createdAt))
+        .all();
+      for (const m of msgs) lastMsgByTicket.set(m.ticketId, { createdAt: m.createdAt, senderRole: m.senderRole });
+    }
+
     return reply.send({
-      tickets: rows.map((r) => ({ ...rowToTicket(r), username: nameById.get(r.userId) ?? r.userId })),
+      tickets: rows.map((r) => {
+        const last = lastMsgByTicket.get(r.id) ?? null;
+        return {
+          ...rowToTicket(r),
+          username: nameById.get(r.userId) ?? r.userId,
+          lastMessageAt: last?.createdAt ?? null,
+          lastMessageRole: (last?.senderRole as RechargeMessage['senderRole'] | undefined) ?? null,
+        };
+      }),
     });
   });
 

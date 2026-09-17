@@ -244,6 +244,52 @@ describe('recharge purchase chat (T1 backend)', () => {
     expect(tickets[0].username).toBe('buyer');
   });
 
+  it('queue exposes last message info (role drives the unread dot) and filters by status', async () => {
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/credits/recharge',
+      headers: { authorization: `Bearer ${tokenFor(USER_ID)}` },
+      payload: { packId: 'pack_2' },
+    });
+    const ticketId = created.json().ticket.id;
+    await app.inject({
+      method: 'POST',
+      url: '/api/credits/recharge/my/message',
+      headers: { authorization: `Bearer ${tokenFor(USER_ID)}` },
+      payload: { body: 'adjunto captura' },
+    });
+
+    const queue = await app.inject({
+      method: 'GET',
+      url: '/api/admin/recharge',
+      headers: { authorization: `Bearer ${tokenFor(ADMIN_ID)}` },
+    });
+    const tk = queue.json().tickets.find((t: { id: string }) => t.id === ticketId);
+    expect(tk.lastMessageRole).toBe('user');
+    expect(tk.lastMessageAt).toBeTruthy();
+
+    // Resuelto desaparece de la cola "open" y aparece filtrando por estado.
+    await app.inject({
+      method: 'POST',
+      url: `/api/admin/recharge/${ticketId}/close`,
+      headers: { authorization: `Bearer ${tokenFor(ADMIN_ID)}` },
+      payload: {},
+    });
+    const openQueue = await app.inject({
+      method: 'GET',
+      url: '/api/admin/recharge?status=open',
+      headers: { authorization: `Bearer ${tokenFor(ADMIN_ID)}` },
+    });
+    expect(openQueue.json().tickets.find((t: { id: string }) => t.id === ticketId)).toBeUndefined();
+    const closedQueue = await app.inject({
+      method: 'GET',
+      url: '/api/admin/recharge?status=closed',
+      headers: { authorization: `Bearer ${tokenFor(ADMIN_ID)}` },
+    });
+    expect(closedQueue.json().tickets).toHaveLength(1);
+    expect(closedQueue.json().tickets[0].status).toBe('closed');
+  });
+
   it('admin replies in the chat and the user sees the answer', async () => {
     const created = await app.inject({
       method: 'POST',

@@ -4,6 +4,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useUIStore } from '../../stores/uiStore';
 import { attUrlOf } from '../chat/AttachmentRenderer';
 import type {
+  RechargeQueueTicket,
   RechargeTicket,
   RechargeTicketWithMessages,
 } from '@backspace/shared';
@@ -18,7 +19,7 @@ import type {
 
 const PACK_CREDITS: Record<string, number> = { pack_2: 100, pack_5: 275, pack_10: 600 };
 
-type QueueItem = RechargeTicket & { username: string };
+type QueueItem = RechargeQueueTicket;
 
 function systemBody(body: string): { kind: 'created' | 'approved' | 'rejected' | 'closed'; note?: string } {
   if (body.startsWith('SYSTEM_APPROVED')) {
@@ -47,10 +48,15 @@ function statusIcon(status: string): string {
   return '📁';
 }
 
+type QueueFilter = 'open' | 'approved' | 'rejected' | 'closed' | 'all';
+
+const FILTERS: QueueFilter[] = ['open', 'approved', 'rejected', 'closed', 'all'];
+
 export function AdminPurchases() {
   const { t } = useLanguage();
   const addToast = useUIStore((s) => s.addToast);
-  const [filter, setFilter] = useState<'open' | 'all'>('open');
+  const openUserProfile = useUIStore((s) => s.openUserProfile);
+  const [filter, setFilter] = useState<QueueFilter>('open');
   const [tickets, setTickets] = useState<QueueItem[] | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<(RechargeTicketWithMessages & { username: string }) | null>(null);
@@ -63,8 +69,8 @@ export function AdminPurchases() {
 
   const loadQueue = useCallback(async () => {
     try {
-      const res = await api.spaces.rechargeQueue(filter === 'all' ? 'all' : 'open');
-      setTickets(res.tickets as QueueItem[]);
+      const res = await api.spaces.rechargeQueue(filter);
+      setTickets(res.tickets);
     } catch {
       setTickets([]);
     }
@@ -151,6 +157,39 @@ export function AdminPurchases() {
 
   const openCount = tickets?.filter((tk) => tk.status === 'open').length ?? 0;
 
+  const FILTER_LABELS: Record<QueueFilter, string> = {
+    open: t('admin_purchases_filter_open'),
+    approved: t('admin_purchases_filter_approved'),
+    rejected: t('admin_purchases_filter_rejected'),
+    closed: t('admin_purchases_filter_closed'),
+    all: t('admin_purchases_filter_all'),
+  };
+
+  const showProfile = (e: React.MouseEvent, tk: QueueItem) => {
+    e.stopPropagation();
+    openUserProfile(
+      {
+        id: tk.userId,
+        username: tk.username ?? tk.userId,
+        displayName: tk.username ?? tk.userId,
+        avatar: null,
+        banner: null,
+        accentColor: null,
+        avatarColor: null,
+        bio: null,
+        status: 'offline' as const,
+        customStatus: null,
+        createdAt: tk.createdAt,
+        homeUserId: null,
+        homeInstance: null,
+        isAdmin: false,
+        replicatedInstances: [],
+      },
+      e.currentTarget.getBoundingClientRect(),
+      'left',
+    );
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 flex-wrap">
@@ -160,17 +199,17 @@ export function AdminPurchases() {
             {openCount}
           </span>
         )}
-        <div className="ml-auto flex rounded-lg border border-white/10 p-0.5">
-          {(['open', 'all'] as const).map((f) => (
+        <div className="ml-auto flex flex-wrap rounded-lg border border-white/10 p-0.5">
+          {FILTERS.map((f) => (
             <button
               key={f}
               type="button"
               onClick={() => setFilter(f)}
-              className={`px-2.5 py-1 rounded-md text-[11px] transition-colors motion-reduce:transition-none ${
+              className={`px-2 py-1 rounded-md text-[11px] transition-colors motion-reduce:transition-none ${
                 filter === f ? 'bg-white/10 text-txt-primary font-semibold' : 'text-txt-tertiary hover:text-txt-secondary'
               }`}
             >
-              {f === 'open' ? t('admin_purchases_filter_open') : t('admin_purchases_filter_all')}
+              {FILTER_LABELS[f]}
             </button>
           ))}
         </div>
@@ -195,7 +234,22 @@ export function AdminPurchases() {
               }`}
             >
               <div className="flex items-center gap-2">
-                <span className="text-[12.5px] font-semibold text-txt-primary truncate">{tk.username}</span>
+                <button
+                  type="button"
+                  onClick={(e) => showProfile(e, tk)}
+                  className="truncate text-[12.5px] font-semibold text-txt-primary underline-offset-2 hover:underline"
+                  title={t('admin_purchases_view_profile')}
+                >
+                  {tk.username}
+                </button>
+                {/* Sin leer: el último mensaje es del usuario y nadie ha respondido después. */}
+                {tk.lastMessageRole === 'user' && (
+                  <span
+                    className="h-2 w-2 shrink-0 rounded-full bg-amber-400"
+                    title={t('admin_purchases_awaiting_reply')}
+                    aria-label={t('admin_purchases_awaiting_reply')}
+                  />
+                )}
                 <span
                   className={`ml-auto shrink-0 rounded-full px-1.5 py-px text-[9px] font-bold uppercase ${statusChipClass(tk.status)}`}
                 >

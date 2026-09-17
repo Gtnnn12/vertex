@@ -184,7 +184,7 @@ export class BackspaceApiClient {
     rechargeClose: () => Promise<import('@backspace/shared').RechargeTicketWithMessages>;
     rechargeCreate: (packId: 'pack_2' | 'pack_5' | 'pack_10') => Promise<import('@backspace/shared').RechargeTicketWithMessages>;
     rechargeSendMessage: (data: { body?: string; imageUrl?: string }) => Promise<{ message: import('@backspace/shared').RechargeMessage }>;
-    rechargeQueue: (status?: 'open' | 'approved' | 'rejected' | 'all') => Promise<import('@backspace/shared').RechargeQueueResponse>;
+    rechargeQueue: (status?: 'open' | 'approved' | 'rejected' | 'closed' | 'all') => Promise<import('@backspace/shared').RechargeQueueResponse>;
     rechargeTicket: (id: string) => Promise<import('@backspace/shared').RechargeTicketWithMessages & { username: string }>;
     rechargeReply: (id: string, data: { body?: string; imageUrl?: string }) => Promise<{ message: import('@backspace/shared').RechargeMessage }>;
     rechargeApprove: (id: string, note?: string) => Promise<import('@backspace/shared').RechargeTicketWithMessages>;
@@ -599,7 +599,7 @@ export class BackspaceApiClient {
         request<{ message: import('@backspace/shared').RechargeMessage }>('POST', '/credits/recharge/my/message', data),
       rechargeClose: () =>
         request<import('@backspace/shared').RechargeTicketWithMessages>('POST', '/credits/recharge/my/close', {}),
-      rechargeQueue: (status?: 'open' | 'approved' | 'rejected' | 'all') =>
+      rechargeQueue: (status?: 'open' | 'approved' | 'rejected' | 'closed' | 'all') =>
         request<import('@backspace/shared').RechargeQueueResponse>('GET', `/admin/recharge${status ? `?status=${status}` : ''}`),
       rechargeTicket: (id: string) =>
         request<import('@backspace/shared').RechargeTicketWithMessages & { username: string }>('GET', `/admin/recharge/${id}`),

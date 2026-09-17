@@ -834,8 +834,16 @@ export interface RechargeMessageRequest {
   imageUrl?: string | null;
 }
 
+export interface RechargeQueueTicket extends RechargeTicket {
+  /** Adjuntado por la cola admin para mostrar el nombre. */
+  username?: string;
+  /** Último mensaje del chat — alimenta el indicador "sin responder" del staff. */
+  lastMessageAt?: number | null;
+  lastMessageRole?: RechargeSenderRole | null;
+}
+
 export interface RechargeQueueResponse {
-  tickets: RechargeTicket[];
+  tickets: RechargeQueueTicket[];
 }
 
 export interface AdminRechargeResolveRequest {
