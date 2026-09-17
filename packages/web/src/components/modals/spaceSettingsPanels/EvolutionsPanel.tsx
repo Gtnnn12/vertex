@@ -3,7 +3,7 @@ import { getApiForOrigin, getMyUserIdForOrigin } from '../../../stores/spaceStor
 import { useSpaceStore } from '../../../stores/spaceStore';
 import { useUIStore } from '../../../stores/uiStore';
 import { useLanguage } from '../../../contexts/LanguageContext';
-import { EVO_CHANNEL_LIMITS, EVO_ROLE_COLOR_LIMITS, EVO_EMOJI_LIMITS } from '@backspace/shared/src/evoConstants.js';
+import { EVO_CHANNEL_LIMITS, EVO_ROLE_COLOR_LIMITS, EVO_EMOJI_LIMITS, BOOST_CREDIT_COST } from '@backspace/shared/src/evoConstants.js';
 import type { BoostState } from '@backspace/shared';
 
 interface EvolutionsPanelProps {
@@ -78,8 +78,8 @@ export function EvolutionsPanel({ spaceId }: EvolutionsPanelProps) {
       await refresh();
     } catch (err: any) {
       const code = err?.body?.code ?? err?.code;
-      if (code === 'no_boost_credits') {
-        setError(t('evo_error_no_credits'));
+      if (code === 'insufficient_credits') {
+        setError(t('evo_error_insufficient_credits'));
       } else if (code === 'not_member') {
         setError(t('evo_error_membership'));
       } else {
@@ -139,19 +139,29 @@ export function EvolutionsPanel({ spaceId }: EvolutionsPanelProps) {
           </p>
         )}
 
-        {/* CTA de compra — cualquier MIEMBRO puede mejorar el server. El
-            único gating es el procesado: sin créditos el click dispara el
-            request y el 402 muestra el aviso de compra inline. */}
+        {/* CTA de compra — cualquier MIEMBRO puede mejorar el server gastando
+            100 créditos del monedero. Sin saldo, el CTA secundario abre la
+            tienda de recargas. El único gating del botón es el procesado. */}
         {boostState && (
-          <button
-            onClick={handleBoost}
-            disabled={boosting}
-            className="mt-3 w-full py-2 rounded-md bg-accent-primary text-white text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
-          >
-            {boosting
-              ? t('evo_boosting')
-              : t('evo_boost_cta')}
-          </button>
+          <>
+            <button
+              onClick={handleBoost}
+              disabled={boosting}
+              className="mt-3 w-full py-2 rounded-md bg-accent-primary text-white text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity motion-reduce:transition-none"
+            >
+              {boosting
+                ? t('evo_boosting')
+                : t('evo_boost_cta_credits')}
+            </button>
+            {boostState.myCredits < BOOST_CREDIT_COST && (
+              <button
+                onClick={() => useUIStore.getState().openModal('creditsShop')}
+                className="mt-2 w-full py-2 rounded-md border border-accent-mint/40 text-accent-mint text-sm font-medium hover:bg-accent-mint/10 transition-colors motion-reduce:transition-none"
+              >
+                {t('evo_recharge_credits_cta')}
+              </button>
+            )}
+          </>
         )}
         {boostState && boostState.myCredits > 0 && (
           <p className="mt-1.5 text-[11px] text-txt-tertiary">

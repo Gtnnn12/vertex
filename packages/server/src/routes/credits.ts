@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { eq, desc } from 'drizzle-orm';
-import { getDb, schema } from '../db/index.js';
+import { getDb, schema, type DB } from '../db/index.js';
 import { authenticate } from '../utils/auth.js';
 import { generateSnowflake } from '../utils/snowflake.js';
 import { CREDIT_PACKS, CREDIT_PACKS_BY_ID, isCreditPackId } from '@backspace/shared/src/evoConstants.js';
@@ -33,38 +33,52 @@ export interface WalletDelta {
   reason: string;
 }
 
+/** Transaction handle type — the same object db.transaction(cb) passes. */
+type WalletTx = Parameters<Parameters<DB['transaction']>[0]>[0];
+
 /**
- * Single chokepoint for balance mutations. Verifies sufficient funds for
- * spends, applies the delta and writes the audit row in one transaction.
- * Throws a 400-shaped error (code 'insufficient_credits') on overdraft.
+ * Core mutation — runs on the given handle. Verifies sufficient funds for
+ * spends, applies the delta and writes the audit row. Throws a 400-shaped
+ * error (code 'insufficient_credits') on overdraft. Exported so callers can
+ * compose the wallet debit INTO a larger transaction (e.g. spend credits +
+ * create the boost atomically).
+ */
+export function applyWalletDelta(tx: WalletTx, delta: WalletDelta): number {
+  const row = tx.select({ creditBalance: schema.users.creditBalance })
+    .from(schema.users)
+    .where(eq(schema.users.id, delta.userId))
+    .get();
+  const current = row?.creditBalance ?? 0;
+  if (delta.amount < 0 && current + delta.amount < 0) {
+    const err = new Error('Insufficient credits') as Error & { statusCode: number; code: string };
+    err.statusCode = 400;
+    err.code = 'insufficient_credits';
+    throw err;
+  }
+  const newBalance = current + delta.amount;
+  tx.update(schema.users)
+    .set({ creditBalance: newBalance })
+    .where(eq(schema.users.id, delta.userId))
+    .run();
+  tx.insert(schema.creditTransactions).values({
+    id: generateSnowflake(),
+    userId: delta.userId,
+    amount: delta.amount,
+    reason: delta.reason,
+    createdAt: Date.now(),
+  }).run();
+  return newBalance;
+}
+
+/**
+ * Single chokepoint for balance mutations. Every variation of
+ * users.creditBalance goes through here (plus its audit row).
  */
 export function creditWallet(delta: WalletDelta): number {
   const db = getDb();
   let newBalance = 0;
   db.transaction((tx) => {
-    const row = tx.select({ creditBalance: schema.users.creditBalance })
-      .from(schema.users)
-      .where(eq(schema.users.id, delta.userId))
-      .get();
-    const current = row?.creditBalance ?? 0;
-    if (delta.amount < 0 && current + delta.amount < 0) {
-      const err = new Error('Insufficient credits') as Error & { statusCode: number; code: string };
-      err.statusCode = 400;
-      err.code = 'insufficient_credits';
-      throw err;
-    }
-    newBalance = current + delta.amount;
-    tx.update(schema.users)
-      .set({ creditBalance: newBalance })
-      .where(eq(schema.users.id, delta.userId))
-      .run();
-    tx.insert(schema.creditTransactions).values({
-      id: generateSnowflake(),
-      userId: delta.userId,
-      amount: delta.amount,
-      reason: delta.reason,
-      createdAt: Date.now(),
-    }).run();
+    newBalance = applyWalletDelta(tx, delta);
   });
   return newBalance;
 }

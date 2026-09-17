@@ -26,7 +26,8 @@ import type {
   BoostState,
   SpaceBoost,
 } from '@backspace/shared';
-import { BOOST_DURATION_DAYS } from '@backspace/shared/src/evoConstants.js';
+import { BOOST_DURATION_DAYS, BOOST_CREDIT_COST } from '@backspace/shared/src/evoConstants.js';
+import { applyWalletDelta } from './credits.js';
 
 /** Emoji name: 2-32 chars, lowercase handle style (letters/digits/_/-). */
 const EMOJI_NAME_RE = /^[a-z0-9_-]{2,32}$/;
@@ -378,8 +379,11 @@ export async function spaceEvolutionRoutes(app: FastifyInstance): Promise<void> 
       ))
       .all();
 
-    const creditRow = db.select().from(schema.boostCredits)
-      .where(eq(schema.boostCredits.userId, request.userId)).get();
+    // myCredits = saldo del monedero (wallet): es lo que se gasta al mejorar.
+    const walletRow = db.select({ creditBalance: schema.users.creditBalance })
+      .from(schema.users)
+      .where(eq(schema.users.id, request.userId))
+      .get();
 
     const body: BoostState = {
       activeBoosts: state.activeBoosts,
@@ -387,7 +391,7 @@ export async function spaceEvolutionRoutes(app: FastifyInstance): Promise<void> 
       effectiveLevel: state.effectiveLevel,
       boostsForLevel1: 4,
       boostsForLevel2: 10,
-      myCredits: creditRow?.credits ?? 0,
+      myCredits: walletRow?.creditBalance ?? 0,
       myBoosts: mine.length,
       nextExpiryAt: state.nextExpiryAt,
     };
@@ -426,11 +430,10 @@ export async function spaceEvolutionRoutes(app: FastifyInstance): Promise<void> 
     return reply.code(200).send({ boosts });
   });
 
-  // POST /api/spaces/:id/boost — CUALQUIER MIEMBRO del server canjea 1 crédito
-  // de mejora (comprado vía billing, 2€/mes por mejora). La compra original va
-  // por el webhook de billing → boost_credits; aquí solo se canjea: 1 crédito
-  // → 1 fila space_boosts con expires_at = now + 30 días. Idempotente por
-  // crédito (el débito y el insert van en la misma transacción).
+  // POST /api/spaces/:id/boost — CUALQUIER MIEMBRO del server gasta 100
+  // créditos del monedero en UNA mejora. Transacción atómica: verifica saldo,
+  // descuenta, registra en credit_transactions y crea el boost (30 días).
+  // Saldo insuficiente → 400 insufficient_credits. Renovar = volver a gastar.
   app.post<{ Params: { id: string } }>('/api/spaces/:id/boost', {
     preHandler: authenticate,
   }, async (request, reply) => {
@@ -453,23 +456,13 @@ export async function spaceEvolutionRoutes(app: FastifyInstance): Promise<void> 
 
     try {
       db.transaction((tx) => {
-        // Débito atómico del crédito (INSERT ... ON CONFLICT + RETURNING vía
-        // drizzle: upsert then decrement, race-safe dentro de la transacción).
-        const existing = tx.select().from(schema.boostCredits)
-          .where(eq(schema.boostCredits.userId, request.userId)).get();
-        if (!existing || existing.credits < 1) {
-          const err = new Error('No boost credits available — purchase "Mejora de server — 2€/mes" first') as Error & {
-            statusCode: number;
-            code: string;
-          };
-          err.statusCode = 402;
-          err.code = 'no_boost_credits';
-          throw err;
-        }
-        tx.update(schema.boostCredits)
-          .set({ credits: existing.credits - 1, updatedAt: now })
-          .where(eq(schema.boostCredits.userId, request.userId))
-          .run();
+        // Débito del monedero + auditoría + insert del boost, todo en LA MISMA
+        // transacción: si el boost falla, el débito se revierte (y viceversa).
+        applyWalletDelta(tx, {
+          userId: request.userId,
+          amount: -BOOST_CREDIT_COST,
+          reason: `spend:boost:${id}`,
+        });
 
         boostId = generateSnowflake();
         tx.insert(schema.spaceBoosts).values({
@@ -482,8 +475,12 @@ export async function spaceEvolutionRoutes(app: FastifyInstance): Promise<void> 
       });
     } catch (e) {
       const ev = e as Error & { statusCode?: number; code?: string };
-      if (ev.statusCode === 402 && ev.code) {
-        return reply.code(402).send({ error: ev.message, code: ev.code, statusCode: 402 });
+      if (ev.statusCode === 400 && ev.code === 'insufficient_credits') {
+        return reply.code(400).send({
+          error: 'Insufficient credits — top up your wallet to boost',
+          code: 'insufficient_credits',
+          statusCode: 400,
+        });
       }
       throw e;
     }

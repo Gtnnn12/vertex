@@ -117,14 +117,10 @@ function seedBase(): void {
   ]).run();
 }
 
-function grantCredits(userId: string, credits: number): void {
-  const existing = testDb.select().from(schema.boostCredits).where(eq(schema.boostCredits.userId, userId)).get();
-  if (existing) {
-    testDb.update(schema.boostCredits).set({ credits, updatedAt: Date.now() })
-      .where(eq(schema.boostCredits.userId, userId)).run();
-  } else {
-    testDb.insert(schema.boostCredits).values({ userId, credits, updatedAt: Date.now() }).run();
-  }
+/** Recarga el monedero vía creditWallet — con su fila de auditoría. */
+async function grantCredits(userId: string, credits: number): Promise<void> {
+  const { creditWallet } = await import('./credits.js');
+  creditWallet({ userId, amount: credits, reason: 'topup:test' });
 }
 
 function tokenFor(userId: string): string {
@@ -196,22 +192,28 @@ afterEach(async () => {
 });
 
 describe('POST /api/spaces/:id/boost — compra por cualquier MIEMBRO', () => {
-  it('a normal member (not the owner) can boost with one credit', async () => {
-    grantCredits(MEMBER_ID, 1);
+  it('a normal member (not the owner) can boost spending 100 wallet credits', async () => {
+    await grantCredits(MEMBER_ID, 100);
     const res = await boost();
     expect(res.statusCode).toBe(201);
     expect(res.json().activeBoosts).toBe(1);
     expect(res.json().serverEvoLevel).toBe(0); // 1 boost < 4 → base
     expect(activeBoostCount()).toBe(1);
-    // Credit consumed
-    expect(testDb.select().from(schema.boostCredits).where(eq(schema.boostCredits.userId, MEMBER_ID)).get()?.credits).toBe(0);
+    // Wallet debited by BOOST_CREDIT_COST, with its audit row
+    expect(testDb.select().from(schema.users).where(eq(schema.users.id, MEMBER_ID)).get()!.creditBalance).toBe(0);
+    const txns = testDb.select().from(schema.creditTransactions)
+      .where(eq(schema.creditTransactions.userId, MEMBER_ID)).all();
+    expect(txns.some((t) => t.amount === -100 && t.reason === `spend:boost:${SPACE_ID}`)).toBe(true);
   });
 
-  it('rejects without credits (402 no_boost_credits) and consumes nothing', async () => {
+  it('rejects with insufficient balance (400 insufficient_credits) and consumes nothing', async () => {
+    await grantCredits(MEMBER_ID, 99);
     const res = await boost();
-    expect(res.statusCode).toBe(402);
-    expect(res.json().code).toBe('no_boost_credits');
+    expect(res.statusCode).toBe(400);
+    expect(res.json().code).toBe('insufficient_credits');
     expect(activeBoostCount()).toBe(0);
+    // Nothing debited, nothing created
+    expect(testDb.select().from(schema.users).where(eq(schema.users.id, MEMBER_ID)).get()!.creditBalance).toBe(99);
   });
 
   it('rejects non-members (403 not_member)', async () => {
@@ -225,7 +227,7 @@ describe('POST /api/spaces/:id/boost — compra por cualquier MIEMBRO', () => {
       createdAt: Date.now(),
     }).run();
     // outsider has credits but no membership
-    grantCredits('outsider', 1);
+    await grantCredits('outsider', 100);
     const res = await app.inject({
       method: 'POST',
       url: `/api/spaces/${SPACE_ID}/boost`,
@@ -238,7 +240,7 @@ describe('POST /api/spaces/:id/boost — compra por cualquier MIEMBRO', () => {
   });
 
   it('the OWNER can also boost (any member, owner included)', async () => {
-    grantCredits(OWNER_ID, 1);
+    await grantCredits(OWNER_ID, 100);
     const res = await boost(OWNER_ID);
     expect(res.statusCode).toBe(201);
   });
@@ -249,7 +251,7 @@ describe('POST /api/spaces/:id/boost — compra por cualquier MIEMBRO', () => {
       .set({ netrexEnabled: 0, netrexUntil: null, netrexExpiresAt: null })
       .where(eq(schema.users.id, MEMBER_ID))
       .run();
-    grantCredits(MEMBER_ID, 4);
+    await grantCredits(MEMBER_ID, 400);
     for (let i = 0; i < 4; i++) {
       const res = await boost(MEMBER_ID);
       expect(res.statusCode).toBe(201);
@@ -260,7 +262,7 @@ describe('POST /api/spaces/:id/boost — compra por cualquier MIEMBRO', () => {
   });
 
   it('expires 30 days out', async () => {
-    grantCredits(MEMBER_ID, 1);
+    await grantCredits(MEMBER_ID, 100);
     const before = Date.now();
     const res = await boost();
     const row = testDb.select().from(schema.spaceBoosts).where(eq(schema.spaceBoosts.spaceId, SPACE_ID)).get()!;
@@ -271,8 +273,8 @@ describe('POST /api/spaces/:id/boost — compra por cualquier MIEMBRO', () => {
   });
 
   it('level rises with each purchase: 4 boosts → N1, 10 → N2', async () => {
-    grantCredits(MEMBER_ID, 10);
-    grantCredits(OWNER_ID, 1);
+    await grantCredits(MEMBER_ID, 1000);
+    await grantCredits(OWNER_ID, 100);
 
     for (let i = 0; i < 3; i++) {
       const res = await boost();
@@ -295,7 +297,7 @@ describe('POST /api/spaces/:id/boost — compra por cualquier MIEMBRO', () => {
 
 describe('Server Booster role', () => {
   it('assigns an idempotent "Server Booster" role to the buyer on purchase', async () => {
-    grantCredits(MEMBER_ID, 3);
+    await grantCredits(MEMBER_ID, 300);
     await boost();
     await boost();
     await boost();
@@ -316,7 +318,7 @@ describe('Server Booster role', () => {
   });
 
   it('the booster role is visible in the member list', async () => {
-    grantCredits(MEMBER_ID, 1);
+    await grantCredits(MEMBER_ID, 100);
     await boost();
     const res = await app.inject({
       method: 'GET',
@@ -331,7 +333,7 @@ describe('Server Booster role', () => {
 
 describe('Boost state endpoint (GET /api/spaces/:id/boosts)', () => {
   it('reports active count, per-member boosts and credits', async () => {
-    grantCredits(MEMBER_ID, 2);
+    await grantCredits(MEMBER_ID, 200);
     await boost();
     await boost();
     const res = await getBoosts();
@@ -366,7 +368,7 @@ describe('Boost state endpoint (GET /api/spaces/:id/boosts)', () => {
 
 describe('EXPIRACIÓN + FREEZE RULE (nada se borra, se clampa al base)', () => {
   it('expired boosts stop counting and effective level clamps to base', async () => {
-    grantCredits(MEMBER_ID, 5);
+    await grantCredits(MEMBER_ID, 500);
     for (let i = 0; i < 4; i++) await boost();
     expect(activeBoostCount()).toBe(4);
     expect((await getEvolution()).json().effectiveLevel).toBe(1);
@@ -385,7 +387,7 @@ describe('EXPIRACIÓN + FREEZE RULE (nada se borra, se clampa al base)', () => {
   });
 
   it('partial expiry de-factors only expired boosts (4 → 3 drops to base)', async () => {
-    grantCredits(MEMBER_ID, 5);
+    await grantCredits(MEMBER_ID, 500);
     for (let i = 0; i < 4; i++) await boost();
     const rows = testDb.select().from(schema.spaceBoosts).where(eq(schema.spaceBoosts.spaceId, SPACE_ID)).all();
     testDb.update(schema.spaceBoosts)
@@ -398,7 +400,7 @@ describe('EXPIRACIÓN + FREEZE RULE (nada se borra, se clampa al base)', () => {
   });
 
   it('channel creation clamps to base limits when boosts expire (freeze at write time)', async () => {
-    grantCredits(MEMBER_ID, 5);
+    await grantCredits(MEMBER_ID, 500);
     for (let i = 0; i < 4; i++) await boost();
     // Level 1 → 20 text channels allowed; create 20
     for (let i = 0; i < 20; i++) {
@@ -417,7 +419,7 @@ describe('EXPIRACIÓN + FREEZE RULE (nada se borra, se clampa al base)', () => {
   });
 
   it('re-boosting after expiry raises the level again', async () => {
-    grantCredits(MEMBER_ID, 9);
+    await grantCredits(MEMBER_ID, 900);
     for (let i = 0; i < 4; i++) await boost();
     const rows = testDb.select().from(schema.spaceBoosts).where(eq(schema.spaceBoosts.spaceId, SPACE_ID)).all();
     testDb.update(schema.spaceBoosts)
@@ -447,7 +449,7 @@ describe('Evolutions catalog gates (por nivel derivado de boosts)', () => {
   });
 
   it('custom emojis unlock at 4 active boosts (level 1)', async () => {
-    grantCredits(MEMBER_ID, 5);
+    await grantCredits(MEMBER_ID, 500);
     for (let i = 0; i < 4; i++) await boost();
     const res = await app.inject({
       method: 'POST',
@@ -459,7 +461,7 @@ describe('Evolutions catalog gates (por nivel derivado de boosts)', () => {
   });
 
   it('evolution endpoint reports derived level and boost count', async () => {
-    grantCredits(MEMBER_ID, 5);
+    await grantCredits(MEMBER_ID, 500);
     for (let i = 0; i < 4; i++) await boost();
     const body = (await getEvolution()).json();
     expect(body.serverEvoLevel).toBe(1);
@@ -472,7 +474,7 @@ describe('Evolutions catalog gates (por nivel derivado de boosts)', () => {
   it('space GET carries the derived level (not the stored column)', async () => {
     // Legacy stored level is ignored — must stay 0 in DB
     expect(testDb.select().from(schema.spaces).where(eq(schema.spaces.id, SPACE_ID)).get()?.serverEvoLevel).toBe(0);
-    grantCredits(MEMBER_ID, 5);
+    await grantCredits(MEMBER_ID, 500);
     for (let i = 0; i < 4; i++) await boost();
     const res = await app.inject({
       method: 'GET',
@@ -518,7 +520,7 @@ describe('Billing webhook — boost credits', () => {
     process.env.BOOST_PRODUCT_ID = 'boost-product-1';
     try {
       testDb.update(schema.users).set({ billingEmail: 'buyer@example.com' }).where(eq(schema.users.id, MEMBER_ID)).run();
-      grantCredits(MEMBER_ID, 1);
+      await grantCredits(MEMBER_ID, 100);
       await boost(); // 1 active boost
 
       const res = await sendPing({

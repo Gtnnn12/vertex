@@ -21,6 +21,7 @@ type ModalType =
   | 'personalization'
   | 'premiumBlock'
   | 'bulkPermissions'
+  | 'creditsShop'
   | null;
 
 interface MobileStackEntry {
