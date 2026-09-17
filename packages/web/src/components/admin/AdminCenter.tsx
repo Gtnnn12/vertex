@@ -13,6 +13,7 @@ import { AdminActivity } from './AdminActivity';
 import { AdminAuditLog } from './AdminAuditLog';
 import { AdminSettings } from './AdminSettings';
 import { AdminSuggestions } from './AdminSuggestions';
+import { AdminPurchases } from './AdminPurchases';
 
 export type AdminTab =
   | 'overview'
@@ -24,6 +25,7 @@ export type AdminTab =
   | 'activity'
   | 'audit'
   | 'suggestions'
+  | 'purchases'
   | 'settings';
 
 export function AdminCenter() {
@@ -101,6 +103,7 @@ export function AdminCenter() {
         {navItem('activity', t('admin_activity'))}
         {navItem('audit', t('admin_audit'))}
         {navItem('suggestions', t('suggestions_admin_title'))}
+        {navItem('purchases', t('admin_purchases_tab'))}
         {navItem('settings', t('admin_settings'), !canManage)}
       </div>
 
@@ -114,6 +117,7 @@ export function AdminCenter() {
         {tab === 'activity' && <AdminActivity />}
         {tab === 'audit' && <AdminAuditLog />}
         {tab === 'suggestions' && <AdminSuggestions />}
+        {tab === 'purchases' && <AdminPurchases />}
         {tab === 'settings' && <AdminSettings />}
       </div>
     </div>
