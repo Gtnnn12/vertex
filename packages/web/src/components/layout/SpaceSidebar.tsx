@@ -15,6 +15,7 @@ import type { SpaceLayoutItem, SpaceFolder } from '@backspace/shared';
 import { getSpaceGradient } from '../../utils/gradients';
 import { isElectron } from '../../platform/platform';
 import { useFloatingPosition } from '../../hooks/useFloatingPosition';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 // ─── Resolved layout types ─────────────────────────────────────────────────
 
@@ -584,6 +585,7 @@ function FolderSlot({
 // ─── SpaceSidebar (main component) ────────────────────────────────────────
 
 export function SpaceSidebar() {
+  const { t } = useLanguage();
   const spaces = useSpaceStore((s) => s.spaces);
   const currentSpaceId = useSpaceStore((s) => s.currentSpaceId);
   const setCurrentSpace = useSpaceStore((s) => s.setCurrentSpace);
@@ -1094,7 +1096,7 @@ export function SpaceSidebar() {
 
       <SidebarItem
         id="@me"
-        name="Direct Messages"
+        name={t('direct_messages')}
         active={showDms}
         onClick={handleDmClick}
         type="dm"
@@ -1231,7 +1233,7 @@ export function SpaceSidebar() {
       <div className="mt-2.5 pt-2 border-t border-white/[0.06] w-full flex flex-col items-center gap-1.5">
       <SidebarItem
         id="add-space"
-        name="Add a Space"
+        name={t('add_a_space')}
         active={false}
         onClick={() => openModal('createSpace')}
         type="action"
@@ -1240,7 +1242,7 @@ export function SpaceSidebar() {
 
       <SidebarItem
         id="join-space"
-        name="Join a Space"
+        name={t('join_a_space')}
         active={false}
         onClick={() => openModal('joinSpace')}
         type="action"
@@ -1249,7 +1251,7 @@ export function SpaceSidebar() {
 
       <SidebarItem
         id="explore"
-        name="Explore Spaces"
+        name={t('explore_spaces_label')}
         active={location.pathname === '/explore'}
         onClick={handleExploreClick}
         type="action"
