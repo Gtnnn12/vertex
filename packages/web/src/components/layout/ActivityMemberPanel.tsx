@@ -1,8 +1,10 @@
-import React, { useMemo, useState } from 'react';
-import type { Activity, MemberWithUser } from '@backspace/shared';
+import React, { useEffect, useMemo, useState } from 'react';
+import type { Activity, Channel, MemberWithUser } from '@backspace/shared';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useActivityStore } from '../../stores/activityStore';
+import { useVoiceStore } from '../../stores/voiceStore';
+import { useAuthStore } from '../../stores/authStore';
 import { Avatar } from '../ui/Avatar';
 import { Username } from '../ui/Username';
 import { hasRichActivity, getActivityAccentClass } from '../ui/ActivityCard';
@@ -15,8 +17,6 @@ import { getMemberGroup, MemberSidebarRow } from './MemberSidebar';
 import { StaffBadge, NetrexChip } from '../ui/StaffBadge';
 import { useNetrexPrefsStore } from '../../stores/netrexPrefsStore';
 import { CompactMembersGrid } from './CompactMembersGrid';
-
-const INITIAL_GRID_COUNT = 24;
 
 type ActivityMemberMode = 'activity' | 'standard';
 
@@ -31,15 +31,6 @@ function formatRelative(startMs: number): string {
   if (days > 0) return `${days}d`;
   return `${hours}h`;
 }
-
-const ACTIVITY_GROUP_LABEL: Record<Activity['type'], string> = {
-  playing: 'activity_playing',
-  listening: 'activity_listening',
-  watching: 'activity_watching',
-  streaming: 'activity_streaming',
-  spotify: 'activity_spotify',
-  custom: 'activity_custom_fallback',
-};
 
 const ACTIVITY_TYPE_TEXT_CLASS: Record<Activity['type'], string> = {
   playing: 'text-accent-mint',
@@ -85,15 +76,28 @@ function ActivityActionIcon({ type }: { type: Activity['type'] }) {
   }
 }
 
+/** Section header for the grouped (activity-mode) member list. */
+function AmpSectionHeader({ dotClass, label, count }: { dotClass: string; label: string; count: number }) {
+  return (
+    <div className="flex items-center gap-1.5 px-1 mb-1">
+      <span className={`w-1 h-1 rounded-full ${dotClass}`} />
+      <span className="text-[9px] font-semibold uppercase tracking-[0.08em] text-txt-tertiary">{label}</span>
+      <span className="text-[9px] text-txt-tertiary/70 tabular-nums">{count}</span>
+    </div>
+  );
+}
+
 function ActivityMemberRow({
   member,
   primary,
   accentClass,
+  colorStyle,
   onClickMember,
 }: {
   member: MemberWithUser;
   primary: Activity;
   accentClass: string;
+  colorStyle: React.CSSProperties | undefined;
   onClickMember: (e: React.MouseEvent, user: MemberWithUser['user']) => void;
 }) {
   const canonical = useCanonicalUserView(member.user);
@@ -118,7 +122,8 @@ function ActivityMemberRow({
         <div className="flex items-baseline gap-1">
           <Username
             username={displayName}
-            className="text-[12.5px] leading-[1.2] font-medium truncate text-txt-primary"
+            className={`text-[12.5px] leading-[1.2] font-medium truncate ${colorStyle ? '' : 'text-txt-primary'}`}
+            style={colorStyle}
           />
           {canonical.staffRole && <StaffBadge role={canonical.staffRole} />}
           {canonical.netrexEnabled && <NetrexChip />}
@@ -136,11 +141,16 @@ function ActivityMemberRow({
   );
 }
 
-function MemberGridCell({
+/** Row for the "In voice" section: username on top, voice channel underneath. */
+function VoiceMemberRow({
   member,
+  channelName,
+  colorStyle,
   onClickMember,
 }: {
   member: MemberWithUser;
+  channelName: string | null;
+  colorStyle: React.CSSProperties | undefined;
   onClickMember: (e: React.MouseEvent, user: MemberWithUser['user']) => void;
 }) {
   const canonical = useCanonicalUserView(member.user);
@@ -148,22 +158,39 @@ function MemberGridCell({
   const displayName = canonical.displayName ?? baseName;
 
   return (
-    <button
+    <div
       onClick={(e) => onClickMember(e, canonical)}
-      className="flex flex-col items-center gap-0.5 p-1 rounded-lg hover:bg-interactive-hover transition-colors"
-      title={displayName}
+      className="flex items-center gap-2.5 px-2.5 py-2 rounded-[10px] mb-1 cursor-pointer transition-colors glass-pill border-l-2 border-l-[rgb(var(--status-online))]"
     >
       <Avatar
         src={canonical.avatar}
         name={displayName}
-        size={36}
+        size={28}
         status={canonical.status}
         user={canonical}
+        className="flex-shrink-0"
       />
-      <span className="text-[8px] text-txt-tertiary truncate w-full text-center leading-tight">
-        {displayName}
-      </span>
-    </button>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline gap-1">
+          <Username
+            username={displayName}
+            className={`text-[12.5px] leading-[1.2] font-medium truncate ${colorStyle ? '' : 'text-txt-primary'}`}
+            style={colorStyle}
+          />
+          {canonical.staffRole && <StaffBadge role={canonical.staffRole} />}
+          {canonical.netrexEnabled && <NetrexChip />}
+        </div>
+        {channelName && (
+          <div className="flex items-center gap-1 text-[10.5px] leading-[1.3] text-txt-secondary min-w-0">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+              <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
+              <path d="M19 10v2a7 7 0 01-14 0v-2" />
+            </svg>
+            <span className="truncate">{channelName}</span>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -172,11 +199,20 @@ export function ActivityMemberPanel() {
   const members = useSpaceStore((s) => s.members);
   const spaces = useSpaceStore((s) => s.spaces);
   const currentSpaceId = useSpaceStore((s) => s.currentSpaceId);
+  const channels = useSpaceStore((s) => s.channels);
   const loadingSpaceId = useSpaceStore((s) => s.loadingSpaceId);
   const memberListOpen = useUIStore((s) => s.memberListOpen);
   const openUserProfile = useUIStore((s) => s.openUserProfile);
   const openModal = useUIStore((s) => s.openModal);
   const userActivities = useActivityStore((s) => s.userActivities);
+
+  // Live voice state: server-pushed map (all channels) + our own LiveKit
+  // room, which is the freshest source for the channel we are connected to.
+  const voiceUsersMap = useVoiceStore((s) => s.voiceUsers);
+  const currentVoiceChannelId = useVoiceStore((s) => s.currentVoiceChannelId);
+  const liveParticipants = useVoiceStore((s) => s.participants);
+  const isLiveKitConnected = useVoiceStore((s) => s.isLiveKitConnected);
+  const me = useAuthStore((s) => s.user);
 
   // Netrex feature preferences (Hub-controlled). The panel itself is only
   // rendered when the entitlement is active (see RightPanel), so this store
@@ -185,7 +221,12 @@ export function ActivityMemberPanel() {
   const compactGrid = useNetrexPrefsStore((s) => s.activeFeatures.includes('memberGridCompact'));
 
   const [mode, setMode] = useState<ActivityMemberMode>(hubPanelMode);
-  const [gridExpanded, setGridExpanded] = useState(false);
+
+  // Keep the in-panel switcher in sync when the mode is flipped from the
+  // Netrex Hub ("Modo actividad" / "Modo estándar") while the panel is open.
+  useEffect(() => {
+    setMode(hubPanelMode);
+  }, [hubPanelMode]);
 
   const space = spaces.find(s => s.id === currentSpaceId);
   const ownerId = space?.ownerId;
@@ -208,28 +249,74 @@ export function ActivityMemberPanel() {
     return { roleGroups: sorted, offlineMembers: offline, onlineMembers: online };
   }, [members, ownerId, t]);
 
-  // Group online members by their primary activity type (priority order).
-  const activityGroups = useMemo(() => {
-    const byType = new Map<Activity['type'], MemberWithUser[]>();
-    const order: Activity['type'][] = ['playing', 'streaming', 'listening', 'spotify', 'watching', 'custom'];
-    const noActivity: MemberWithUser[] = [];
+  // Voice channels of the current space (name lookup + which channels count
+  // as "in voice" for this panel).
+  const spaceVoiceChannels = useMemo(
+    () => channels.filter((c: Channel) => c.type === 'voice' && c.spaceId === currentSpaceId),
+    [channels, currentSpaceId]
+  );
+  const spaceVoiceChannelIds = useMemo(
+    () => new Set(spaceVoiceChannels.map((c) => c.id)),
+    [spaceVoiceChannels]
+  );
+  const voiceChannelNameById = useMemo(() => {
+    const names = new Map<string, string>();
+    for (const c of spaceVoiceChannels) names.set(c.id, c.name);
+    return names;
+  }, [spaceVoiceChannels]);
+
+  // Consolidated userId → voice channel for the current space. Server map is
+  // the base; our own connected room overrides it (same precedence as
+  // VoiceChannel). The local participant's id can be origin-scoped, so it is
+  // resolved back to the member-list id.
+  const selfIds = useMemo(
+    () => new Set([me?.id, me?.homeUserId].filter((v): v is string => !!v)),
+    [me]
+  );
+  const voiceByUser = useMemo(() => {
+    const byUser = new Map<string, string>();
+    const put = (userId: string, channelId: string) => {
+      if (!byUser.has(userId)) byUser.set(userId, channelId);
+    };
+    for (const [channelId, userIds] of voiceUsersMap) {
+      if (!spaceVoiceChannelIds.has(channelId)) continue;
+      for (const uid of userIds) put(uid, channelId);
+    }
+    if (currentVoiceChannelId && isLiveKitConnected && liveParticipants.length > 0) {
+      for (const p of liveParticipants) {
+        const uid = selfIds.has(p.userId)
+          ? (members.find((m) => selfIds.has(m.userId))?.userId ?? p.userId)
+          : p.userId;
+        put(uid, currentVoiceChannelId);
+      }
+    }
+    return byUser;
+  }, [voiceUsersMap, spaceVoiceChannelIds, currentVoiceChannelId, isLiveKitConnected, liveParticipants, selfIds, members]);
+
+  // Live grouping of online members into the activity sections. Every input
+  // (presence, voice map, activities) is reactive, so members move between
+  // sections without any refresh.
+  const grouped = useMemo(() => {
+    const inVoice: MemberWithUser[] = [];
+    const playing: MemberWithUser[] = [];
+    const listening: MemberWithUser[] = [];
+    const rest: MemberWithUser[] = [];
     for (const m of onlineMembers) {
-      const primary = getPrimaryActivity(userActivities.get(m.userId) ?? []);
-      if (!primary) {
-        // Online without activity — rendered in the "Online" section below.
-        noActivity.push(m);
+      if (voiceByUser.has(m.userId)) {
+        inVoice.push(m);
         continue;
       }
-      if (!byType.has(primary.type)) byType.set(primary.type, []);
-      byType.get(primary.type)!.push(m);
+      const primary = getPrimaryActivity(userActivities.get(m.userId) ?? []);
+      if (primary?.type === 'playing' || primary?.type === 'streaming') {
+        playing.push(m);
+      } else if (primary?.type === 'spotify' || primary?.type === 'listening') {
+        listening.push(m);
+      } else {
+        rest.push(m);
+      }
     }
-    return {
-      groups: order
-        .filter((type) => (byType.get(type)?.length ?? 0) > 0)
-        .map((type) => ({ type, members: byType.get(type)! })),
-      onlineWithoutActivity: noActivity,
-    };
-  }, [onlineMembers, userActivities]);
+    return { inVoice, playing, listening, rest };
+  }, [onlineMembers, voiceByUser, userActivities]);
 
   const isLoadingSpace = !!loadingSpaceId && loadingSpaceId === currentSpaceId;
   const showMemberSkeleton = useDelayedLoading(isLoadingSpace);
@@ -272,9 +359,20 @@ export function ActivityMemberPanel() {
     );
   };
 
-  const expanded = gridExpanded || onlineMembers.length <= INITIAL_GRID_COUNT;
-  const gridMembers = expanded ? onlineMembers : onlineMembers.slice(0, INITIAL_GRID_COUNT);
-  const remaining = onlineMembers.length - gridMembers.length;
+  const renderActivityRow = (member: MemberWithUser) => {
+    const primary = getPrimaryActivity(userActivities.get(member.userId) ?? []);
+    if (!primary) return null;
+    return (
+      <ActivityMemberRow
+        key={member.userId}
+        member={member}
+        primary={primary}
+        accentClass={getActivityAccentClass(primary.type)}
+        colorStyle={getMemberColor(member)}
+        onClickMember={handleMemberClick}
+      />
+    );
+  };
 
   return (
     <div className="w-60 bg-surface-members flex-shrink-0 overflow-y-auto select-none no-scrollbar hidden md:block border-l border-border-hard">
@@ -335,21 +433,56 @@ export function ActivityMemberPanel() {
           {/* ── Scroll body ── */}
           <div className="flex-1 min-h-0 overflow-y-auto px-3 pb-3 no-scrollbar">
             {mode === 'activity' ? (
-              <div className="space-y-2">
-                {/* Avatar grid */}
-                {onlineMembers.length > 0 && (
-                  <div className="pt-1">
-                    <div className="flex items-center justify-between px-1 mb-1.5">
-                      <span className="text-[9.5px] font-bold uppercase tracking-[0.12em] text-txt-tertiary">
-                        {t('netrex_activity_group_members')}
-                      </span>
-                      <span className="text-[9px] text-txt-tertiary tabular-nums">{onlineMembers.length}</span>
-                    </div>
-                    {/* Netrex "Cuadrícula Compacta de Miembros": Discord-style dense grid.
-                        Without the feature the classic 4/6-column grid renders below. */}
+              <div className="space-y-3 pt-1">
+                {/* En voz — connected to a voice channel, channel underneath */}
+                {grouped.inVoice.length > 0 && (
+                  <div key="amp-voice" className="amp-regroup-section">
+                    <AmpSectionHeader dotClass="bg-status-online" label={t('netrex_amp_group_in_voice')} count={grouped.inVoice.length} />
+                    {grouped.inVoice.map((m) => {
+                      const channelId = voiceByUser.get(m.userId);
+                      return (
+                        <div key={m.userId} className="amp-regroup-item">
+                          <VoiceMemberRow
+                            member={m}
+                            channelName={channelId ? (voiceChannelNameById.get(channelId) ?? null) : null}
+                            colorStyle={getMemberColor(m)}
+                            onClickMember={handleMemberClick}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Jugando — game activity detected (streaming counts too) */}
+                {grouped.playing.length > 0 && (
+                  <div key="amp-playing" className="amp-regroup-section">
+                    <AmpSectionHeader dotClass="bg-accent-mint" label={t('netrex_amp_group_playing')} count={grouped.playing.length} />
+                    {grouped.playing.map((m) => (
+                      <div key={m.userId} className="amp-regroup-item">{renderActivityRow(m)}</div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Escuchando — Spotify / music activity */}
+                {grouped.listening.length > 0 && (
+                  <div key="amp-listening" className="amp-regroup-section">
+                    <AmpSectionHeader dotClass="bg-accent-sky" label={t('netrex_amp_group_listening')} count={grouped.listening.length} />
+                    {grouped.listening.map((m) => (
+                      <div key={m.userId} className="amp-regroup-item">{renderActivityRow(m)}</div>
+                    ))}
+                  </div>
+                )}
+
+                {/* En línea — everyone else */}
+                {grouped.rest.length > 0 && (
+                  <div key="amp-online" className="amp-regroup-section">
+                    <AmpSectionHeader dotClass="bg-status-online" label={t('netrex_amp_group_online')} count={grouped.rest.length} />
+                    {/* Netrex "Cuadrícula Compacta de Miembros": render the plain-online
+                        members as the dense Discord-style grid when the Hub feature is on. */}
                     {compactGrid ? (
                       <CompactMembersGrid
-                        users={onlineMembers.map((m) => m.user)}
+                        users={grouped.rest.map((m) => m.user)}
                         getActivities={(u) => userActivities.get(u.homeUserId ?? u.id) ?? []}
                         onMemberClick={handleMemberClick}
                         onAddClick={() => openModal('invite')}
@@ -357,104 +490,27 @@ export function ActivityMemberPanel() {
                         showActivityFeed={false}
                       />
                     ) : (
-                      <>
-                        <div className={`grid gap-1.5 grid-cols-4`}>
-                          {gridMembers.map((m) => (
-                            <MemberGridCell key={m.userId} member={m} onClickMember={handleMemberClick} />
-                          ))}
-                        </div>
-                        {!expanded && remaining > 0 && (
-                          <button
-                            onClick={() => setGridExpanded(true)}
-                            className="w-full mt-1.5 px-2 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06] text-[10px] font-semibold text-txt-secondary hover:bg-white/[0.08] hover:text-txt-primary transition-colors"
-                          >
-                            {t('show_more_members').replace('{count}', String(remaining))}
-                          </button>
-                        )}
-                        {expanded && gridExpanded && onlineMembers.length > INITIAL_GRID_COUNT && (
-                          <button
-                            onClick={() => setGridExpanded(false)}
-                            className="w-full mt-1.5 px-2 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06] text-[10px] font-semibold text-txt-secondary hover:bg-white/[0.08] hover:text-txt-primary transition-colors"
-                          >
-                            {t('show_less_members')}
-                          </button>
-                        )}
-                      </>
+                      grouped.rest.map((m) => (
+                        <div key={m.userId} className="amp-regroup-item">{renderMember(m)}</div>
+                      ))
                     )}
                   </div>
                 )}
 
-                {/* Activity feed */}
-                <div className="pt-2">
-                  <div className="flex items-center gap-2 px-1 mb-2">
-                    <span className="text-[9.5px] font-bold uppercase tracking-[0.12em] text-txt-tertiary">
-                      {t('netrex_activity_active_now')}
-                    </span>
-                    <span className="h-px flex-1 bg-white/[0.05]" />
-                  </div>
-                  {activityGroups.groups.length === 0 && activityGroups.onlineWithoutActivity.length === 0 ? (
-                    <p className="text-[10.5px] text-txt-tertiary px-1 py-2">{t('amp_no_activity')}</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {activityGroups.groups.map((group) => (
-                        <div key={group.type}>
-                          <div className="flex items-center gap-1.5 px-1 mb-1">
-                            <span
-                              className={`w-1 h-1 rounded-full ${
-                                group.type === 'playing' ? 'bg-accent-mint'
-                                : group.type === 'listening' ? 'bg-accent-sky'
-                                : group.type === 'watching' ? 'bg-accent-lavender'
-                                : 'bg-accent-rose'
-                              }`}
-                            />
-                            <span className="text-[9px] font-semibold uppercase tracking-[0.08em] text-txt-tertiary">
-                              {t(ACTIVITY_GROUP_LABEL[group.type])}
-                            </span>
-                            <span className="text-[9px] text-txt-tertiary/70 tabular-nums">{group.members.length}</span>
-                          </div>
-                          {group.members.map((m) => {
-                            const primary = getPrimaryActivity(userActivities.get(m.userId) ?? [])!;
-                            const accentClass = getActivityAccentClass(primary.type);
-                            return (
-                              <ActivityMemberRow
-                                key={m.userId}
-                                member={m}
-                                primary={primary}
-                                accentClass={accentClass}
-                                onClickMember={handleMemberClick}
-                              />
-                            );
-                          })}
-                        </div>
-                      ))}
-
-                      {/* Online members without a rich activity: "X · Online" */}
-                      {activityGroups.onlineWithoutActivity.length > 0 && (
-                        <div>
-                          <div className="flex items-center gap-1.5 px-1 mb-1">
-                            <span className="w-1 h-1 rounded-full bg-status-online" />
-                            <span className="text-[9px] font-semibold uppercase tracking-[0.08em] text-txt-tertiary">
-                              {t('online')}
-                            </span>
-                            <span className="text-[9px] text-txt-tertiary/70 tabular-nums">
-                              {activityGroups.onlineWithoutActivity.length}
-                            </span>
-                          </div>
-                          {activityGroups.onlineWithoutActivity.map((m) => renderMember(m))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Offline */}
+                {/* Sin conexión */}
                 {offlineMembers.length > 0 && (
-                  <div className="pt-2">
+                  <div key="amp-offline" className="amp-regroup-section">
                     <h3 className="text-[9.5px] font-bold uppercase tracking-[0.12em] text-txt-tertiary px-1 mb-1">
-                      {t('offline')} — {offlineMembers.length}
+                      {t('netrex_amp_group_offline')} — {offlineMembers.length}
                     </h3>
-                    {offlineMembers.map((m) => renderMember(m, true))}
+                    {offlineMembers.map((m) => (
+                      <div key={m.userId} className="amp-regroup-item">{renderMember(m, true)}</div>
+                    ))}
                   </div>
+                )}
+
+                {grouped.inVoice.length === 0 && grouped.playing.length === 0 && grouped.listening.length === 0 && grouped.rest.length === 0 && offlineMembers.length === 0 && (
+                  <p className="text-[10.5px] text-txt-tertiary px-1 py-2">{t('netrex_amp_empty')}</p>
                 )}
               </div>
             ) : (
