@@ -1093,7 +1093,7 @@ class WsRateLimiter {
   private readonly refillRate: number; // tokens per second
   private lastRefill: number;
 
-  constructor(maxTokens = 30, refillRate = 2) {
+  constructor(maxTokens = 60, refillRate = 5) {
     this.maxTokens = maxTokens;
     this.tokens = maxTokens;
     this.refillRate = refillRate;
@@ -1793,7 +1793,9 @@ export async function registerWebSocket(app: FastifyInstance): Promise<void> {
         return;
       }
 
-      // Rate limit all post-auth, non-ping messages (per-user, shared across tabs)
+      // Rate limit all post-auth, non-ping messages (per-user, shared across tabs).
+      // Generous bucket (60 burst / 5 tok/s) — anti-flood only, invisible to
+      // normal users: typing, presence and acks no longer starve message sends.
       if (!connectionManager.getUserRateLimiter(userId!).consume()) {
         ws.send(JSON.stringify({ type: 'error', message: 'Rate limited' }));
         return;
