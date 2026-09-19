@@ -236,10 +236,10 @@ export function CompactMembersGrid({ users, getActivities, onMemberClick, onAddC
         continue;
       }
       const verbKey = VERB_KEY[primary.type] ?? VERB_KEY.custom;
-      const text =
-        primary.type === 'custom'
-          ? t(verbKey)
-          : t(verbKey).replace('{activity}', primary.name ?? primary.details ?? '');
+      const activityName = primary.name ?? primary.details ?? '';
+      const text = activityName
+        ? t(verbKey).replace('{activity}', activityName)
+        : t('compact_grid_verb_generic');
       rows.push({
         key: canonical.homeUserId ?? canonical.id,
         user: canonical,

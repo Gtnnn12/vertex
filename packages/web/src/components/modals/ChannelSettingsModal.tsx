@@ -11,23 +11,23 @@ import type { PermissionDef } from '../ui/OverrideEntry';
 // ─── Permission Definitions for Channel Overrides ──────────────────────────────
 
 const TEXT_CHANNEL_PERMISSIONS: PermissionDef[] = [
-  { key: 'VIEW_CHANNEL', label: 'View Channel', bit: PermissionBits.VIEW_CHANNEL },
-  { key: 'SEND_MESSAGES', label: 'Send Messages', bit: PermissionBits.SEND_MESSAGES },
-  { key: 'MANAGE_MESSAGES', label: 'Manage Messages', bit: PermissionBits.MANAGE_MESSAGES },
-  { key: 'ATTACH_FILES', label: 'Attach Files', bit: PermissionBits.ATTACH_FILES },
-  { key: 'READ_MESSAGE_HISTORY', label: 'Read Message History', bit: PermissionBits.READ_MESSAGE_HISTORY },
-  { key: 'ADD_REACTIONS', label: 'Add Reactions', bit: PermissionBits.ADD_REACTIONS },
+  { key: 'VIEW_CHANNEL', label: 'perm_view_channels', bit: PermissionBits.VIEW_CHANNEL },
+  { key: 'SEND_MESSAGES', label: 'perm_send_messages', bit: PermissionBits.SEND_MESSAGES },
+  { key: 'MANAGE_MESSAGES', label: 'perm_manage_messages', bit: PermissionBits.MANAGE_MESSAGES },
+  { key: 'ATTACH_FILES', label: 'perm_attach_files', bit: PermissionBits.ATTACH_FILES },
+  { key: 'READ_MESSAGE_HISTORY', label: 'perm_read_message_history', bit: PermissionBits.READ_MESSAGE_HISTORY },
+  { key: 'ADD_REACTIONS', label: 'perm_add_reactions', bit: PermissionBits.ADD_REACTIONS },
 ];
 
 const VOICE_CHANNEL_PERMISSIONS: PermissionDef[] = [
-  { key: 'VIEW_CHANNEL', label: 'View Channel', bit: PermissionBits.VIEW_CHANNEL },
-  { key: 'CONNECT', label: 'Connect', bit: PermissionBits.CONNECT },
-  { key: 'SPEAK', label: 'Speak', bit: PermissionBits.SPEAK },
-  { key: 'STREAM', label: 'Stream', bit: PermissionBits.STREAM },
-  { key: 'MUTE_MEMBERS', label: 'Mute Members', bit: PermissionBits.MUTE_MEMBERS },
-  { key: 'DEAFEN_MEMBERS', label: 'Deafen Members', bit: PermissionBits.DEAFEN_MEMBERS },
-  { key: 'MOVE_MEMBERS', label: 'Move Members', bit: PermissionBits.MOVE_MEMBERS },
-  { key: 'DISCONNECT_MEMBERS', label: 'Disconnect Members', bit: PermissionBits.DISCONNECT_MEMBERS },
+  { key: 'VIEW_CHANNEL', label: 'perm_view_channels', bit: PermissionBits.VIEW_CHANNEL },
+  { key: 'CONNECT', label: 'perm_connect', bit: PermissionBits.CONNECT },
+  { key: 'SPEAK', label: 'perm_speak', bit: PermissionBits.SPEAK },
+  { key: 'STREAM', label: 'perm_stream', bit: PermissionBits.STREAM },
+  { key: 'MUTE_MEMBERS', label: 'perm_mute_members', bit: PermissionBits.MUTE_MEMBERS },
+  { key: 'DEAFEN_MEMBERS', label: 'perm_deafen_members', bit: PermissionBits.DEAFEN_MEMBERS },
+  { key: 'MOVE_MEMBERS', label: 'perm_move_members', bit: PermissionBits.MOVE_MEMBERS },
+  { key: 'DISCONNECT_MEMBERS', label: 'perm_disconnect_members', bit: PermissionBits.DISCONNECT_MEMBERS },
 ];
 
 // ─── Overview Tab ───────────────────────────────────────────────────────────────

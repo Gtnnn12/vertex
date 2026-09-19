@@ -13,7 +13,7 @@ const KINDS: Array<{ type: ActivityType; labelKey: string; emoji: string }> = [
   { type: 'playing', labelKey: 'compact_grid_verb_playing', emoji: '🎮' },
   { type: 'listening', labelKey: 'compact_grid_verb_listening', emoji: '🎧' },
   { type: 'watching', labelKey: 'compact_grid_verb_watching', emoji: '📺' },
-  { type: 'custom', labelKey: 'activity_custom', emoji: '💬' },
+  { type: 'custom', labelKey: 'activity_custom_fallback', emoji: '💬' },
 ];
 
 export function ActivityPicker(): React.ReactNode {

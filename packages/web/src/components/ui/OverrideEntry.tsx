@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { TriStateToggle, type TriState } from './TriStateToggle';
 import { PermissionBits } from '../../utils/permissions';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 export interface PermissionDef {
   key: keyof typeof PermissionBits;
@@ -28,6 +29,7 @@ export function OverrideEntry({
   isEveryone?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const { t } = useLanguage();
 
   const getState = (bit: bigint): TriState => {
     if ((allow & bit) !== 0n) return 'allow';
@@ -59,14 +61,14 @@ export function OverrideEntry({
         <span className="text-sm font-medium text-txt-primary flex-1 text-left truncate">{label}</span>
         {!expanded && summary.length > 0 && (
           <span className="text-[11px] text-txt-tertiary flex-shrink-0">
-            {summary.length} override{summary.length !== 1 ? 's' : ''}
+            {t('override_count').replace('{count}', String(summary.length))}
           </span>
         )}
         {onRemove && !isEveryone && (
           <button
             onClick={(e) => { e.stopPropagation(); onRemove(); }}
             className="p-0.5 text-txt-muted hover:text-accent-rose transition-colors"
-            title="Remove override"
+            title={t('remove_override')}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
               <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
@@ -84,7 +86,7 @@ export function OverrideEntry({
         <div className="px-3 pb-3 space-y-1.5 border-t border-white/[0.04] pt-2">
           {permDefs.map((perm) => (
             <div key={perm.key} className="flex items-center justify-between">
-              <span className="text-[13px] text-txt-secondary">{perm.label}</span>
+              <span className="text-[13px] text-txt-secondary">{t(perm.label)}</span>
               <TriStateToggle
                 value={getState(perm.bit)}
                 onChange={(v) => setState(perm.bit, v)}

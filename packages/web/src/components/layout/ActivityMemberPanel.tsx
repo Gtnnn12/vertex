@@ -38,7 +38,7 @@ const ACTIVITY_GROUP_LABEL: Record<Activity['type'], string> = {
   watching: 'activity_watching',
   streaming: 'activity_streaming',
   spotify: 'activity_spotify',
-  custom: 'activity_custom',
+  custom: 'activity_custom_fallback',
 };
 
 const ACTIVITY_TYPE_TEXT_CLASS: Record<Activity['type'], string> = {
