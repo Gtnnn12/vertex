@@ -17,14 +17,16 @@ import { PRESENCE_META } from '../../utils/presence';
  * Netrex "Cuadrícula Compacta de Miembros" (feature: memberGridCompact).
  *
  * Discord-style dense avatar grid with a collapsible "Group Members" header and
- * an "Activity (Active Now)" feed underneath, rendered with relative times and
- * fading skeleton placeholder rows. Callers gate rendering on
- * `useNetrexFeatureActive('memberGridCompact')` — this component never checks
- * the entitlement itself.
+ * an "Activity (Active Now)" feed underneath, rendered with relative times.
+ * Callers gate rendering on `useNetrexFeatureActive('memberGridCompact')` —
+ * this component never checks the entitlement itself.
+ *
+ * NOTE: the old decorative "fading skeleton placeholder rows" under the
+ * activity feed were removed — they read as a stuck loading state in the
+ * panel and violated the "resident data ⇒ never skeletons" rule.
  */
 
 const INITIAL_VISIBLE = 12;
-const SKELETON_ROWS = 4;
 const CELL_SIZE = 38;
 
 /** Grid status dots come from the shared presence map — never local palettes. */
@@ -363,21 +365,6 @@ export function CompactMembersGrid({ users, getActivities, onMemberClick, onAddC
             </div>
           )}
 
-          {/* Fading skeleton placeholder rows */}
-          <div className="mt-1" aria-hidden="true">
-            {Array.from({ length: SKELETON_ROWS }, (_, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-2.5 px-1 py-1.5"
-                style={{ opacity: Math.max(0.12, 1 - i * 0.25) }}
-              >
-                <div className="skeleton skeleton-circle w-[26px] h-[26px] flex-shrink-0" style={{ animationDelay: `${i * 0.1}s` }} />
-                <div className="skeleton skeleton-bar h-2" style={{ width: `${58 - i * 9}%`, animationDelay: `${i * 0.1}s` }} />
-                <div className="flex-1" />
-                <div className="skeleton skeleton-bar h-2 w-8 flex-shrink-0" style={{ animationDelay: `${i * 0.1}s` }} />
-              </div>
-            ))}
-          </div>
         </div>
         )}
       </div>
