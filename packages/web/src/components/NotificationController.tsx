@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
 import { useChatStore } from '../stores/chatStore';
-import { useVoiceStore } from '../stores/voiceStore';
 import { useAuthStore } from '../stores/authStore';
 import { isElectron } from '../platform/platform';
 import { sendNotification, updateBadgeCount } from '../platform/notifications';
@@ -82,19 +81,6 @@ export function NotificationController() {
   useEffect(() => {
     const unsubscribe = useChatStore.subscribe((state) => {
       updateBadgeCount(state.unreadChannels.size);
-    });
-    return unsubscribe;
-  }, []);
-
-  // DM call notification
-  useEffect(() => {
-    let prevIncoming: { dmChannelId: string | null; callerId: string; callerName: string } | null = null;
-
-    const unsubscribe = useVoiceStore.subscribe((state) => {
-      if (state.incomingCall && !prevIncoming && !windowFocused.current) {
-        sendNotification(t('incoming_call'), `${state.incomingCall.callerName} ${t('is_calling_you')}`);
-      }
-      prevIncoming = state.incomingCall;
     });
     return unsubscribe;
   }, []);

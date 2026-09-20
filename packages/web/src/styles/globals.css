@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
 @font-face {
   font-family: 'DM Sans';
   src: url('/fonts/DMSans-Variable.woff2') format('woff2');
@@ -23,61 +21,176 @@
 @layer base {
   :root {
     /* ── Matte Surfaces (RGB channels for Tailwind opacity support) ── */
-    --bg-base: 11 12 19;
-    --bg-channel: 18 19 28;
-    --bg-chat: 15 16 24;
-    --bg-members: 20 21 30;
-    --bg-elevated: 24 25 36;
-    --bg-input: 14 15 21;
-    --bg-overlay: rgba(0, 0, 0, 0.6);
+    --bg-base: 11 11 16;
+    --bg-channel: 26 26 35;
+    --bg-chat: 19 19 26;
+    --bg-members: 26 26 35;
+    --bg-elevated: 37 37 48;
+    --bg-input: 17 17 24;
+    --bg-overlay: rgba(0, 0, 0, 0.85);
 
-    /* ── Primary Accent Palette (technological gradient) ── */
-    --accent-primary: 96 108 236;
-    --accent-primary-hover: 82 79 212;
-    --accent-primary-active: 66 58 179;
+    /* ── Borders ── */
+    --border-hard: 34 34 44;
+    --border-soft: 42 42 54;
 
-    /* ── Secondary Accent Colors (refined technological gradient) ── */
-    --accent-cyan: 0 206 211;
-    --accent-indigo: 79 70 229;
-    --accent-sky: 14 165 233;
-    --accent-teal: 15 225 138;
+    /* ── Pastel Accents ── */
+    --accent-mint: 134 239 172;
+    --accent-peach: 252 165 165;
+    --accent-lavender: 196 181 253;
+    --accent-sky: 125 211 252;
+    --accent-amber: 252 211 77;
+    --accent-rose: 253 164 175;
+    --accent-coral: 251 146 60;
 
-    /* ── Refined Neutral Accents ── */
-    --accent-rose: 244 63 94;
-    --accent-amber: 251 191 36;
-    --accent-violet: 168 85 247;
+    /* ── Primary Action ──
+       Base identity is monochrome; `data-accent` presets below override only
+       these channels, keeping the interface neutral by default. */
+    --accent-primary: 130 130 140;
+    --accent-primary-hover: 148 148 158;
+    --accent-primary-active: 114 114 124;
+    --accent-primary-glow: 130 130 140;
+    --accent-primary-comma: 130, 130, 140;
 
     /* ── Text Hierarchy ── */
-    --text-primary: 246 246 246;
-    --text-secondary: 170 170 185;
-    --text-tertiary: 110 110 125;
-    --text-category: 86 86 100;
-    --text-message: 235 235 241;
-    --text-link: 14 165 233;
-    --text-positive: 34 197 94;
-    --text-warning: 251 191 36;
-    --text-danger: 239 68 68;
+    --text-primary: 239 239 239;
+    --text-secondary: 160 160 170;
+    --text-tertiary: 92 92 104;
+    --text-category: 72 72 84;
+    --text-message: 216 216 222;
+    --text-link: 125 211 252;
+    --text-positive: 134 239 172;
+    --text-warning: 252 211 77;
+    --text-danger: 252 165 165;
 
     /* ── Interactive ── */
     --interactive-hover: rgba(255, 255, 255, 0.06);
-    --interactive-active: rgba(255, 255, 255, 0.10);
+    --interactive-active: rgba(255, 255, 255, 0.12);
     --interactive-selected: rgba(255, 255, 255, 0.16);
-    --interactive-muted: 82 84 100;
+    --interactive-muted: 58 58 68;
 
     /* ── Status ── */
-    --status-online: 34 197 94;
-    --status-idle: 251 191 36;
-    --status-dnd: 244 63 94;
-    --status-offline: 82 84 100;
+    --status-online: 134 239 172;
+    --status-idle: 252 211 77;
+    --status-dnd: 248 113 113;
+    --status-offline: 58 58 68;
 
     /* ── Glass Material ── */
-    --glass-bg: rgba(18, 19, 27, 0.65);
-    --glass-modal-bg: rgba(18, 19, 27, 0.78);
-    --glass-border: rgba(255, 255, 255, 0.06);
-    --glass-highlight: rgba(255, 255, 255, 0.04);
+    --glass-bg: rgba(20, 20, 26, 0.52);
+    --glass-modal-bg: rgba(20, 20, 26, 0.82);
+    --glass-border: rgba(255, 255, 255, 0.07);
+    --glass-highlight: rgba(255, 255, 255, 0.05);
 
     /* ── Notification ── */
-    --notification: 244 63 94;
+    --notification: 253 164 175;
+  }
+
+  /* ── Accent Layer ──
+     The default identity is black + white + greys. Each `[data-accent]`
+     preset overrides only the accent channels — that is the entire point:
+     color is a single personalization layer, never a redesign of the base. */
+  :root[data-accent='indigo'] {
+    --accent-primary: 99 102 241;
+    --accent-primary-hover: 88 90 232;
+    --accent-primary-active: 77 79 218;
+    --accent-primary-glow: 99 102 241;
+    --accent-primary-comma: 99, 102, 241;
+  }
+
+  :root[data-accent='blue'] {
+    --accent-primary: 56 132 255;
+    --accent-primary-hover: 44 120 245;
+    --accent-primary-active: 34 108 235;
+    --accent-primary-glow: 56 132 255;
+    --accent-primary-comma: 56, 132, 255;
+  }
+
+  :root[data-accent='emerald'] {
+    --accent-primary: 16 185 129;
+    --accent-primary-hover: 5 170 115;
+    --accent-primary-active: 4 148 102;
+    --accent-primary-glow: 16 185 129;
+    --accent-primary-comma: 16, 185, 129;
+  }
+
+  :root[data-accent='crimson'] {
+    --accent-primary: 225 78 102;
+    --accent-primary-hover: 209 62 86;
+    --accent-primary-active: 192 48 72;
+    --accent-primary-glow: 225 78 102;
+    --accent-primary-comma: 225, 78, 102;
+  }
+
+  :root[data-accent='violet'] {
+    --accent-primary: 139 92 246;
+    --accent-primary-hover: 122 75 230;
+    --accent-primary-active: 106 59 215;
+    --accent-primary-glow: 139 92 246;
+    --accent-primary-comma: 139, 92, 246;
+  }
+
+  /* Effect presets (`data-effects` on <html>: minimal / ambient / glass / glow)
+     re-skin surfaces, glass blur and the accent aura with plain per-effect
+     rules — see the VERTEX cabinet at the bottom of this file. */
+
+  /* Theme cross-fade — big canvases only; micro-elements keep their own
+     designed transitions, so nothing important is overridden. */
+  body,
+  main,
+  aside,
+  footer {
+    transition:
+      background-color 0.35s ease,
+      color 0.35s ease,
+      border-color 0.35s ease;
+  }
+
+  /* ── THEMES ──
+     `data-theme` on <html> redefines the entire token set for the Light
+     identity. Every Tailwind color is var-driven, and the white-alpha
+     utility cabinet (bottom of file) re-skims the hardcoded hairlines. */
+  :root[data-theme='light'] {
+    color-scheme: light;
+
+    --bg-base: 245 245 248;
+    --bg-channel: 236 236 241;
+    --bg-chat: 250 250 252;
+    --bg-members: 236 236 241;
+    --bg-elevated: 255 255 255;
+    --bg-input: 229 229 235;
+    --bg-overlay: rgba(20, 20, 26, 0.45);
+
+    --border-hard: 218 218 225;
+    --border-soft: 224 224 231;
+
+    --text-primary: 24 24 30;
+    --text-secondary: 82 82 96;
+    --text-tertiary: 128 128 140;
+    --text-category: 138 138 150;
+    --text-message: 40 40 48;
+    --text-link: 56 132 255;
+    --text-positive: 16 142 94;
+    --text-warning: 176 116 0;
+    --text-danger: 200 60 84;
+
+    --interactive-hover: rgba(20, 20, 26, 0.05);
+    --interactive-active: rgba(20, 20, 26, 0.1);
+    --interactive-selected: rgba(20, 20, 26, 0.13);
+    --interactive-muted: 220 220 226;
+
+    --status-online: 12 150 96;
+    --status-idle: 190 128 0;
+    --status-dnd: 220 38 64;
+    --status-offline: 196 196 204;
+
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-modal-bg: rgba(255, 255, 255, 0.92);
+    --glass-border: rgba(20, 20, 26, 0.12);
+    --glass-highlight: rgba(255, 255, 255, 0.8);
+
+    --notification: 210 70 92;
+  }
+  :root[data-theme='dark'] {
+    color-scheme: dark;
   }
 
   * {
@@ -306,14 +419,44 @@
   }
 }
 
+@layer utilities {
+  /* Space strip glass — in utilities layer so md:glass-strip wins over bg-surface-* */
+  .glass-strip {
+    backdrop-filter: blur(20px) saturate(120%);
+    -webkit-backdrop-filter: blur(20px) saturate(120%);
+    background: var(--glass-bg);
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.03),
+      2px 0 12px rgba(0, 0, 0, 0.20);
+  }
+
+  .rounded-inherit {
+    border-radius: inherit;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.15);
+    border-radius: 100px;
+  }
+}
+
 /* ── Emoji Mart Overrides ── */
 .emoji-picker-wrapper em-emoji-picker {
-  --em-rgb-background: 18, 19, 27;
-  --em-rgb-input: 14, 15, 21;
-  --em-rgb-color: 225, 225, 232;
-  --em-color-border: rgba(255, 255, 255, 0.06);
-  --em-color-border-over: rgba(255, 255, 255, 0.08);
-  --rgb-accent: 96, 108, 236;
+  --em-rgb-background: 20, 20, 26;
+  --em-rgb-input: 17, 17, 24;
+  --em-rgb-color: 216, 216, 222;
+  --em-color-border: rgba(255, 255, 255, 0.07);
+  --em-color-border-over: rgba(255, 255, 255, 0.12);
+  --rgb-accent: var(--accent-primary-comma);
   --font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   border: none !important;
   background: transparent !important;
@@ -333,19 +476,19 @@
   width: 100%;
 }
 
-/* ── Subtle Micro-Animations ── */
+/* Animations */
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
-.animate-fade-in {
-  animation: fadeIn 0.15s ease-out;
+@keyframes slideUp {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
-@keyframes slideUp {
-  from { transform: translateY(4px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+.animate-fade-in {
+  animation: fadeIn 0.15s ease-out;
 }
 
 .animate-slide-up {
@@ -354,7 +497,7 @@
 
 /* Slides into place from above — used for popovers that open upward */
 @keyframes slideDown {
-  from { transform: translateY(-4px); opacity: 0; }
+  from { transform: translateY(-10px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
 
@@ -363,72 +506,752 @@
 }
 
 @keyframes typingFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from { transform: translateY(4px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 .animate-typing-in {
   animation: typingFadeIn 0.15s ease-out;
 }
 
-/* Subtle pulse for interactive elements */
-@keyframes pulse-subtle {
+/* Typing indicator "pulse" style (Netrex option) */
+@keyframes typingPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.97); }
+}
+.animate-typing-pulse {
+  animation: typingPulse 1.2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-typing-pulse {
+    animation: none;
+  }
+}
+
+@keyframes gradientPulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+.animate-gradient-pulse {
+  animation: gradientPulse 4s ease-in-out infinite;
+}
+
+/* ── Netrex Personalization Editor (premium controls) ── */
+
+/* Range sliders: glowing accent thumb, thin track */
+.prem-slider {
+  outline: none;
+}
+.prem-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #fff;
+  border: 2px solid rgba(0, 0, 0, 0.25);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  cursor: grab;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.prem-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+}
+.prem-slider::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  transform: scale(1.05);
+}
+.prem-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #fff;
+  border: 2px solid rgba(0, 0, 0, 0.25);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  cursor: grab;
+  transition: transform 0.15s ease;
+}
+.prem-slider::-moz-range-thumb:hover {
+  transform: scale(1.15);
+}
+.prem-slider:focus-visible {
+  outline: 2px solid rgb(var(--accent-primary) / 0.5);
+  outline-offset: 3px;
+}
+
+/* Popover entrance */
+@keyframes premPopoverIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.prem-popover {
+  animation: premPopoverIn 0.16s ease-out;
+}
+
+/* Staggered section entrance when switching tabs */
+@keyframes premStaggerIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.prem-stagger > * {
+  animation: premStaggerIn 0.24s ease-out backwards;
+}
+.prem-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.prem-stagger > *:nth-child(2) { animation-delay: 60ms; }
+.prem-stagger > *:nth-child(3) { animation-delay: 120ms; }
+.prem-stagger > *:nth-child(4) { animation-delay: 180ms; }
+.prem-stagger > *:nth-child(5) { animation-delay: 240ms; }
+
+/* Live preview indicator pulse */
+@keyframes premLivePulse {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.9; }
+  50% { opacity: 0.45; }
 }
-.animate-pulse-subtle {
-  animation: pulse-subtle 2s ease-in-out infinite;
-}
-
-/* Scale emphasis for button press */
-@keyframes scale-emphasis {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.02); }
-}
-.animate-scale-emphasis {
-  animation: scale-emphasis 120ms ease-out;
+.prem-live-dot span {
+  animation: premLivePulse 2s ease-in-out infinite;
 }
 
-/* Micro-appearance for content */
-@keyframes content-appear {
-  from { opacity: 0; transform: translateY(2px); }
+@media (prefers-reduced-motion: reduce) {
+  .prem-popover,
+  .prem-stagger > * {
+    animation: none;
+  }
+  .prem-live-dot span {
+    animation: none;
+  }
+  .prem-slider::-webkit-slider-thumb,
+  .prem-slider::-moz-range-thumb {
+    transition: none;
+  }
+}
+
+/* ── DM View Premium Effects ──
+   Presentation-only polish for the direct-message view: message entrance,
+   hover action panel, date dividers and composer focus glow. Everything is
+   driven by the existing token set (--accent-primary*, --text-*, glass
+   tiers) so data-accent / data-theme / data-effects keep working untouched. */
+
+/* New message entrance: subtle fade + translateY. */
+@keyframes dmMsgIn {
+  from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.animate-content-appear {
-  animation: content-appear 120ms ease-out;
+.dm-msg-in {
+  animation: dmMsgIn 0.16s ease-out;
 }
 
-/* Button hover lift */
-@keyframes button-lift {
-  from { transform: translateY(0); }
-  to { transform: translateY(-2px); }
+/* Hover action panel: fade + scale, 150ms — Discord-style but tighter. */
+@keyframes dmActionPop {
+  from { opacity: 0; transform: translateY(2px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
-.animate-button-lift {
-  animation: button-lift 150ms ease-out;
+.dm-action-pop {
+  animation: dmActionPop 0.15s ease-out;
+  transform-origin: bottom right;
 }
 
-/* Subtle fade slide for modals */
-@keyframes modal-fade-slide {
+/* Date divider entrance. */
+@keyframes dmDateIn {
+  from { opacity: 0; transform: translateY(-2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.dm-date-in {
+  animation: dmDateIn 0.18s ease-out;
+}
+
+/* Elegant date divider — gradient hairline instead of a flat 1px line. */
+.dm-date-rule {
+  height: 1px;
+  flex: 1 1 0%;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgb(var(--border-soft) / 0.9) 18%,
+    rgb(var(--border-soft) / 0.9) 82%,
+    transparent
+  );
+}
+
+/* NETREX nav chip — green pulsing dot (opacity only; text-shadow stays static per frame). */
+@keyframes netrexDotPulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+
+/* Luminous icon hover for header/composer actions: a soft accent halo
+   instead of a flat background wash. Gated on the glow/ambient effects so
+   minimal stays flat by design. */
+.dm-icon-btn {
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+:root:not([data-effects='minimal']) .dm-icon-btn:hover {
+  box-shadow:
+    0 0 12px -2px rgb(var(--accent-primary-glow) / 0.25),
+    inset 0 0 0 1px rgb(var(--accent-primary-glow) / 0.08);
+}
+
+/* Composer focus glow: the focus ring/border lights up with the user's
+   custom accent color. Applied via :focus-within on the composer bubble. */
+.composer-focus-glow:focus-within {
+  border-color: rgb(var(--accent-primary) / 0.55);
+  box-shadow:
+    0 2px 12px rgba(0, 0, 0, 0.3),
+    0 8px 36px -8px rgba(0, 0, 0, 0.6),
+    0 0 0 3px rgb(var(--accent-primary-glow) / 0.16),
+    0 0 24px -4px rgb(var(--accent-primary-glow) / 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.composer-focus-glow {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Sticky DM header — soft glassmorphism. Uses the existing glass tokens so
+   data-theme light gets its lighter surface automatically. */
+.dm-header-glass {
+  backdrop-filter: blur(20px) saturate(120%);
+  -webkit-backdrop-filter: blur(20px) saturate(120%);
+  background: var(--glass-bg);
+  transition:
+    box-shadow 0.18s ease,
+    background-color 0.18s ease;
+}
+.dm-header-scrolled {
+  box-shadow:
+    inset 0 -1px 0 var(--glass-border),
+    0 4px 16px -8px rgba(0, 0, 0, 0.35);
+}
+
+/* Presence ring around the header avatar — a subtle accent-tinted halo. */
+.dm-presence-ring {
+  border-radius: 9999px;
+  aspect-ratio: 1;
+  box-shadow:
+    0 0 0 1px rgb(var(--accent-primary-glow) / 0.35),
+    0 0 10px -2px rgb(var(--accent-primary-glow) / 0.4);
+  transition: box-shadow 0.18s ease;
+}
+.dm-presence-ring:hover {
+  box-shadow:
+    0 0 0 1px rgb(var(--accent-primary-glow) / 0.55),
+    0 0 16px -2px rgb(var(--accent-primary-glow) / 0.6);
+}
+
+/* Theme link polish: animated underline that slides in on hover, theme color. */
+.dm-link {
+  color: rgb(var(--text-link));
+  text-decoration: none;
+  background-image: linear-gradient(rgb(var(--text-link) / 0.5), rgb(var(--text-link) / 0.5));
+  background-size: 0% 1px;
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  transition: background-size 0.16s ease-out;
+  border-radius: 1px;
+}
+.dm-link:hover {
+  background-size: 100% 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dm-msg-in,
+  .dm-action-pop,
+  .dm-date-in {
+    animation: none;
+  }
+  .dm-icon-btn,
+  .composer-focus-glow,
+  .composer-focus-glow:focus-within,
+  .dm-header-glass,
+  .dm-presence-ring,
+  .dm-link {
+    transition: none;
+  }
+}
+
+/* ── HOME PREMIUM EFFECTS ──
+   Presentation-only: hero aurora, cursor-follow card glow and count-up
+   support. All driven by the existing accent/theme tokens. */
+
+/* Hero aurora — two slow-drifting accent blobs behind the hero content.
+   Very low alpha so it reads as ambient light, never noise. */
+@keyframes homeAuroraDrift1 {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.75; }
+  50% { transform: translate(6%, 4%) scale(1.12); opacity: 1; }
+}
+@keyframes homeAuroraDrift2 {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.6; }
+  50% { transform: translate(-5%, -4%) scale(1.08); opacity: 0.9; }
+}
+.home-hero-aurora {
+  position: absolute;
+  border-radius: 9999px;
+  pointer-events: none;
+  filter: blur(60px);
+}
+.home-hero-aurora-1 {
+  width: 480px;
+  height: 480px;
+  top: -160px;
+  left: 50%;
+  margin-left: -240px;
+  background: radial-gradient(circle, rgb(var(--accent-primary-glow) / 0.13) 0%, transparent 65%);
+  animation: homeAuroraDrift1 11s ease-in-out infinite;
+}
+.home-hero-aurora-2 {
+  width: 360px;
+  height: 360px;
+  bottom: -140px;
+  right: 8%;
+  background: radial-gradient(circle, rgb(var(--accent-primary-glow) / 0.08) 0%, transparent 65%);
+  animation: homeAuroraDrift2 15s ease-in-out infinite;
+}
+/* Logo glow — soft breathing halo on the VERTEX. wordmark. */
+@keyframes homeLogoGlow {
+  0%, 100% { text-shadow: 0 0 24px rgb(var(--accent-primary-glow) / 0.10); }
+  50% { text-shadow: 0 0 36px rgb(var(--accent-primary-glow) / 0.22); }
+}
+.home-logo-glow {
+  animation: homeLogoGlow 5s ease-in-out infinite;
+}
+
+/* Quick-access cards: cursor-follow glow. The card sets --mx/--my via
+   JS on mousemove; the layer is a radial gradient anchored there. */
+.home-card-glow-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease-out;
+  background: radial-gradient(
+    180px circle at var(--mx, 50%) var(--my, 50%),
+    rgb(var(--accent-primary-glow) / 0.10),
+    transparent 70%
+  );
+}
+.group:hover > .home-card-glow-layer {
+  opacity: 1;
+}
+.home-card-lift {
+  transition:
+    transform 0.18s ease-out,
+    border-color 0.18s ease-out,
+    background-color 0.18s ease-out,
+    box-shadow 0.18s ease-out;
+}
+.group:hover > .home-card-glow-layer ~ * ,
+.group:hover .home-card-lift {
+}
+.group:hover .home-card-lift-inner {
+  transform: translateY(-2px);
+}
+.home-card-lift-inner {
+  transition: transform 0.18s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-hero-aurora-1,
+  .home-hero-aurora-2,
+  .home-logo-glow {
+    animation: none;
+  }
+  .home-card-glow-layer {
+    display: none;
+  }
+  .home-card-lift,
+  .home-card-lift-inner {
+    transition: none;
+  }
+  .group:hover .home-card-lift-inner {
+    transform: none;
+  }
+}
+
+/* GIF picker tiles: accent ring + soft glow on hover. Token-driven so the
+   user's custom accent and light/dark themes both apply. */
+.gif-tile {
+  display: block;
+  border: 1px solid transparent;
+}
+.gif-tile:hover {
+  border-color: rgb(var(--accent-primary) / 0.6);
+  box-shadow:
+    0 0 0 2px rgb(var(--accent-primary) / 0.35),
+    0 4px 16px -4px rgb(var(--accent-primary-glow) / 0.45);
+}
+@media (prefers-reduced-motion: reduce) {
+  .gif-tile {
+    transition: none;
+  }
+}
+
+/* ── PROFILE CARD FX (popout + modal) ──
+   Tilt 3D + cursor glow + banner parallax + presence ring + staggered
+   entrance. All token-driven (accent/status vars) with full
+   prefers-reduced-motion opt-out. The JS hook (useProfileCardFX) writes
+   --fx-rx/--fx-ry/--fx-mx/--fx-my/--fx-bx on the card root. */
+.profile-fx {
+  --fx-rx: 0deg;
+  --fx-ry: 0deg;
+  --fx-mx: 50%;
+  --fx-my: 30%;
+  --fx-bx: 0%;
+  --fx-by: 0%;
+  /* Personal profile tint (--profile-accent, hex). Empty var = no tint:
+     all consumers fall back to the neutral glass look. Set by the shared
+     profileTint() util (utils/profileTint.ts) on every profile surface. */
+  --profile-accent: initial;
+  transform: perspective(900px) rotateX(var(--fx-rx)) rotateY(var(--fx-ry));
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+/* ── Tint consumers — ONE implementation, intensity variants only ──
+   Applied via the shared profileTint() util: it sets --profile-accent and
+   adds .profile-tint-compact (popout) or .profile-tint-full (big modal).
+   With no accent the var resolves to 'transparent' → color-mix() makes
+   every layer fully transparent → neutral glass.
+
+   compact: subtle hairline border + faint top wash (small card).
+   full: the tint FILLS the whole surface — top glow from the banner,
+   bottom fade to the base, borders and outer glow scaled up. */
+.profile-tint-compact {
+  background-image:
+    linear-gradient(180deg, color-mix(in srgb, var(--profile-accent) 14%, transparent) 0%, transparent 55%);
+  border-color: color-mix(in srgb, var(--profile-accent) 30%, transparent);
+}
+.profile-tint-compact .profile-fx-banner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(to top, color-mix(in srgb, var(--profile-accent) 30%, transparent), transparent 60%);
+}
+
+.profile-tint-full {
+  background-image:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--profile-accent) 26%, transparent) 0%,
+      color-mix(in srgb, var(--profile-accent) 10%, transparent) 34%,
+      transparent 58%,
+      color-mix(in srgb, var(--profile-accent) 12%, transparent) 88%,
+      color-mix(in srgb, var(--profile-accent) 20%, transparent) 100%
+    );
+  border-color: color-mix(in srgb, var(--profile-accent) 38%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--profile-accent) 22%, transparent),
+    0 24px 90px -20px color-mix(in srgb, var(--profile-accent) 34%, transparent);
+}
+.profile-tint-full .profile-fx-banner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(to top, color-mix(in srgb, var(--profile-accent) 42%, transparent), transparent 65%);
+}
+/* Full-modal: the wash must cover the background BEHIND both columns —
+   panel backgrounds are transparent, the card gradient does the work. */
+.profile-tint-full .profile-fx-banner-overlay {
+  background: linear-gradient(
+    to bottom,
+    rgb(var(--bg-chat) / 0.02) 0%,
+    rgb(var(--bg-chat) / 0.22) 62%,
+    rgb(var(--bg-chat) / 0.8) 100%
+  );
+}
+.profile-fx.fx-animatable {
+  transition: transform 0.25s ease-out;
+}
+
+/* Cursor glow layer — anchored at --fx-mx/--fx-my. */
+.profile-fx-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 0.25s ease-out;
+  background: radial-gradient(
+    260px circle at var(--fx-mx) var(--fx-my),
+    rgb(var(--accent-primary-glow) / 0.12),
+    transparent 70%
+  );
+}
+.profile-fx:hover > .profile-fx-glow {
+  opacity: 1;
+}
+
+/* Banner parallax — the inner layer drifts against the cursor. */
+.profile-fx-banner {
+  position: absolute;
+  inset: -12px;
+  transform: translate(var(--fx-bx), var(--fx-by)) scale(1.06);
+  background-size: cover;
+  background-position: center;
+  will-change: transform;
+}
+.profile-fx.fx-animatable .profile-fx-banner {
+  transition: transform 0.25s ease-out;
+}
+/* Banner gradient overlay: surface fades up from the bottom so identity
+   text sits on the card, not on the photo — the depth layer. */
+.profile-fx-banner-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgb(var(--bg-chat) / 0.06) 0%,
+    rgb(var(--bg-chat) / 0.34) 62%,
+    rgb(var(--bg-chat) / 0.92) 100%
+  );
+}
+
+/* Presence ring — REMOVED: it was a decorative halo that read as a pink
+   blob floating on the avatar's edge. The only presence indicator on profile
+   surfaces is the small standardized dot rendered by <Avatar>. */
+
+/* Staggered entrance — apply .profile-stagger to the card; each direct
+   block with [data-stagger] fades up in cascade. */
+@keyframes profileStaggerIn {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.animate-modal-fade-slide {
-  animation: modal-fade-slide 200ms ease-out;
+.profile-stagger [data-stagger] {
+  animation: profileStaggerIn 0.32s ease-out backwards;
+}
+.profile-stagger [data-stagger='1'] { animation-delay: 0.03s; }
+.profile-stagger [data-stagger='2'] { animation-delay: 0.1s; }
+.profile-stagger [data-stagger='3'] { animation-delay: 0.17s; }
+.profile-stagger [data-stagger='4'] { animation-delay: 0.24s; }
+.profile-stagger [data-stagger='5'] { animation-delay: 0.31s; }
+
+/* Premium tab indicator (modal) — the sliding pill. */
+.profile-tab-indicator {
+  position: absolute;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 9999px;
+  background: rgb(var(--accent-primary));
+  box-shadow: 0 0 8px rgb(var(--accent-primary-glow) / 0.5);
+  transition: transform 0.18s ease-out, width 0.18s ease-out;
 }
 
-/* ── Reduced motion support ── */
+/* ── PROFILE BOARD (Tablero) ──
+   Editorial, minimal widget cards: icon + label + value, hairline borders,
+   layered shadows, controlled glow. Only transform/opacity animate; full
+   prefers-reduced-motion opt-out below. */
+.board-widget {
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.18),
+    0 4px 12px -6px rgb(0 0 0 / 0.24);
+}
+.board-widget:hover {
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.2),
+    0 8px 20px -8px rgb(var(--accent-primary-glow) / 0.28);
+}
+.board-widget:focus-visible {
+  box-shadow:
+    0 0 0 1px rgb(var(--accent-primary) / 0.4),
+    0 4px 14px -6px rgb(var(--accent-primary-glow) / 0.35);
+}
+.board-locked {
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.16),
+    0 10px 28px -14px rgb(252 165 165 / 0.3);
+}
+/* Editor: framer-motion drag uses transform only — safe by contract. */
+.board-editor [data-framer-appear-id],
+.board-editor li[style*='transform'] {
+  will-change: transform;
+}
 @media (prefers-reduced-motion: reduce) {
-  .animate-fade-in,
-  .animate-slide-up,
-  .animate-slide-down,
-  .animate-typing-in,
-  .animate-pulse-subtle,
-  .animate-scale-emphasis,
-  .animate-content-appear,
-  .animate-button-lift,
-  .animate-modal-fade-slide {
-    animation: none !important;
+  .board-widget,
+  .board-widget:hover,
+  .board-locked {
+    transition: none;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.18);
+  }
+  .board-editor * {
     transition: none !important;
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-fx {
+    transform: none !important;
+  }
+  .profile-fx.fx-animatable,
+  .profile-fx.fx-animatable .profile-fx-banner {
+    transition: none;
+  }
+  .profile-fx-banner {
+    transform: scale(1.06);
+  }
+  .profile-fx-glow {
+    display: none;
+  }
+  .profile-presence-ring {
+    animation: none;
+  }
+  .profile-stagger [data-stagger] {
+    animation: none;
+  }
+  .profile-tab-indicator {
+    transition: none;
+  }
+}
+
+/* ── Skeleton Loading ── */
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg,
+    rgba(255,255,255,0.04) 0%,
+    rgba(255,255,255,0.08) 40%,
+    rgba(255,255,255,0.04) 80%
+  );
+  background-size: 400px 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+.skeleton-circle { border-radius: 50%; }
+.skeleton-bar    { height: 12px; border-radius: 6px; }
+.skeleton-block  { border-radius: 8px; }
+
+@keyframes search-flash {
+  0% { background-color: rgba(124, 108, 246, 0.2); }
+  100% { background-color: transparent; }
+}
+.search-highlight { animation: search-flash 2s ease-out; }
+
+@keyframes stepForward {
+  from { transform: translateX(24px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes stepBack {
+  from { transform: translateX(-24px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.animate-step-forward {
+  animation: stepForward 0.25s ease-out;
+}
+.animate-step-back {
+  animation: stepBack 0.25s ease-out;
+}
+
+/* ── Incoming Call Animations ── */
+
+/* Liquid ripple: soft gradient orb that expands and dissolves */
+@keyframes callRippleLiquid {
+  0% {
+    scale: 0.3;
+    opacity: 0.45;
+  }
+  70% {
+    opacity: 0.12;
+  }
+  100% {
+    scale: 2.8;
+    opacity: 0;
+  }
+}
+
+/* Soft multi-layered halo around avatar */
+@keyframes callGlowSoft {
+  0%, 100% {
+    box-shadow:
+      0 0 20px rgba(134, 239, 172, 0.06),
+      0 0 40px rgba(134, 239, 172, 0.04),
+      0 0 80px rgba(134, 239, 172, 0.02);
+  }
+  50% {
+    box-shadow:
+      0 0 24px rgba(134, 239, 172, 0.12),
+      0 0 48px rgba(134, 239, 172, 0.06),
+      0 0 96px rgba(134, 239, 172, 0.03);
+  }
+}
+
+/* Traveling light refraction across glass card surface */
+@keyframes callRefraction {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+/* Gentle breathing glow on accept button */
+@keyframes callButtonBreath {
+  0%, 100% {
+    box-shadow:
+      0 0 12px rgba(134, 239, 172, 0.08),
+      0 0 28px rgba(134, 239, 172, 0.04);
+  }
+  50% {
+    box-shadow:
+      0 0 18px rgba(134, 239, 172, 0.16),
+      0 0 36px rgba(134, 239, 172, 0.06);
+  }
+}
+
+.animate-call-ripple {
+  animation: callRippleLiquid 4s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+}
+
+.animate-call-glow {
+  animation: callGlowSoft 4s ease-in-out infinite;
+}
+
+.animate-call-button-glow {
+  animation: callButtonBreath 3s ease-in-out infinite;
+}
+
+/* Light refraction shimmer overlay on the call card */
+.call-refraction::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    transparent 35%,
+    rgba(134, 239, 172, 0.03) 42%,
+    rgba(134, 239, 172, 0.05) 50%,
+    rgba(134, 239, 172, 0.03) 58%,
+    transparent 65%,
+    transparent 100%
+  );
+  animation: callRefraction 6s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-call-ripple,
+  .animate-call-glow,
+  .animate-call-button-glow { animation: none !important; }
+  .call-refraction::after { animation: none !important; opacity: 0; }
+  .skeleton { animation: none; }
 }
 
 /* ── MOBILE SCREEN TRANSITIONS ── */
@@ -447,3 +1270,1177 @@
 /* ── Electron window drag regions ── */
 .titlebar-drag { -webkit-app-region: drag; }
 .titlebar-no-drag { -webkit-app-region: no-drag; }
+
+/* ===== ANIMACIONES CYBERPUNK DE VERTEX ===== */
+
+/* Pulso ne�n en botones */
+@keyframes neonPulse {
+    0% { box-shadow: 0 0 10px #a855f7; }
+    50% { box-shadow: 0 0 30px #ff00cc; }
+    100% { box-shadow: 0 0 10px #a855f7; }
+}
+.btn-primary, .btn-enter, .btn-voice {
+    animation: neonPulse 2s infinite;
+}
+
+/* Flotaci�n suave para avatares */
+@keyframes floatAvatar {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-6px); }
+    100% { transform: translateY(0px); }
+}
+.avatar, .user-avatar {
+    animation: floatAvatar 3s ease-in-out infinite;
+}
+
+/* Brillo de entrada (fade-in con brillo) */
+@keyframes fadeInGlow {
+    from { opacity: 0; filter: blur(4px); }
+    to { opacity: 1; filter: blur(0); }
+}
+.glass-panel, .message, .server-item {
+    animation: fadeInGlow 0.6s ease forwards;
+}
+
+/* Barra de estado con destello */
+@keyframes statusGlow {
+    0% { text-shadow: 0 0 5px #a855f7; }
+    50% { text-shadow: 0 0 20px #ff00cc; }
+    100% { text-shadow: 0 0 5px #a855f7; }
+}
+.status-online {
+    animation: statusGlow 1.5s infinite;
+}
+
+/* ============================================================
+   VERTEX — THEME + EFFECT CABINETS
+   ------------------------------------------------------------
+   `data-theme`  on <html> → light/dark token set (see :root).
+   `data-effects` on <html> → minimal / ambient / glass / glow.
+   These cabinets re-skim the hardcoded white-alpha Tailwind
+   utilities so the whole app re-skins from CSS alone, with no
+   per-component changes.
+   ============================================================ */
+
+/* ── EFFECT PRESETS ──
+   `data-effects` on <html>. Every effect re-skins the glass tiers, the
+   panel fills (below) and the accent aura (`body::after`) with explicit
+   values — no numeric custom properties (esbuild minify rejects them). */
+:root[data-effects='minimal'] {
+  --glass-bg: rgba(18, 18, 24, 0.97);
+  --glass-modal-bg: rgba(18, 18, 24, 0.99);
+  --glass-border: rgba(255, 255, 255, 0.09);
+  --glass-highlight: rgba(255, 255, 255, 0.03);
+}
+:root[data-effects='ambient'] {
+  --glass-bg: rgba(20, 20, 26, 0.44);
+  --glass-modal-bg: rgba(20, 20, 26, 0.76);
+}
+:root[data-effects='glow'] {
+  --glass-border: rgba(255, 255, 255, 0.1);
+}
+
+/* Glass tiers follow the preset so each effect visibly changes the floating
+   frosted material (voice bar, composer bubble, badges, strips):
+   Glass/Glow keep full frost, Ambient softens it, Minimal removes it. */
+:root .glass,
+:root .glass-strip,
+:root .glass-bubble,
+:root .glass-modal {
+  backdrop-filter: blur(20px) saturate(120%);
+  -webkit-backdrop-filter: blur(20px) saturate(120%);
+}
+:root[data-effects='ambient'] .glass,
+:root[data-effects='ambient'] .glass-strip,
+:root[data-effects='ambient'] .glass-bubble,
+:root[data-effects='ambient'] .glass-modal {
+  backdrop-filter: blur(10px) saturate(112%);
+  -webkit-backdrop-filter: blur(10px) saturate(112%);
+}
+
+/* Minimal removes backdrop blur across every glass tier (must win over the
+   var-consumption rule above, so it is declared after it). */
+:root[data-effects='minimal'] .glass,
+:root[data-effects='minimal'] .glass-bubble,
+:root[data-effects='minimal'] .glass-strip,
+:root[data-effects='minimal'] .glass-modal,
+:root[data-effects='minimal'] .glass-pill {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* Light re-tints the glass pill tiers (dark-on-light would vanish). */
+:root[data-theme='light'] .glass-pill {
+  background: rgba(20, 20, 26, 0.08);
+  border-color: rgba(20, 20, 26, 0.14);
+  box-shadow: 0 1px 3px rgba(20, 20, 26, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+:root[data-theme='light'] .glass-pill:hover {
+  background: rgba(20, 20, 26, 0.12);
+  border-color: rgba(20, 20, 26, 0.2);
+}
+:root[data-theme='light'] .glass-pill-mine {
+  background: rgba(16, 142, 94, 0.12);
+  border-color: rgba(16, 142, 94, 0.3);
+  box-shadow: 0 1px 3px rgba(20, 20, 26, 0.08);
+}
+:root[data-theme='light'] .glass-pill-mine:hover {
+  background: rgba(16, 142, 94, 0.18);
+}
+
+/* ── PANEL SURFACES (effect-driven fill) ──
+   The layout panels (`bg-white/[0.025|0.03|0.04]`) go near-opaque in
+   Minimal and translucent-frosted in the other effects. Per-effect alpha,
+   kept explicit (no numeric custom properties — esbuild rejects them). */
+:root[data-effects='minimal']:not([data-theme='light']) :is(.bg-white\/\[0\.025\], .bg-white\/\[0\.03\], .bg-white\/\[0\.04\]) {
+  background-color: rgba(24, 24, 32, 0.97);
+}
+:root[data-effects='ambient']:not([data-theme='light']) :is(.bg-white\/\[0\.025\], .bg-white\/\[0\.03\], .bg-white\/\[0\.04\]) {
+  background-color: rgba(13, 14, 20, 0.78);
+}
+:root[data-effects='glass']:not([data-theme='light']) :is(.bg-white\/\[0\.025\], .bg-white\/\[0\.03\], .bg-white\/\[0\.04\]) {
+  background-color: rgba(13, 14, 20, 0.86);
+}
+:root[data-effects='glow']:not([data-theme='light']) :is(.bg-white\/\[0\.025\], .bg-white\/\[0\.03\], .bg-white\/\[0\.04\]) {
+  background-color: rgba(13, 14, 20, 0.82);
+}
+:root[data-theme='light'][data-effects='minimal'] :is(.bg-white\/\[0\.025\], .bg-white\/\[0\.03\], .bg-white\/\[0\.04\]) {
+  background-color: rgba(255, 255, 255, 0.96);
+}
+:root[data-theme='light'][data-effects='ambient'] :is(.bg-white\/\[0\.025\], .bg-white\/\[0\.03\], .bg-white\/\[0\.04\]),
+:root[data-theme='light'][data-effects='glass'] :is(.bg-white\/\[0\.025\], .bg-white\/\[0\.03\], .bg-white\/\[0\.04\]),
+:root[data-theme='light'][data-effects='glow'] :is(.bg-white\/\[0\.025\], .bg-white\/\[0\.03\], .bg-white\/\[0\.04\]) {
+  background-color: rgba(255, 255, 255, 0.6);
+}
+
+/* ── LIGHT HAIRLINE CABINET ──
+   White-alpha hairlines vanish on a light canvas; re-tint them with ink. */
+:root[data-theme='light'] :is(.border-white\/\[0\.04\], .border-white\/\[0\.045\], .border-white\/\[0\.05\], .border-white\/\[0\.06\], .border-white\/\[0\.07\], .border-white\/\[0\.08\]) {
+  border-color: rgba(20, 20, 26, 0.16);
+}
+:root[data-theme='light'] :is(.border-white\/\[0\.09\], .border-white\/\[0\.1\], .border-white\/\[0\.10\], .border-white\/\[0\.11\], .border-white\/\[0\.12\], .border-white\/\[0\.13\], .border-white\/\[0\.14\]) {
+  border-color: rgba(20, 20, 26, 0.24);
+}
+:root[data-theme='light'] :is(.border-white\/\[0\.16\], .border-white\/10, .border-white\/40) {
+  border-color: rgba(20, 20, 26, 0.42);
+}
+
+/* ── LIGHT FILL CABINET ──
+   White fill-washes become ink washes so hover/active rows keep contrast. */
+:root[data-theme='light'] :is(.bg-white\/5, .bg-white\/\[0\.015\], .bg-white\/\[0\.02\], .bg-white\/\[0\.025\], .bg-white\/\[0\.03\], .bg-white\/\[0\.035\], .bg-white\/\[0\.04\], .bg-white\/\[0\.045\], .bg-white\/\[0\.05\]) {
+  background-color: rgba(20, 20, 26, 0.07);
+}
+:root[data-theme='light'] :is(.bg-white\/10, .bg-white\/\[0\.06\], .bg-white\/\[0\.07\], .bg-white\/\[0\.08\], .bg-white\/\[0\.1\], .bg-white\/\[0\.10\]) {
+  background-color: rgba(20, 20, 26, 0.13);
+}
+:root[data-theme='light'] :is(.bg-white\/20, .bg-white\/\[0\.14\], .bg-white\/\[0\.22\]) {
+  background-color: rgba(20, 20, 26, 0.22);
+}
+
+/* Hover/active row washes — keep interactive rows visible on light. */
+:root[data-theme='light'] :is(.hover\:bg-white\/\[0\.03\]:hover, .hover\:bg-white\/\[0\.04\]:hover, .hover\:bg-white\/\[0\.05\]:hover, .hover\:bg-white\/5:hover) {
+  background-color: rgba(20, 20, 26, 0.09);
+}
+:root[data-theme='light'] :is(.hover\:bg-white\/\[0\.06\]:hover, .hover\:bg-white\/\[0\.07\]:hover, .hover\:bg-white\/\[0\.08\]:hover, .hover\:bg-white\/10:hover) {
+  background-color: rgba(20, 20, 26, 0.15);
+}
+
+/* ── LIGHT ELECTRONICA: focus rings, scrollbars, selection, autofill ── */
+:root[data-theme='light'] ::-webkit-scrollbar-thumb {
+  background-color: rgba(20, 20, 26, 0.18);
+}
+:root[data-theme='light'] ::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(20, 20, 26, 0.3);
+}
+:root[data-theme='light'] ::selection {
+  background: rgba(16, 142, 94, 0.22);
+  color: rgb(var(--text-primary));
+}
+:root[data-theme='light'] input:-webkit-autofill,
+:root[data-theme='light'] input:-webkit-autofill:hover,
+:root[data-theme='light'] input:-webkit-autofill:focus {
+  -webkit-text-fill-color: rgb(var(--text-primary));
+  -webkit-box-shadow: 0 0 0 1000px #ececf4 inset;
+}
+
+/* ── AMBIENT AURA ──
+   A soft accent-tinted aura behind the canvas, scaled per effect via
+   explicit opacity (Minimal off). Pointer-events none + low alpha keep it
+   from being loud. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 1999;
+  pointer-events: none;
+  background:
+    radial-gradient(44% 34% at 12% -6%, rgb(var(--accent-primary-glow) / 0.09), transparent 72%),
+    radial-gradient(36% 30% at 100% 106%, rgb(var(--accent-primary-glow) / 0.07), transparent 72%);
+  opacity: 0.65;
+  transition: opacity 0.4s ease;
+}
+:root[data-effects='minimal'] body::after {
+  opacity: 0;
+}
+:root[data-effects='ambient'] body::after {
+  opacity: 0.5;
+}
+:root[data-effects='glow'] body::after {
+  opacity: 0.75;
+}
+
+/* ── GLOW EFFECT INTERACTIONS (data-effects='glow') ──
+   Subtle accent glow on focus, hover and the highlighted elements the user
+   called out. box-shadow replaces nothing important (rows/entries have no
+   idle shadow of their own). */
+
+/* Focus: accent ring replaces the browser focus ring app-wide. */
+:root[data-effects='glow'] button:focus-visible,
+:root[data-effects='glow'] [role='button']:focus-visible,
+:root[data-effects='glow'] :is(input, textarea, select, [contenteditable='true']):focus {
+  box-shadow: 0 0 0 3px rgb(var(--accent-primary-glow) / 0.28);
+}
+
+/* VERTEX entry (ChannelSidebar). */
+:root[data-effects='glow'] [data-fx='vertex']:hover {
+  box-shadow: 0 0 0 3px rgb(var(--accent-primary-glow) / 0.12);
+}
+
+/* Rail (SpaceSidebar) buttons. */
+:root[data-effects='glow'] nav[data-pip-obstacle='left'] button:hover {
+  box-shadow: 0 0 18px -2px rgb(var(--accent-primary-glow) / 0.45);
+}
+
+/* Channel rows. */
+:root[data-effects='glow'] [data-sidebar-column] [class*='h-[32px]'][class*='rounded-[7px]']:hover {
+  box-shadow: inset 0 0 0 1px rgb(var(--accent-primary-glow) / 0.24);
+}
+
+/* Panels — a quiet accent hairline. */
+:root[data-effects='glow'] [data-sidebar-column] [class*='rounded-[12px]'][class*='bg-white/[0.025]'] {
+  box-shadow: inset 0 0 0 1px rgb(var(--accent-primary-glow) / 0.14);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::after {
+    transition: none;
+  }
+  :root[data-effects='glow'] * {
+    transition-duration: 0s !important;
+  }
+}
+
+/* ── Home Motion Animations ── */
+@keyframes homeFadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes homeFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes homeScaleIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes homeHaloPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes homeWatermarkPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes homeAccentPulse {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 10px rgb(var(--accent-primary-glow) / 0.55);
+  }
+  50% {
+    opacity: 0.85;
+    box-shadow: 0 0 6px rgb(var(--accent-primary-glow) / 0.35);
+  }
+}
+
+.animate-home-fade-in-up {
+  animation: homeFadeInUp 0.35s ease-out forwards;
+}
+
+.animate-home-fade-in {
+  animation: homeFadeIn 0.3s ease-out forwards;
+}
+
+.animate-home-scale-in {
+  animation: homeScaleIn 0.3s ease-out forwards;
+}
+
+.animate-home-halo {
+  animation: homeHaloPulse 4s ease-in-out infinite;
+}
+
+.animate-home-watermark {
+  animation: homeWatermarkPulse 6s ease-in-out infinite;
+}
+
+.animate-home-accent {
+  animation: homeAccentPulse 3s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-home-fade-in-up,
+  .animate-home-fade-in,
+  .animate-home-scale-in,
+  .animate-home-halo,
+  .animate-home-watermark,
+  .animate-home-accent {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── NETREX AURA ── */
+@keyframes netrexAura1 {
+  0%, 100% {
+    transform: translate(0%, 0%) scale(1);
+    opacity: 0.6;
+  }
+  33% {
+    transform: translate(5%, -8%) scale(1.08);
+    opacity: 0.8;
+  }
+  66% {
+    transform: translate(-3%, 5%) scale(0.95);
+    opacity: 0.5;
+  }
+}
+
+@keyframes netrexAura2 {
+  0%, 100% {
+    transform: translate(0%, 0%) scale(1);
+    opacity: 0.5;
+  }
+  40% {
+    transform: translate(-6%, 4%) scale(1.1);
+    opacity: 0.7;
+  }
+  70% {
+    transform: translate(4%, -5%) scale(0.92);
+    opacity: 0.4;
+  }
+}
+
+@keyframes netrexAura3 {
+  0%, 100% {
+    transform: translate(0%, 0%) scale(1);
+    opacity: 0.4;
+  }
+  50% {
+    transform: translate(3%, 6%) scale(1.06);
+    opacity: 0.6;
+  }
+}
+
+.netrex-aura-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+}
+
+.netrex-aura-1 {
+  width: 600px;
+  height: 600px;
+  top: -200px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: radial-gradient(circle, rgba(252,165,165,0.18) 0%, rgba(196,181,253,0.08) 40%, transparent 70%);
+  animation: netrexAura1 12s ease-in-out infinite;
+}
+
+.netrex-aura-2 {
+  width: 500px;
+  height: 500px;
+  top: 30%;
+  right: -150px;
+  background: radial-gradient(circle, rgba(196,181,253,0.14) 0%, rgba(252,165,165,0.06) 50%, transparent 70%);
+  animation: netrexAura2 16s ease-in-out infinite;
+}
+
+.netrex-aura-3 {
+  width: 400px;
+  height: 400px;
+  bottom: 20%;
+  left: -100px;
+  background: radial-gradient(circle, rgba(125,211,252,0.10) 0%, rgba(252,165,165,0.04) 50%, transparent 70%);
+  animation: netrexAura3 20s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .netrex-aura-orb {
+    animation: none;
+    opacity: 0.4;
+    transform: none;
+  }
+}
+
+@keyframes vertex-idle {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+@keyframes vertex-focus {
+  0% { transform: scale(1) translateY(0); }
+  50% { transform: scale(1.1) translateY(-4px); }
+}
+@keyframes vertex-loading {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+@keyframes vertex-error-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-8px); }
+  80% { transform: translateX(8px); }
+}
+@keyframes vertex-success-bounce {
+  0%, 100% { transform: scale(1) translateY(0); }
+  50% { transform: scale(1.1) translateY(-8px); }
+}
+@keyframes vertex-startup-fade {
+  0% { opacity: 0; transform: scale(0.8); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.vertex-mascot-idle { animation: vertex-idle 4s ease-in-out infinite; }
+.vertex-mascot-focus { animation: vertex-focus 3s ease-in-out infinite; }
+.vertex-mascot-loading { animation: vertex-loading 1s linear infinite; }
+.vertex-mascot-error { animation: vertex-error-shake 0.6s ease-in-out; }
+.vertex-mascot-success { animation: vertex-success-bounce 0.8s ease-out; }
+.vertex-mascot-startup { animation: vertex-startup-fade 0.5s ease-out forwards; }
+/* Login: shy paws rising to cover the eyes on password focus. */
+.vertex-mascot-hands { animation: vertex-mascot-hands-up 0.35s cubic-bezier(0.34, 1.3, 0.64, 1); }
+@keyframes vertex-mascot-hands-up {
+  from { transform: translateY(16px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+
+/* ── Spotify vinyl (spinning disc; disabled under prefers-reduced-motion) ── */
+@keyframes spotify-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-\[spotify-spin_8s_linear_infinite\] {
+    animation: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   SPOTIFY CARD — VERTEX “listening now” (profile popout + modal).
+   Layered card: ambient glow (dominant cover colour) → turntable disc →
+   info column. Only transform/opacity animate; the disc spin is the one
+   linear animation in the app (it's a record player). Hover “scratches”
+   the disc (brief speed-up). Paused → disc stops, live dot hidden.
+   ═══════════════════════════════════════════════════════════════════════ */
+.spotify-card {
+  --vinyl-glow: #1db954;
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid rgb(255 255 255 / 0.07);
+  background: #0d0d0d;
+  padding: 14px 16px 16px;
+  text-decoration: none;
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.04) inset,
+    0 8px 24px -12px rgb(0 0 0 / 0.7);
+  transition: border-color 0.25s ease-out;
+}
+.spotify-card:hover {
+  border-color: rgb(255 255 255 / 0.14);
+}
+
+/* Ambient glow from the cover's dominant colour — fixed layer, opacity only. */
+.spotify-card-ambient {
+  position: absolute;
+  top: -48px;
+  right: -48px;
+  width: 190px;
+  height: 190px;
+  border-radius: 9999px;
+  pointer-events: none;
+  background: radial-gradient(circle, var(--vinyl-glow) 0%, transparent 70%);
+  opacity: clamp(0.14, 0.16, 0.22);
+  transition: opacity 0.25s ease-out;
+}
+.spotify-card:hover .spotify-card-ambient {
+  opacity: clamp(0.24, 0.28, 0.34);
+}
+
+/* Header — live dot + badge + volume detail. */
+.spotify-card-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.spotify-card-badge {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #1db954;
+}
+.spotify-live-dot {
+  position: relative;
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: #1db954;
+  animation: spotify-pulse 2s ease-in-out infinite;
+}
+/* One static ring, opacity pulse only — no animated box-shadow. */
+.spotify-live-dot::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 9999px;
+  border: 1px solid #1db954;
+  opacity: 0.4;
+  animation: spotify-ring 2s ease-in-out infinite;
+}
+@keyframes spotify-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+@keyframes spotify-ring {
+  0%, 100% { transform: scale(1); opacity: 0.4; }
+  50% { transform: scale(1.25); opacity: 0.1; }
+}
+
+/* Body — turntable left, info column right. */
+.spotify-card-body {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* ── The turntable ─────────────────────────────────────────────────── */
+.spotify-vinyl {
+  position: relative;
+  flex-shrink: 0;
+}
+.spotify-card-ambient ~ .spotify-card-body .spotify-vinyl::before {
+  content: '';
+  position: absolute;
+  inset: -7px;
+  border-radius: 9999px;
+  pointer-events: none;
+  background: radial-gradient(circle, var(--vinyl-glow) 0%, transparent 70%);
+  opacity: 0.28;
+  transition: opacity 0.25s ease-out;
+}
+.spotify-card:hover .spotify-vinyl::before {
+  opacity: 0.45;
+}
+.spotify-disc {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 9999px;
+  overflow: hidden;
+  will-change: transform;
+}
+/* The one linear animation in the app — a turntable spins at constant speed.
+   Hover = “scratch”: brief 200ms speed-up. Paused = the record stops. */
+.spotify-disc-spin {
+  animation: spotify-spin 8s linear infinite;
+}
+.spotify-card:hover .spotify-disc-spin {
+  animation-duration: 4.5s;
+}
+.spotify-card.is-paused .spotify-disc-spin {
+  animation-play-state: paused;
+}
+.spotify-vinyl-sheen {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  pointer-events: none;
+  background: linear-gradient(
+    135deg,
+    rgb(255 255 255 / 0.14) 0%,
+    rgb(255 255 255 / 0.03) 28%,
+    transparent 46%
+  );
+  mix-blend-mode: screen;
+}
+
+/* Times — monospace tabular so digits never jitter. */
+.spotify-card-times {
+  margin-top: 10px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  color: rgb(255 255 255 / 0.45);
+}
+.spotify-progress-fill {
+  transition: width 1s linear;
+  will-change: width;
+}
+
+/* Compact (popout) — slightly tighter type. */
+.spotify-card.is-compact {
+  padding: 12px 14px 14px;
+}
+.spotify-card.is-compact .spotify-card-times {
+  margin-top: 8px;
+}
+
+/* Light theme: lift the card off the lighter surface. */
+.light .spotify-card,
+.theme-light .spotify-card {
+  background: #101010;
+}
+
+/* Reduced motion: static disc, no pulses, progress jumps instead of ticking. */
+@media (prefers-reduced-motion: reduce) {
+  .spotify-disc-spin,
+  .spotify-live-dot,
+  .spotify-live-dot::after {
+    animation: none;
+  }
+  .spotify-progress-fill {
+    transition: none;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   MATCH CARD — the "playing a game" state of the profile widget.
+   While a game is detected (Netrex), the widget shows the match card:
+   game icon with breathing glow, big game name, mode/map when real,
+   live timer, Spotify as a fine secondary line. Sober and pro.
+   ══════════════════════════════════════════════════════════════════ */
+.match-card {
+  --mc-accent: #ff4655;
+  --mc-user-accent: #35e0ff;
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid rgb(255 255 255 / 0.07);
+  background: #0a0e13;
+  text-align: left;
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.04) inset,
+    0 8px 24px -12px rgb(0 0 0 / 0.7);
+}
+.match-card-glow {
+  position: absolute;
+  inset: -32px;
+  pointer-events: none;
+  background: radial-gradient(circle at 14% 42%, var(--mc-accent) 0%, transparent 44%);
+  opacity: 0.14;
+  animation: match-card-breathe 5.5s ease-in-out infinite;
+}
+@keyframes match-card-breathe {
+  0%, 100% { opacity: 0.10; }
+  50% { opacity: 0.22; }
+}
+
+.match-card-body {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  padding: 13px 14px;
+  align-items: center;
+}
+
+/* Game icon article — VERTEX glyph, breathing glow ring. */
+.match-card-icon {
+  position: relative;
+  flex-shrink: 0;
+  width: 58px;
+  height: 58px;
+}
+.match-card-icon svg { width: 100%; height: 100%; display: block; }
+.match-card-icon .mc-icon-bg { fill: #10161d; }
+.match-card-icon .mc-icon-frame { stroke: var(--mc-accent); }
+.match-card-icon .mc-icon-fill { fill: var(--mc-accent); }
+.match-card-icon .mc-icon-core { fill: #ece8e1; }
+.match-card-icon::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  pointer-events: none;
+  box-shadow:
+    0 0 16px 2px color-mix(in srgb, var(--mc-accent) 34%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--mc-accent) 26%, transparent);
+  animation: match-card-breathe 5.5s ease-in-out infinite;
+}
+
+.match-card-main { flex: 1; min-width: 0; }
+.match-card-game {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  color: #ece8e1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.match-card-mode {
+  margin-top: 2px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgb(236 232 225 / 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.match-card-mode b { color: var(--mc-user-accent); font-weight: 700; }
+
+.match-card-score-row {
+  display: flex;
+  align-items: baseline;
+  margin-top: 8px;
+}
+.match-card-timer { margin-left: 0; text-align: left; font-family: var(--font-mono, ui-monospace, monospace); }
+.match-card-timer .t {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #ece8e1;
+  font-variant-numeric: tabular-nums;
+}
+.match-card-timer .cap {
+  display: block;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgb(236 232 225 / 0.35);
+  margin-top: 2px;
+}
+.match-card-timer .live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--mc-accent);
+  animation: match-card-blink 1.6s steps(1) infinite;
+}
+@keyframes match-card-blink { 50% { opacity: 0.2; } }
+
+/* CS2 score row — real numbers only (matchData). Arena tabular style. */
+.match-card-score {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+.match-card-score .n {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.match-card-score .n.you {
+  color: var(--mc-user-accent);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--mc-user-accent) 45%, transparent);
+}
+.match-card-score .n.them { color: rgb(236 232 225 / 0.45); }
+.match-card-score .sep { font-size: 14px; color: rgb(236 232 225 / 0.3); }
+.match-card-score .round {
+  margin-left: 6px;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mc-accent);
+}
+.match-card.is-compact .match-card-score .n { font-size: 16px; }
+.match-card.is-compact .match-card-score .round { font-size: 7px; }
+
+.light .match-card-score .n.them,
+.theme-light .match-card-score .n.them { color: rgb(18 22 28 / 0.4); }
+.light .match-card-score .sep,
+.theme-light .match-card-score .sep { color: rgb(18 22 28 / 0.3); }
+
+/* ══════════════════════════════════════════════════════════════════
+   CS2 RADAR — the CS2 variant of the Match Card (own composition).
+   Right: circular operation radar (sweep + blips) = the identity.
+   Left: military-mono data block, HUGE CT—T score as protagonist.
+   Reduced-motion: sweep and blips frozen (radar visible, static).
+   ══════════════════════════════════════════════════════════════════ */
+.match-card.radar-card {
+  --radar-tan: #c8b98a;
+  --radar-ct: #5b9bd5;
+  --radar-t: #d9b23c;
+}
+.radar-wrap {
+  position: relative;
+  display: flex;
+  min-height: 128px;
+}
+.radar-data {
+  position: relative;
+  z-index: 2;
+  width: 60%;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 13px 8px 12px 14px;
+  background: linear-gradient(120deg, rgba(255 255 255 / 0.03) 78%, transparent);
+}
+.radar-game {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--radar-tan);
+  opacity: 0.85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.radar-map {
+  font-family: Impact, 'Arial Black', sans-serif;
+  font-size: 24px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.15;
+  color: #ece8e1;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.radar-mode {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgb(236 232 225 / 0.55);
+  margin-top: 2px;
+}
+
+/* The score — protagonist. */
+.radar-score {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 10px;
+}
+.radar-score .n {
+  font-size: 42px;
+  font-weight: 700;
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.radar-score .n.ct { color: var(--radar-ct); text-shadow: 0 0 14px rgb(91 155 213 / 0.35); }
+.radar-score .n.tt { color: var(--radar-t); text-shadow: 0 0 14px rgb(217 178 60 / 0.3); }
+.radar-score .sep { font-size: 22px; color: rgb(236 232 225 / 0.4); font-weight: 300; }
+.radar-score-side { display: flex; flex-direction: column; gap: 3px; margin-left: 2px; }
+.radar-score-side .tags { display: flex; gap: 8px; }
+.radar-score-side .tg { font-size: 8px; font-weight: 700; letter-spacing: 0.12em; }
+.radar-score-side .tg.ct { color: var(--radar-ct); }
+.radar-score-side .tg.tt { color: var(--radar-t); }
+.radar-round {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--mc-accent);
+}
+
+/* Real party size (Valorant presence) — tiny caption under the data. */
+.radar-party {
+  margin-top: 6px;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--mc-user-accent);
+}
+
+/* Lobby / no-data status line (honest). */
+.radar-status {
+  margin-top: auto;
+  padding-top: 14px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgb(236 232 225 / 0.55);
+}
+.radar-status .sep-dot { color: rgb(236 232 225 / 0.3); }
+
+/* Live clock row. */
+.radar-clockrow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 9px;
+  padding-top: 7px;
+  border-top: 1px solid rgb(255 255 255 / 0.05);
+}
+.radar-clockrow .rlbl {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgb(236 232 225 / 0.35);
+}
+.radar-clock .t {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #ece8e1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── THE RADAR (right half, bleeding off the edge) ── */
+.radar-scope {
+  position: absolute;
+  right: -36px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 172px;
+  height: 172px;
+  pointer-events: none;
+}
+.radar-disc {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 1px solid rgb(255 255 255 / 0.07);
+  background:
+    radial-gradient(circle, transparent 0 30%, rgb(255 255 255 / 0.05) 30.5% 31%, transparent 31.5%),
+    radial-gradient(circle, transparent 0 55%, rgb(255 255 255 / 0.05) 55.5% 56%, transparent 56.5%),
+    radial-gradient(circle at center, rgb(255 255 255 / 0.04) 0%, transparent 72%);
+}
+.radar-disc::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background:
+    linear-gradient(rgb(255 255 255 / 0.06), rgb(255 255 255 / 0.06)) center / 1px 100% no-repeat,
+    linear-gradient(rgb(255 255 255 / 0.06), rgb(255 255 255 / 0.06)) center / 100% 1px no-repeat;
+}
+.radar-sweep {
+  position: absolute;
+  inset: 5px;
+  border-radius: 9999px;
+  background: conic-gradient(from 0deg, transparent 0deg, transparent 300deg, rgb(232 150 60 / 0.15) 355deg, rgb(232 150 60 / 0.4) 360deg);
+  animation: radar-sweep 5.5s linear infinite;
+}
+@keyframes radar-sweep { to { transform: rotate(360deg); } }
+.radar-blip {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 9999px;
+  background: var(--radar-tan);
+}
+.radar-blip.b1 { top: 28%; left: 34%; animation: radar-blip 5.5s ease-out infinite; }
+.radar-blip.b2 { top: 55%; left: 60%; width: 4px; height: 4px; background: var(--mc-accent); animation: radar-blip 5.5s ease-out 1.9s infinite; }
+.radar-blip.b3 { top: 66%; left: 28%; width: 4px; height: 4px; animation: radar-blip 5.5s ease-out 3.6s infinite; }
+@keyframes radar-blip { 0% { opacity: 0; } 6% { opacity: 1; } 55% { opacity: 0.6; } 100% { opacity: 0; } }
+
+/* Corner stamp — the game icon demoted to a seal. */
+.radar-stamp {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  z-index: 3;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 7.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--mc-accent);
+  border: 1px solid var(--mc-accent);
+  padding: 2px 6px;
+  opacity: 0.85;
+  background: rgb(10 12 15 / 0.8);
+}
+
+/* Lobby standby: radar dimmed, no sweep motion, no blips pop. */
+.match-card.radar-card.standby .radar-sweep { animation: none; opacity: 0.25; }
+.match-card.radar-card.standby .radar-blip { animation: none; opacity: 0.18; }
+
+/* Compact variant. */
+.match-card.radar-card.is-compact .radar-wrap { min-height: 96px; }
+.match-card.radar-card.is-compact .radar-data { padding: 9px 6px 9px 11px; width: 62%; }
+.match-card.radar-card.is-compact .radar-game { font-size: 7.5px; }
+.match-card.radar-card.is-compact .radar-map { font-size: 15px; }
+.match-card.radar-card.is-compact .radar-mode { font-size: 8px; }
+.match-card.radar-card.is-compact .radar-score { padding-top: 7px; gap: 7px; }
+.match-card.radar-card.is-compact .radar-score .n { font-size: 26px; }
+.match-card.radar-card.is-compact .radar-score .sep { font-size: 13px; }
+.match-card.radar-card.is-compact .radar-score-side .tg { font-size: 6.5px; }
+.match-card.radar-card.is-compact .radar-round { font-size: 7px; }
+.match-card.radar-card.is-compact .radar-clock .t { font-size: 11px; }
+.match-card.radar-card.is-compact .radar-clockrow { margin-top: 6px; padding-top: 5px; }
+.match-card.radar-card.is-compact .radar-scope { width: 110px; height: 110px; right: -24px; }
+.match-card.radar-card.is-compact .radar-stamp { font-size: 6px; padding: 1px 4px; }
+.match-card.radar-card.is-compact .radar-status { font-size: 8.5px; padding-top: 9px; }
+
+/* Light theme. */
+.light .radar-data,
+.theme-light .radar-data { background: linear-gradient(120deg, rgb(0 0 0 / 0.03) 78%, transparent); }
+.light .radar-map,
+.theme-light .radar-map { color: #12161c; }
+.light .radar-mode,
+.theme-light .radar-mode { color: rgb(18 22 28 / 0.55); }
+.light .radar-status,
+.theme-light .radar-status { color: rgb(18 22 28 / 0.55); }
+.light .radar-status .sep-dot,
+.theme-light .radar-status .sep-dot { color: rgb(18 22 28 / 0.3); }
+.light .radar-clock .t,
+.theme-light .radar-clock .t { color: #12161c; }
+.light .radar-clockrow,
+.theme-light .radar-clockrow { border-top-color: rgb(0 0 0 / 0.08); }
+.light .radar-clockrow .rlbl,
+.theme-light .radar-clockrow .rlbl { color: rgb(18 22 28 / 0.4); }
+.light .radar-disc,
+.theme-light .radar-disc {
+  border-color: rgb(0 0 0 / 0.1);
+  background:
+    radial-gradient(circle, transparent 0 30%, rgb(0 0 0 / 0.06) 30.5% 31%, transparent 31.5%),
+    radial-gradient(circle, transparent 0 55%, rgb(0 0 0 / 0.06) 55.5% 56%, transparent 56.5%),
+    radial-gradient(circle at center, rgb(0 0 0 / 0.05) 0%, transparent 72%);
+}
+.light .radar-disc::before,
+.theme-light .radar-disc::before {
+  background:
+    linear-gradient(rgb(0 0 0 / 0.07), rgb(0 0 0 / 0.07)) center / 1px 100% no-repeat,
+    linear-gradient(rgb(0 0 0 / 0.07), rgb(0 0 0 / 0.07)) center / 100% 1px no-repeat;
+}
+.light .radar-sweep,
+.theme-light .radar-sweep {
+  background: conic-gradient(from 0deg, transparent 0deg, transparent 300deg, rgb(185 127 46 / 0.18) 355deg, rgb(185 127 46 / 0.42) 360deg);
+}
+.light .radar-stamp,
+.theme-light .radar-stamp { background: rgb(242 239 233 / 0.8); }
+
+@media (prefers-reduced-motion: reduce) {
+  .radar-sweep { animation: none; opacity: 0.3; }
+  .radar-blip { animation: none; opacity: 0.4; }
+  .match-card.radar-card.standby .radar-blip { opacity: 0.18; }
+}
+
+/* Spotify fine secondary line. */
+.match-card-song {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border-top: 1px solid rgb(255 255 255 / 0.06);
+  font-size: 11px;
+  color: rgb(236 232 225 / 0.55);
+  white-space: nowrap;
+}
+.match-card-song .note { color: var(--mc-user-accent); flex-shrink: 0; font-size: 12px; }
+.match-card-song .name { overflow: hidden; text-overflow: ellipsis; }
+
+/* Compact variant (popout). */
+.match-card.is-compact .match-card-body { padding: 10px 11px; gap: 10px; }
+.match-card.is-compact .match-card-icon { width: 44px; height: 44px; }
+.match-card.is-compact .match-card-game { font-size: 14px; }
+.match-card.is-compact .match-card-mode { font-size: 9px; letter-spacing: 0.1em; }
+.match-card.is-compact .match-card-timer .t { font-size: 12px; }
+.match-card.is-compact .match-card-song { padding: 5px 11px; font-size: 9.5px; }
+
+/* Light theme: warm paper surface, same structure. */
+.light .match-card,
+.theme-light .match-card {
+  background: #f2efe9;
+  border-color: #d3cec2;
+  box-shadow: 0 8px 24px -14px rgb(0 0 0 / 0.25);
+}
+.light .match-card-game,
+.theme-light .match-card-game { color: #12161c; }
+.light .match-card-mode,
+.theme-light .match-card-mode { color: rgb(18 22 28 / 0.55); }
+.light .match-card-timer .t,
+.theme-light .match-card-timer .t { color: #12161c; }
+.light .match-card-timer .cap,
+.theme-light .match-card-timer .cap { color: rgb(18 22 28 / 0.4); }
+.light .match-card-icon .mc-icon-bg,
+.theme-light .match-card-icon .mc-icon-bg { fill: #e4e0d7; }
+.light .match-card-icon .mc-icon-core,
+.theme-light .match-card-icon .mc-icon-core { fill: #12161c; }
+.light .match-card-song,
+.theme-light .match-card-song {
+  border-top-color: #d3cec2;
+  color: rgb(18 22 28 / 0.55);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .match-card-glow,
+  .match-card-icon::after,
+  .match-card-timer .live-dot {
+    animation: none;
+  }
+}
+
+/* ─── Quiet row entrance for member lists (silent re-sync) ────────────────
+   When a re-sync (ready push, role/membership change) adds a member to an
+   already-visible list, the new row fades in softly instead of popping.
+   Rows that merely re-render in place keep their React key and never
+   animate. Disabled under prefers-reduced-motion. */
+.member-row-enter {
+  animation: member-row-in 180ms ease-out both;
+}
+@keyframes member-row-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .member-row-enter {
+    animation: none;
+  }
+}

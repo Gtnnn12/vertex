@@ -5,6 +5,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { useUIStore } from '../../../stores/uiStore';
 import { getApiForOrigin, resolveUserOrigin } from '../../../stores/spaceStore';
 import { WIDGET_REGISTRY } from './widgetRegistry';
+import { SpotifyVinylBlock } from '../../spotify/SpotifyVinylBlock';
 import { BoardEditor } from './BoardEditor';
 import { useProfileBoard } from './useProfileBoard';
 
@@ -13,6 +14,10 @@ interface ProfileBoardTabProps {
   origin: string;
   /** Called after a successful save so the modal can refresh its user view. */
   onBoardSaved?: (widgets: BoardWidget[]) => void;
+  /** Controlled editor state: the "+ Añadir widget" button lives in the
+      modal's board header (row 2), so the modal opens the editor here. */
+  externalEditing?: boolean;
+  onExternalEditingChange?: (editing: boolean) => void;
 }
 
 /**
@@ -20,7 +25,7 @@ interface ProfileBoardTabProps {
  * renders each type with its registry renderer. Everything else (locked
  * state, editor hosting, empty state) is a mode of THIS component.
  */
-export function ProfileBoardTab({ user, origin, onBoardSaved }: ProfileBoardTabProps) {
+export function ProfileBoardTab({ user, origin, onBoardSaved, externalEditing, onExternalEditingChange }: ProfileBoardTabProps) {
   const { t } = useLanguage();
   const currentUser = useAuthStore((s) => s.user);
   const setNetrexPurchaseOpen = useUIStore((s) => s.setNetrexPurchaseOpen);
@@ -37,7 +42,14 @@ export function ProfileBoardTab({ user, origin, onBoardSaved }: ProfileBoardTabP
     () => (Array.isArray(user.profileBoard) ? user.profileBoard : []),
     [user.profileBoard],
   );
-  const [editing, setEditing] = useState(false);
+  // Editor state: externally controlled when the modal drives it (its header
+  // hosts the add button), local fallback otherwise.
+  const [localEditing, setLocalEditing] = useState(false);
+  const editing = externalEditing ?? localEditing;
+  const setEditing = (v: boolean) => {
+    setLocalEditing(v);
+    onExternalEditingChange?.(v);
+  };
   const [displayed, setDisplayed] = useState<BoardWidget[] | null>(null);
   const shown = displayed ?? widgets;
   const { saveBoard, saving } = useProfileBoard();
@@ -99,20 +111,11 @@ export function ProfileBoardTab({ user, origin, onBoardSaved }: ProfileBoardTabP
   }
 
   // ── View mode ──
+  // NOTE: the "+ Añadir widget" button lives in the MODAL's board header
+  // (row 2) — it must not be duplicated here. This component only renders
+  // widgets + empty state (with its own inline add for that context).
   return (
     <div>
-      {canEdit && (
-        <div className="mb-3 flex items-center justify-end">
-          <button
-            type="button"
-            onClick={() => setEditing(true)}
-            className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-1.5 text-[12px] font-semibold text-txt-secondary transition-colors hover:bg-white/[0.08] hover:text-txt-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-primary/40"
-          >
-            {t('board_edit')}
-          </button>
-        </div>
-      )}
-
       {shown.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-white/[0.09] px-6 py-10 text-center">
           <p className="text-[13px] text-txt-secondary">
@@ -129,7 +132,7 @@ export function ProfileBoardTab({ user, origin, onBoardSaved }: ProfileBoardTabP
           )}
         </div>
       ) : (
-        <div className="board-grid grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 min-[420px]:grid-cols-2 min-[420px]:items-start min-[420px]:gap-x-4">
           {shown.map((w) => {
             const def = WIDGET_REGISTRY[w.type];
             if (!def || w.visible === false) return null;
@@ -145,6 +148,12 @@ export function ProfileBoardTab({ user, origin, onBoardSaved }: ProfileBoardTabP
           })}
         </div>
       )}
+
+      {/* Spotify — the "now playing" block LAST (game → quote → music),
+          FULL size. Netrex-gated: the block itself resolves the style. */}
+      <div className="mt-4">
+        <SpotifyVinylBlock lookupUserId={user.homeUserId ?? user.id} isSelf={isSelfProfile} />
+      </div>
     </div>
   );
 }

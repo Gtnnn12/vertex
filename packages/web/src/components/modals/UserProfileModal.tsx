@@ -4,56 +4,26 @@ import ReactMarkdown from 'react-markdown';
 import type { User } from '@backspace/shared';
 import { Avatar } from '../ui/Avatar';
 import { Username } from '../ui/Username';
+import { CustomStatusBubble } from '../ui/CustomStatusBubble';
 import { useProfileCardFX } from '../ui/useProfileCardFX';
 import { CountUp } from '../../utils/CountUp';
 import { useUIStore } from '../../stores/uiStore';
 import { useSpaceStore, getApiForOrigin, resolveUserOrigin } from '../../stores/spaceStore';
 import { api } from '../../api/client';
 import { useSocialStore, type TaggedFriend, type TaggedFriendRequest } from '../../stores/socialStore';
+import { getFriendshipStatus, type FriendshipStatus } from '../../utils/friendship';
 import { SpotifyVinylBlock } from '../spotify/SpotifyVinylBlock';
 import { mapServerErrorToMessage } from '../../utils/friendErrors';
 import { useAuthStore } from '../../stores/authStore';
 import { getAvatarGradient, getSpaceGradient, adjustColor, mutedGradient } from '../../utils/gradients';
-import { parseFederatedUsername, isSelf, canonicalUserMatch } from '../../utils/identity';
+import { parseFederatedUsername, isSelf } from '../../utils/identity';
 import { loadFederatedMutuals, type TaggedMutualFriend, type MutualSpace } from '../../utils/mutuals';
 import { StaffBadge, NetrexChip } from '../ui/StaffBadge';
 import { ProfileBoardTab } from '../profile/board/ProfileBoardTab';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { profileTint } from '../../utils/profileTint';
 
-type Tab = 'about' | 'board' | 'friends' | 'spaces';
-
-type FriendshipStatus =
-  | { state: 'self' }
-  | { state: 'friends'; friend: TaggedFriend }
-  | { state: 'outbound_pending'; request: TaggedFriendRequest }
-  | { state: 'inbound_pending'; request: TaggedFriendRequest }
-  | { state: 'none' };
-
-function getFriendshipStatus(
-  viewedUser: User,
-  currentUser: User | null,
-  friends: TaggedFriend[],
-  requests: TaggedFriendRequest[],
-): FriendshipStatus {
-  if (!currentUser) return { state: 'none' };
-  if (isSelf(viewedUser, currentUser)) return { state: 'self' };
-
-  const friend = friends.find(f => canonicalUserMatch(f, viewedUser));
-  if (friend) return { state: 'friends', friend };
-
-  const request = requests.find(r =>
-    r.user && canonicalUserMatch(r.user, viewedUser)
-  );
-  if (request?.user) {
-    // request.user is the OTHER party. If their ID === toId, then I am fromId (outbound)
-    const isOutbound = request.user.id === request.toId;
-    return isOutbound
-      ? { state: 'outbound_pending', request }
-      : { state: 'inbound_pending', request };
-  }
-
-  return { state: 'none' };
-}
+type Tab = 'board' | 'activity' | 'friends' | 'spaces';
 
 /**
  * Sliding tab indicator: measures the active tab button and positions the
@@ -110,11 +80,19 @@ export function UserProfileModal() {
 
   const [user, setUser] = useState<User | null>(null);
   const [userOrigin, setUserOrigin] = useState('');
-  const [activeTab, setActiveTab] = useState<Tab>('about');
+  const [activeTab, setActiveTab] = useState<Tab>('board');
+  // Lifted editor state: the "+ Añadir widget" button lives in the board
+  // header (row 2), the editor lives in ProfileBoardTab.
   const [mutualFriends, setMutualFriends] = useState<TaggedMutualFriend[]>([]);
   const [mutualSpaces, setMutualSpaces] = useState<MutualSpace[]>([]);
   const [loadingMutuals, setLoadingMutuals] = useState(false);
   const [friendActionLoading, setFriendActionLoading] = useState(false);
+  const [profileAccent, setProfileAccent] = useState<string | null>(null);
+  const [boardEditing, setBoardEditing] = useState(false);
+  // In-flight drag color for the direct-DOM preview: while dragging,
+  // --profile-accent is written straight to the modal container — no React
+  // state, no re-render — and committed to state only on save.
+  const dragAccentRef = useRef<string | null>(null);
 
   // “Listening now” — one shared block for every profile surface, with the
   // exact lookup the activity panel uses (same store, same key). Must be
@@ -137,6 +115,7 @@ export function UserProfileModal() {
       const targetApi = getApiForOrigin(origin);
       const u = await targetApi.users.get(id);
       setUser(u);
+      setProfileAccent(u.profileAccent ?? null);
       useSpaceStore.getState().upsertUserView(u, origin);
     } catch {
       // User not found
@@ -159,12 +138,13 @@ export function UserProfileModal() {
 
   useEffect(() => {
     if (isOpen && userId) {
-      setActiveTab('about');
+      setActiveTab('board');
       const origin = passedOrigin || (passedUser ? resolveUserOrigin(passedUser) : '');
       setUserOrigin(origin);
       // Use the passed user directly (avoids 404 for federated users on local API)
       if (passedUser) {
         setUser(passedUser);
+        setProfileAccent(passedUser.profileAccent ?? null);
       } else {
         loadUser(userId, origin);
       }
@@ -179,6 +159,7 @@ export function UserProfileModal() {
       setUserOrigin('');
       setMutualFriends([]);
       setMutualSpaces([]);
+      setProfileAccent(null);
     }
   }, [isOpen]);
 
@@ -198,6 +179,41 @@ export function UserProfileModal() {
   const { t } = useLanguage();
   const boardTabLabel = t('board_tab');
   const { barRef, tabsWrapRef } = useSlidingIndicator(activeTab, loadingMutuals);
+
+  // Persist the personal profile tint (self profile only). Called ONLY from
+  // the explicit “Guardar personalización” button — never from picker drag
+  // events. Optimistic: apply locally first, roll back on failure with a
+  // toast. Hook MUST run unconditionally — calling this after the early
+  // return below changed the hook count between renders and crashed React.
+  const handleProfileAccentChange = useCallback(async (hex: string | null) => {
+    const prev = profileAccent;
+    setProfileAccent(hex);
+    // Keep the direct-DOM preview var in sync (drag writes it without a
+    // re-render; this covers save / preset / clear paths). 'transparent'
+    // keeps the color-mix consumers neutral when the tint is cleared.
+    fx.ref.current?.style.setProperty('--profile-accent', hex || 'transparent');
+    dragAccentRef.current = null;
+    try {
+      await api.users.update({ profileAccent: hex ?? '' });
+      addToast('Personalización guardada', 'success');
+      // Persistence: patch EVERY cache the modal / popout can re-read from.
+      // On reopen with a passedUser snapshot the modal never re-fetches, so
+      // each store must carry the new accent (same pattern as the board's
+      // onBoardSaved optimistic update).
+      setUser((prev) => (prev ? { ...prev, profileAccent: hex } : prev));
+      const selfUser = useAuthStore.getState().user;
+      if (user && selfUser && (user.id === selfUser.id || (user.homeUserId && user.homeUserId === (selfUser.homeUserId ?? selfUser.id)))) {
+        useAuthStore.getState().setUser({ ...selfUser, profileAccent: hex });
+      }
+      if (user) {
+        useSpaceStore.getState().upsertUserView({ ...user, profileAccent: hex }, userOrigin);
+      }
+    } catch (err) {
+      setProfileAccent(prev);
+      fx.ref.current?.style.setProperty('--profile-accent', prev || 'transparent');
+      addToast((err as Error).message || 'Could not save profile color', 'warning');
+    }
+  }, [profileAccent, addToast, fx.ref, user, userOrigin]);
 
   if (!isOpen || !user) return null;
 
@@ -291,7 +307,7 @@ export function UserProfileModal() {
     setUserOrigin(friendOrigin);
     setUser(friend);
     loadMutuals(friend.id, friend);
-    setActiveTab('about');
+    setActiveTab('board');
     // Update modal data so re-opening preserves context
     useUIStore.getState().openModal('userProfile', { userId: friend.id, user: friend, origin: friendOrigin });
   };
@@ -301,12 +317,23 @@ export function UserProfileModal() {
     navigate(`/channels/${spaceId}`);
   };
 
-  const tabs: { key: Tab; label: string; count?: number }[] = [
-    { key: 'about', label: 'About' },
+
+  const tabs: { key: Tab; label: string; count?: number; disabled?: boolean }[] = [
     { key: 'board', label: boardTabLabel },
-    { key: 'friends', label: 'Mutual Friends', count: mutualFriends.length },
-    { key: 'spaces', label: 'Mutual Spaces', count: mutualSpaces.length },
+    { key: 'activity', label: t('board_tab_activity') },
+    { key: 'friends', label: t('board_tab_mutual_friends'), count: mutualFriends.length },
+    { key: 'spaces', label: t('board_tab_mutual_spaces'), count: mutualSpaces.length },
   ];
+
+  // Personal tint drives panel background wash, banner glow and hairline borders.
+  const accent = profileAccent;
+  // Shared tint util — the ONE source for every profile surface. 'full'
+  // intensity fills the whole big modal (top glow from the banner + bottom
+  // fade, behind both columns). Drag writes the same var directly to the
+  // DOM for the live preview.
+  const tint = profileTint(accent, 'full');
+
+  const isSelfViewing = isSelfProfile;
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center animate-fade-in">
@@ -315,318 +342,388 @@ export function UserProfileModal() {
         ref={fx.ref}
         onMouseMove={fx.onMouseMove}
         onMouseLeave={fx.onMouseLeave}
-        className="profile-fx fx-animatable profile-stagger relative max-w-lg w-full mx-4 max-h-[calc(100vh-2rem)] flex flex-col glass-modal rounded-[14px] animate-slide-up overflow-hidden"
+        style={{ ...(tint.style ?? {}), clipPath: 'inset(0 round 14px)' }}
+        className={`profile-fx fx-animatable profile-stagger ${tint.className} relative w-full mx-4 max-h-[calc(100vh-2rem)] flex flex-col glass-modal rounded-[14px] animate-slide-up overflow-hidden md:max-w-4xl`}
       >
         {/* Cursor glow layer */}
         <span className="profile-fx-glow" aria-hidden />
 
-        {/* Banner — parallax layer + gradient overlay melting into the card */}
-        <div data-stagger="1" className="h-[110px] flex-shrink-0 relative overflow-hidden">
-          <div
-            className="profile-fx-banner"
-            style={bannerSrc
-              ? { backgroundImage: `url(${bannerSrc})` }
-              : { background: bannerFallback }
-            }
-          />
-          <div className="profile-fx-banner-overlay" aria-hidden />
-          {/* Close button */}
-          <button
-            onClick={closeModal}
-            className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center transition-colors z-[3]"
-            aria-label="Close"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
-              <path d="M18.4 4L12 10.4L5.6 4L4 5.6L10.4 12L4 18.4L5.6 20L12 13.6L18.4 20L20 18.4L13.6 12L20 5.6L18.4 4Z" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Header (avatar + name) */}
-        <div data-stagger="2" className="px-5 flex-shrink-0 relative">
-          <div
-            className="profile-presence-ring inline-block align-top -mt-[52px] mb-2 relative z-10"
-            data-status={user.status ?? 'offline'}
-          >
-            <Avatar
-              src={user.avatar}
-              name={displayName}
-              size={96}
-              status={user.status as 'online' | 'idle' | 'dnd' | 'offline' | null}
-              userId={user.homeUserId ?? user.id}
-              user={user}
-              ring={{ width: 3, color: 'rgba(20,20,26,0.82)' }}
-              className="block"
-            />
-          </div>
-
-          <div className="mb-3">
-            <div className="flex items-center gap-2 flex-wrap">
-              <Username
-                username={displayName}
-                className="text-[20px] font-bold leading-tight tracking-[-0.01em]"
+        {/* Two-column body (Discord layout): LEFT ~35% = compact profile column
+            (own banner + avatar + identity, like Discord's member card).
+            RIGHT ~65% = the Board with its own header tabs. The banner does NOT
+            span both columns. Mobile: profile first, board below. */}
+        <div className="flex flex-col md:flex-row flex-1 min-h-0">
+        {/* ── LEFT column — compact profile ── */}
+        <div className="flex flex-col min-h-0 md:w-[45%] border-t md:border-t-0 md:border-r border-white/[0.06] max-h-[50vh] md:max-h-none min-w-0 md:min-w-[320px]">
+          {/* Banner + avatar — ONE relative container, Discord-exact:
+              banner 140px cover rounded-top; avatar ABSOLUTE bottom -36px
+              left 16px (half out of the banner), no negative margins. */}
+          <div data-stagger="1" className="px-4 pt-4 flex-shrink-0">
+          <div className="relative">
+            <div className="relative h-[140px] md:rounded-t-[13px] rounded-t-xl overflow-hidden">
+              <div
+                className="profile-fx-banner"
+                style={{
+                  ...(bannerSrc
+                    ? { backgroundImage: `url(${bannerSrc})` }
+                    : { background: bannerFallback }),
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                }}
               />
-              {user.staffRole && <StaffBadge role={user.staffRole} />}
-              {user.netrexEnabled && <NetrexChip />}
-            </div>
-            <span className="mt-1 inline-flex items-center h-[22px] px-2 rounded-md border border-white/[0.08] bg-white/[0.04] font-mono text-[12px] tracking-[0.01em] text-txt-secondary">
-              @{user.username}
-            </span>
-            {user.customStatus && (
-              <div className="text-[13px] text-txt-secondary italic mt-1.5">
-                {user.customStatus}
-              </div>
-            )}
-            {/* Spotify vinyl — full-size showpiece in the modal header area. */}
-            <SpotifyVinylBlock lookupUserId={profileUserId} isSelf={isSelfProfile} />
-          </div>
-        </div>
-
-        {/* Tab bar — sliding accent indicator */}
-        <div data-stagger="3" className="px-5 flex-shrink-0 border-b border-white/[0.06]">
-          <div ref={tabsWrapRef} className="flex gap-1 relative">
-            {tabs.map((tab) => (
+              <div className="profile-fx-banner-overlay" aria-hidden />
+              {/* Close button */}
               <button
-                key={tab.key}
-                data-tab-key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`px-3 py-2 text-[13px] font-medium rounded-t-lg transition-colors relative ${
-                  activeTab === tab.key
-                    ? 'text-txt-primary'
-                    : 'text-txt-tertiary hover:text-txt-secondary'
-                }`}
+                onClick={closeModal}
+                className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center transition-colors z-[3]"
+                aria-label="Close"
               >
-                {tab.label}
-                {tab.count !== undefined && !loadingMutuals && (
-                  <span className="ml-1 text-[11px] text-txt-tertiary tabular-nums">
-                    (<CountUp value={tab.count} duration={500} />)
-                  </span>
-                )}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+                  <path d="M18.4 4L12 10.4L5.6 4L4 5.6L10.4 12L4 18.4L5.6 20L12 13.6L18.4 20L20 18.4L13.6 12L20 5.6L18.4 4Z" />
+                </svg>
               </button>
-            ))}
-            <div ref={barRef} className="profile-tab-indicator" aria-hidden />
+            </div>
+            <div className="absolute -bottom-9 left-4 z-20">
+              <div>
+                <Avatar
+                  src={user.avatar}
+                  name={displayName}
+                  size={88}
+                  status={user.status as 'online' | 'idle' | 'dnd' | 'offline' | null}
+                  userId={user.homeUserId ?? user.id}
+                  user={user}
+                  ring={{ width: 6, color: 'rgb(26 22 32 / 0.92)' }}
+                  className="block"
+                />
+              </div>
+            </div>
+          </div>
+          </div>
+
+          {/* Identity — LEFT-aligned again (like the reference); pt-14 (56px)
+              reserves room for the avatar half hanging under the banner. */}
+          <div data-stagger="2" className="px-5 pt-14 pb-4 flex-1 overflow-y-auto scrollbar-thin min-h-0">
+            <div className="pb-4">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Username
+                  username={displayName}
+                  className="text-[19px] font-bold leading-tight tracking-[-0.01em]"
+                />
+                {user.staffRole && <StaffBadge role={user.staffRole} />}
+                {user.netrexEnabled && <NetrexChip />}
+              </div>
+              <div className="mt-4">
+                <span className="inline-flex items-center h-[20px] px-1.5 rounded-md border border-white/[0.08] bg-white/[0.04] font-mono text-[11px] tracking-[0.01em] text-txt-secondary">
+                  @{user.username}
+                </span>
+              </div>
+              <CustomStatusBubble status={user.customStatus} />
+              {user.bio && user.bio.trim() ? (
+                <p className="mt-4 text-[12.5px] leading-relaxed text-txt-secondary whitespace-pre-wrap break-words line-clamp-3">
+                  {user.bio.replace(/[*_~`#>\[\]]/g, '').trim().slice(0, 160)}
+                </p>
+              ) : null}
+
+              <div className="mt-4 text-[12px] text-txt-secondary">
+                <span className="block text-[10.5px] uppercase tracking-wide font-semibold text-txt-tertiary mb-0.5">
+                  {t('profile_member_since')}
+                </span>
+                {new Date(user.createdAt).toLocaleDateString(undefined, {
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric',
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Actions — pinned to the column bottom */}
+          <div data-stagger="3" className="flex-shrink-0 px-5 pb-4">
+            <div className="flex gap-2">
+              {friendship.state === 'none' && (
+                <button onClick={handleAddFriend} disabled={friendActionLoading}
+                  className="flex-1 py-2 rounded-lg text-[12.5px] font-medium text-txt-primary border border-white/[0.08] bg-white/[0.06] hover:bg-white/[0.10] transition-colors disabled:opacity-50">
+                  {friendActionLoading ? '...' : t('profile_action_add_friend')}
+                </button>
+              )}
+              {friendship.state === 'outbound_pending' && (
+                <button onClick={handleCancelRequest} disabled={friendActionLoading}
+                  className="flex-1 py-2 rounded-lg text-[12.5px] font-medium text-amber-400 border border-amber-400/30 hover:bg-amber-400/10 transition-colors disabled:opacity-50">
+                  {friendActionLoading ? '...' : t('profile_action_cancel_request')}
+                </button>
+              )}
+              {friendship.state === 'inbound_pending' && (
+                <>
+                  <button onClick={handleAcceptRequest} disabled={friendActionLoading}
+                    className="flex-1 py-2 rounded-lg text-[12.5px] font-medium text-white bg-accent-primary hover:bg-accent-primary/80 transition-colors disabled:opacity-50">
+                    {friendActionLoading ? '...' : t('profile_action_accept')}
+                  </button>
+                  <button onClick={handleDeclineRequest} disabled={friendActionLoading}
+                    className="py-2 px-3 rounded-lg text-[12.5px] font-medium text-txt-tertiary border border-white/[0.06] hover:bg-white/[0.06] transition-colors disabled:opacity-50">
+                    {friendActionLoading ? '...' : t('profile_action_ignore')}
+                  </button>
+                </>
+              )}
+              {friendship.state === 'friends' && (
+                <button onClick={handleRemoveFriend} disabled={friendActionLoading}
+                  className="flex-1 py-2 rounded-lg text-[12.5px] font-medium text-txt-danger border border-txt-danger/30 hover:bg-txt-danger/10 transition-colors disabled:opacity-50">
+                  {friendActionLoading ? '...' : t('profile_action_remove_friend')}
+                </button>
+              )}
+              {friendship.state !== 'self' && (
+                <button
+                  onClick={handleSendMessage}
+                  className="py-2 px-3 rounded-lg text-[12.5px] font-medium text-white bg-accent-primary hover:bg-accent-primary/85 dm-icon-btn transition-colors"
+                >
+                  {t('profile_action_message')}
+                </button>
+              )}
+            </div>
           </div>
         </div>
+        {/* /left column — compact profile */}
 
-        {/* Tab content */}
-        <div data-stagger="4" className="flex-1 overflow-y-auto scrollbar-thin p-5 min-h-[200px]">
-          {activeTab === 'about' && (
-            <div className="space-y-4">
-              {/* Bio */}
-              {user.bio && (
-                <div>
-                  <span className="text-[11px] uppercase tracking-wide font-semibold text-txt-tertiary">
-                    About Me
-                  </span>
-                  <div className="text-[13px] text-txt-secondary mt-1 whitespace-pre-wrap break-words leading-relaxed [&_strong]:font-semibold [&_strong]:text-txt-primary [&_em]:italic [&_a]:text-accent-primary [&_a]:underline">
-                    <ReactMarkdown
-                      allowedElements={['p', 'strong', 'em', 'a', 'br']}
-                      unwrapDisallowed
-                      components={{
-                        a: ({ href, children }) => (
-                          <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
-                        ),
+        {/* ── RIGHT column — the Board (wide) ── */}
+        <div data-stagger="4" className="flex flex-col min-h-0 md:w-[55%] min-w-0">
+          {/* Board header — DECOUPLED rows: row 1 = the tabs on their own
+              line; row 2 = "Tus widgets" + add + tint controls. */}
+          <div className="px-4 py-2.5 flex-shrink-0 border-b border-white/[0.06]">
+            <div ref={tabsWrapRef} className="flex gap-1 relative min-w-0 overflow-x-auto scrollbar-none">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.key}
+                  data-tab-key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`px-3 py-1.5 text-[13px] rounded-md transition-colors ${
+                    activeTab === tab.key
+                      ? 'font-semibold text-txt-primary bg-white/[0.06]'
+                      : 'font-medium text-txt-tertiary hover:text-txt-secondary'
+                  }`}
+                >
+                  {tab.label}
+                  {tab.count !== undefined && !loadingMutuals && (
+                    <span className="ml-1 text-[11px] text-txt-tertiary tabular-nums">
+                      ({tab.count})
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {activeTab === 'board' ? (
+            <>
+            {/* Row 2: widgets label + add button + tint picker/save — ONE row */}
+            <div className="flex items-center justify-between gap-3 px-4 pt-3 pb-1 flex-shrink-0">
+              <span className="text-[11px] uppercase tracking-wide font-semibold text-txt-tertiary whitespace-nowrap">
+                {t('board_your_widgets')}
+              </span>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {isSelfViewing && (
+                  <button
+                    onClick={() => setBoardEditing(true)}
+                    className="flex items-center gap-1.5 rounded-lg bg-accent-primary px-3 py-1.5 text-[12px] font-bold text-white transition-colors hover:bg-accent-primary/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/50"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden>
+                      <path d="M12 5v14M5 12h14" />
+                    </svg>
+                    {t('board_add_widget')}
+                  </button>
+                )}
+                {isSelfViewing && (
+                  <label
+                    className="flex items-center gap-1.5 cursor-pointer"
+                    title="Profile color"
+                  >
+                    <input
+                      type="color"
+                      value={accent ?? '#7c6cff'}
+                      // Live preview ONLY via direct CSS-var write — zero network
+                      // and zero re-render while dragging. The explicit save
+                      // button commits the value.
+                      onChange={(e) => {
+                        dragAccentRef.current = e.target.value;
+                        fx.ref.current?.style.setProperty('--profile-accent', e.target.value);
                       }}
-                    >
-                      {user.bio}
-                    </ReactMarkdown>
+                      className="w-5 h-5 rounded cursor-pointer bg-transparent border border-white/[0.15] p-0.5"
+                      aria-label="Profile color"
+                    />
+                    <span className="text-[11px] text-txt-tertiary hidden sm:inline">Color</span>
+                  </label>
+                )}
+                {/* Explicit save — the ONLY path that hits the network. Passes
+                    the in-flight drag color when present (drag does not touch
+                    React state), falling back to the saved state value. */}
+                {isSelfViewing && (
+                  <button
+                    onClick={() => void handleProfileAccentChange(dragAccentRef.current ?? accent)}
+                    className="rounded-lg bg-accent-primary px-3 py-1.5 text-[12px] font-bold text-white transition-colors hover:bg-accent-primary/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/50"
+                    title="Guardar personalización"
+                  >
+                    Guardar personalización
+                  </button>
+                )}
+                {isSelfViewing && (
+                  <button
+                    onClick={() => void handleProfileAccentChange('#2a2438')}
+                    className="w-5 h-5 rounded border border-white/[0.15] bg-gradient-to-b from-[#3a3352] to-[#1c1828]"
+                    title="Soft dark"
+                    aria-label="Soft dark preset"
+                  />
+                )}
+                {isSelfViewing && accent && (
+                  <button
+                    onClick={() => void handleProfileAccentChange(null)}
+                    className="text-[11px] text-txt-tertiary hover:text-txt-secondary"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto scrollbar-thin min-h-0 px-4 pb-4">
+              <ProfileBoardTab
+                user={user}
+                origin={userOrigin}
+                externalEditing={boardEditing}
+                onExternalEditingChange={setBoardEditing}
+                onBoardSaved={(widgets) => {
+                  setUser((prev) => (prev ? { ...prev, profileBoard: widgets } : prev));
+                }}
+              />
+            </div>
+            </>
+          ) : (
+            <div className="flex-1 overflow-y-auto scrollbar-thin min-h-0 p-4">
+              {activeTab === 'friends' && (
+                <div>
+                  {loadingMutuals ? (
+                    <div className="flex items-center justify-center py-8">
+                      <svg className="animate-spin w-5 h-5 text-txt-tertiary" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                    </div>
+                  ) : mutualFriends.length === 0 ? (
+                    <div className="text-center py-8 text-txt-tertiary text-[13px]">
+                      No mutual friends
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                      {mutualFriends.map((friend) => {
+                        const fname = friend.displayName ?? parseFederatedUsername(friend.username).baseName;
+                        return (
+                          <button
+                            key={friend.id}
+                            onClick={() => handleViewFriend(friend)}
+                            className="flex items-center gap-2.5 p-2.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.04] transition-colors text-left"
+                          >
+                            <Avatar
+                              src={friend.avatar}
+                              name={fname}
+                              size={40}
+                              status={friend.status as 'online' | 'idle' | 'dnd' | 'offline' | null}
+                              userId={friend.homeUserId ?? friend.id}
+                              avatarColor={friend.avatarColor}
+                            />
+                            <div className="min-w-0">
+                              <div className="text-[13px] font-medium text-txt-primary truncate">
+                                {fname}
+                              </div>
+                              <div className="text-[11px] text-txt-tertiary capitalize">
+                                {friend.status}
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'spaces' && (
+                <div>
+                  {loadingMutuals ? (
+                    <div className="flex items-center justify-center py-8">
+                      <svg className="animate-spin w-5 h-5 text-txt-tertiary" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                    </div>
+                  ) : mutualSpaces.length === 0 ? (
+                    <div className="text-center py-8 text-txt-tertiary text-[13px]">
+                      No mutual spaces
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {mutualSpaces.map((space) => {
+                        const spaceApi = getApiForOrigin(space._instanceOrigin);
+                        return (
+                          <button
+                            key={`${space.id}:${space._instanceOrigin}`}
+                            onClick={() => handleGoToSpace(space.id)}
+                            className="flex items-center gap-3 w-full p-2.5 rounded-lg hover:bg-white/[0.06] transition-colors text-left"
+                          >
+                            <div className="relative shrink-0">
+                              {space.icon ? (
+                                <img
+                                  src={space.icon.startsWith('http') ? space.icon : spaceApi.uploads.url(space.icon)}
+                                  alt={space.name}
+                                  className="w-8 h-8 rounded-lg object-cover"
+                                />
+                              ) : (
+                                <div
+                                  className="w-8 h-8 rounded-lg flex items-center justify-center text-[13px] font-semibold text-white"
+                                  style={{ background: getSpaceGradient(space.id, space.name, space.avatarColor).gradient }}
+                                >
+                                  {space.name.charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                            </div>
+                            <span className="text-[13px] font-medium text-txt-primary truncate">
+                              {space.name}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'activity' && (
+                <div>
+                  {/* CURRENT ACTIVITY — the same renderers every other surface
+                      uses (MatchCard / Spotify box via SpotifyVinylBlock, which
+                      applies its own Netrex gating); zero new data components. */}
+                  <span className="block text-[11px] uppercase tracking-wide font-semibold text-txt-tertiary mb-2">
+                    {t('activity')}
+                  </span>
+                  <div className="max-w-[420px]">
+                    <SpotifyVinylBlock
+                      lookupUserId={user.homeUserId ?? user.id}
+                      isSelf={isSelfProfile}
+                    />
+                  </div>
+
+                  {/* RECENT ACTIVITY — no history is stored yet; honest empty
+                      state instead of an invented feed. */}
+                  <span className="block text-[11px] uppercase tracking-wide font-semibold text-txt-tertiary mt-6 mb-2">
+                    {t('activity_recent')}
+                  </span>
+                  <div className="rounded-lg border border-white/[0.05] bg-white/[0.02] py-8 text-center text-txt-tertiary text-[13px]">
+                    {t('coming_soon')}
                   </div>
                 </div>
               )}
-
-              {/* Member Since */}
-              <div>
-                <span className="text-[11px] uppercase tracking-wide font-semibold text-txt-tertiary">
-                  Member Since
-                </span>
-                <div className="text-[13px] text-txt-secondary mt-1">
-                  {new Date(user.createdAt).toLocaleDateString(undefined, {
-                    month: 'long',
-                    day: 'numeric',
-                    year: 'numeric',
-                  })}
-                </div>
-              </div>
-
-            </div>
-          )}
-
-          {activeTab === 'board' && (
-            <ProfileBoardTab
-              user={user}
-              origin={userOrigin}
-              onBoardSaved={(widgets) => {
-                setUser((prev) => (prev ? { ...prev, profileBoard: widgets } : prev));
-              }}
-            />
-          )}
-
-          {activeTab === 'friends' && (
-            <div>
-              {loadingMutuals ? (
-                <div className="flex items-center justify-center py-8">
-                  <svg className="animate-spin w-5 h-5 text-txt-tertiary" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                </div>
-              ) : mutualFriends.length === 0 ? (
-                <div className="text-center py-8 text-txt-tertiary text-[13px]">
-                  No mutual friends
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-2">
-                  {mutualFriends.map((friend) => {
-                    const fname = friend.displayName ?? parseFederatedUsername(friend.username).baseName;
-                    return (
-                      <button
-                        key={friend.id}
-                        onClick={() => handleViewFriend(friend)}
-                        className="flex items-center gap-2.5 p-2.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.04] transition-colors text-left"
-                      >
-                        <Avatar
-                          src={friend.avatar}
-                          name={fname}
-                          size={40}
-                          status={friend.status as 'online' | 'idle' | 'dnd' | 'offline' | null}
-                          userId={friend.homeUserId ?? friend.id}
-                          avatarColor={friend.avatarColor}
-                        />
-                        <div className="min-w-0">
-                          <div className="text-[13px] font-medium text-txt-primary truncate">
-                            {fname}
-                          </div>
-                          <div className="text-[11px] text-txt-tertiary capitalize">
-                            {friend.status}
-                          </div>
-                          {friend._instanceOrigin && (
-                            <div className="flex items-center gap-1 text-[10px] text-txt-tertiary/70 truncate">
-                              <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" className="shrink-0">
-                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
-                              </svg>
-                              <span className="truncate">{(() => { try { return new URL(friend._instanceOrigin).host; } catch { return '?'; } })()}</span>
-                            </div>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === 'spaces' && (
-            <div>
-              {loadingMutuals ? (
-                <div className="flex items-center justify-center py-8">
-                  <svg className="animate-spin w-5 h-5 text-txt-tertiary" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                </div>
-              ) : mutualSpaces.length === 0 ? (
-                <div className="text-center py-8 text-txt-tertiary text-[13px]">
-                  No mutual spaces
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {mutualSpaces.map((space) => {
-                    const spaceApi = getApiForOrigin(space._instanceOrigin);
-                    return (
-                    <button
-                      key={`${space.id}:${space._instanceOrigin}`}
-                      onClick={() => handleGoToSpace(space.id)}
-                      className="flex items-center gap-3 w-full p-2.5 rounded-lg hover:bg-white/[0.06] transition-colors text-left"
-                    >
-                      <div className="relative shrink-0">
-                        {space.icon ? (
-                          <img
-                            src={space.icon.startsWith('http') ? space.icon : spaceApi.uploads.url(space.icon)}
-                            alt={space.name}
-                            className="w-8 h-8 rounded-lg object-cover"
-                          />
-                        ) : (
-                          <div
-                            className="w-8 h-8 rounded-lg flex items-center justify-center text-[13px] font-semibold text-white"
-                            style={{ background: getSpaceGradient(space.id, space.name, space.avatarColor).gradient }}
-                          >
-                            {space.name.charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                        {space._instanceOrigin && (
-                          <div className="absolute -bottom-0.5 -right-0.5 w-[14px] h-[14px] rounded-full bg-[#1a1a23] flex items-center justify-center">
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className="text-txt-tertiary/80">
-                              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
-                            </svg>
-                          </div>
-                        )}
-                      </div>
-                      <div className="min-w-0 flex flex-col">
-                        <span className="text-[13px] font-medium text-txt-primary truncate">
-                          {space.name}
-                        </span>
-                        {space._instanceOrigin && (
-                          <span className="text-[10px] text-txt-tertiary/70 truncate flex items-center gap-1">
-                            <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" className="shrink-0">
-                              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
-                            </svg>
-                            {(() => { try { return new URL(space._instanceOrigin).host; } catch { return '?'; } })()}
-                          </span>
-                        )}
-                      </div>
-                    </button>
-                    );
-                  })}
-                </div>
-              )}
             </div>
           )}
         </div>
-
-        {/* Action buttons — luminous hover */}
-        <div data-stagger="5" className="flex-shrink-0 px-5 py-3 border-t border-white/[0.06] flex gap-2">
-          <button
-            onClick={handleSendMessage}
-            className="flex-1 py-2 rounded-lg text-[13px] font-medium text-white bg-accent-primary hover:bg-accent-primary/85 dm-icon-btn transition-colors"
-          >
-            Send Message
-          </button>
-
-          {friendship.state === 'none' && (
-            <button onClick={handleAddFriend} disabled={friendActionLoading}
-              className="flex-1 py-2 rounded-lg text-[13px] font-medium text-txt-primary border border-white/[0.08] bg-white/[0.06] hover:bg-white/[0.10] transition-colors disabled:opacity-50">
-              {friendActionLoading ? '...' : 'Add Friend'}
-            </button>
-          )}
-
-          {friendship.state === 'outbound_pending' && (
-            <button onClick={handleCancelRequest} disabled={friendActionLoading}
-              className="flex-1 py-2 rounded-lg text-[13px] font-medium text-amber-400 border border-amber-400/30 hover:bg-amber-400/10 transition-colors disabled:opacity-50">
-              {friendActionLoading ? '...' : 'Cancel Request'}
-            </button>
-          )}
-
-          {friendship.state === 'inbound_pending' && (
-            <>
-              <button onClick={handleAcceptRequest} disabled={friendActionLoading}
-                className="flex-1 py-2 rounded-lg text-[13px] font-medium text-white bg-accent-primary hover:bg-accent-primary/80 transition-colors disabled:opacity-50">
-                {friendActionLoading ? '...' : 'Accept'}
-              </button>
-              <button onClick={handleDeclineRequest} disabled={friendActionLoading}
-                className="py-2 px-3 rounded-lg text-[13px] font-medium text-txt-tertiary border border-white/[0.06] hover:bg-white/[0.06] transition-colors disabled:opacity-50">
-                {friendActionLoading ? '...' : 'Ignore'}
-              </button>
-            </>
-          )}
-
-          {friendship.state === 'friends' && (
-            <button onClick={handleRemoveFriend} disabled={friendActionLoading}
-              className="flex-1 py-2 rounded-lg text-[13px] font-medium text-txt-danger border border-txt-danger/30 hover:bg-txt-danger/10 transition-colors disabled:opacity-50">
-              {friendActionLoading ? '...' : 'Remove Friend'}
-            </button>
-          )}
+        {/* /right column — the Board */}
         </div>
+        {/* /two-column body */}
       </div>
 
     </div>

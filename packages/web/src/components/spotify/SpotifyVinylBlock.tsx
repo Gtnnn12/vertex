@@ -1,11 +1,15 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 import type { Activity, ActivitySpotify } from '@backspace/shared';
 import { getPrimaryActivity } from '@backspace/shared/src/activities.js';
 import { useActivityStore } from '../../stores/activityStore';
+import { useAuthStore } from '../../stores/authStore';
 import { useMusicStyleForSelf } from '../../stores/musicWidgetStore';
 import { resolveMusicStyle } from '../../spotify/musicStyles';
 import { SpotifyCard } from './SpotifyVinyl';
+import { MatchCard } from './MatchCard';
+import { useReducedMotion } from 'framer-motion';
+import type { MusicStyleId } from '../../spotify/musicStyles';
 
 interface SpotifyVinylBlockProps {
   /** Canonical lookup id — the same key the activity panels use: `homeUserId ?? id`. */
@@ -20,6 +24,102 @@ interface SpotifyVinylBlockProps {
 function isSpotifyActivity(a: Activity): boolean {
   if (a.type === 'spotify') return true;
   return (a.type === 'listening' || a.type === 'playing') && /spotify/i.test(a.name);
+}
+
+type GamePlaying = { game: Activity; spotify: ActivitySpotify | null };
+
+/**
+ * Last rich cover seen per song+artist — module scope, so it survives widget
+ * remounts (editor open/close, tab switches). The desktop Vía A push parses
+ * song/artist from the window title but NEVER carries cover art, and the
+ * server merge lets it replace a stored rich activity on free accounts. The
+ * board widget remounting after that push used to fall back to the V logo;
+ * with this cache the cover persists across remounts for as long as the
+ * session lives (one entry per track, bounded by tracks played).
+ */
+const coverCache = new Map<string, string>();
+const coverKey = (s: { song: string; artist: string }) => `${s.song}::${s.artist}`;
+const COVER_CACHE_MAX = 32;
+
+function rememberCover(spotify: ActivitySpotify): ActivitySpotify {
+  if (spotify.albumCover) {
+    if (!coverCache.has(coverKey(spotify))) {
+      if (coverCache.size >= COVER_CACHE_MAX) {
+        coverCache.delete(coverCache.keys().next().value as string);
+      }
+      coverCache.set(coverKey(spotify), spotify.albumCover);
+    }
+    return spotify;
+  }
+  const cached = coverCache.get(coverKey(spotify));
+  return cached ? { ...spotify, albumCover: cached } : spotify;
+}
+
+/**
+ * Game card with the Discord-style hover reveal: by default the minimal
+ * Match Card (icon + "Jugando a X"); on mouse-over it crossfades — slowly,
+ * elegantly — to the Spotify box when music is playing at the same time.
+ * Nothing playing → no hover, just the game card. Reduced-motion: instant
+ * swap, no transition.
+ */
+function GameCardWithHover({
+  game,
+  spotify,
+  compact,
+  style,
+}: {
+  game: Activity;
+  spotify: ActivitySpotify | null;
+  compact: boolean;
+  style: MusicStyleId;
+}) {
+  const prefersReduced = useReducedMotion();
+  const [hovered, setHovered] = useState(false);
+  const showMusic = hovered && !!spotify;
+
+  if (!spotify) {
+    return <MatchCard game={game} compact={compact} />;
+  }
+
+  return (
+    <div
+      className="relative grid"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      data-game-hover
+    >
+      <div
+        className="game-hover-layer transition-opacity duration-[350ms] ease-in-out"
+        style={{ opacity: showMusic ? 1 : 0, pointerEvents: showMusic ? 'auto' : 'none', transitionDuration: prefersReduced ? '0ms' : '350ms' }}
+      aria-hidden={!showMusic}
+    >
+      <SpotifyCard spotify={spotify} compact={compact ?? false} style={style} />
+      </div>
+      <div
+        className="game-hover-layer transition-opacity duration-[350ms] ease-in-out"
+        style={{ opacity: showMusic ? 0 : 1, pointerEvents: showMusic ? 'none' : 'auto', transitionDuration: prefersReduced ? '0ms' : '350ms' }}
+        aria-hidden={showMusic}
+      >
+        <MatchCard game={game} compact={compact ?? false} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Primary activity is a detected GAME → the widget shows the Match Card.
+ * Spotify-type activities outrank `playing` in ACTIVITY_PRIORITY only when
+ * both exist as separate rows; a game while music plays means the game is
+ * primary OR coexists — find the game row and, if present, any rich Spotify
+ * row for the fine secondary line.
+ */
+function findGamePlaying(pool: Activity[]): GamePlaying | null {
+  const game =
+    pool.find((a) => a.type === 'playing' && !/spotify/i.test(a.name)) ??
+    pool.find((a) => a.type === 'streaming' && !/spotify/i.test(a.name));
+  if (!game) return null;
+  const richSpotify = pool.find((a) => a.type === 'spotify' && a.spotify);
+  return { game, spotify: richSpotify?.spotify ?? null };
 }
 
 /**
@@ -57,20 +157,35 @@ export function SpotifyVinylBlock({ lookupUserId, isSelf, compact }: SpotifyViny
 
   // Derive ONCE per (activities, myActivities) change — not per render.
   const cardData = useMemo(() => {
+    // [TEMP-TRACE] what the widget receives at mount and on every store
+    // update — proves whether a late cover reaches the card or not.
+    const tracePool = activities && activities.length > 0 ? activities : (isSelf ? myActivities ?? [] : []);
+    const traceSp = tracePool.find((a) => a.type === 'spotify' && a.spotify)?.spotify;
+    if (traceSp) {
+      // eslint-disable-next-line no-console
+      console.log(`[vinyl-cover widget] song="${traceSp.song}" cover=${traceSp.albumCover ? traceSp.albumCover.slice(0, 60) : 'NULL'}`);
+    }
     const pool = activities && activities.length > 0 ? activities : (isSelf ? myActivities ?? [] : []);
     if (pool.length === 0) return null;
 
     // Same resolution the activity panel applies to decide a row exists.
     const primary = getPrimaryActivity(pool);
-    // [TEMP-TRACE d] what the card's data-derivation actually sees
-    // eslint-disable-next-line no-console
-    console.log(`[card-read] lookup=${lookupUserId} self=${!!isSelf} poolSize=${pool.length} primary=${primary ? `type=${primary.type} name="${primary.name}"` : 'none'} payload=${primary?.spotify ? `song="${primary.spotify.song}" artist="${primary.spotify.artist}"` : 'NONE'}`);
+
+    // ── MATCH CARD branch: playing a detected game → match card wins. ──
+    // Presence info, NOT a premium style: every user gets it (the Netrex
+    // gate here used to blank the widget for non-Netrex players — the card
+    // is the same for everyone; only the music STYLE is entitlement-based). 
+    {
+      const playing = findGamePlaying(pool);
+      if (playing) return { kind: 'game' as const, ...playing };
+    }
+
     if (!primary || !isSpotifyActivity(primary)) return null;
 
     // Rich payload: OAuth poller (premium) AND the promoted desktop Vía A
     // track (free accounts) — both carry song/artist (+cover when resolved).
     if (primary.type === 'spotify' && primary.spotify) {
-      return primary.spotify;
+      return { kind: 'music' as const, spotify: rememberCover(primary.spotify) };
     }
 
     // Bare desktop detection with no parseable title (ads, menus): the card
@@ -85,9 +200,24 @@ export function SpotifyVinylBlock({ lookupUserId, isSelf, compact }: SpotifyViny
       isPlaying: true,
       fetchedAt: primary.timestamps?.start ?? 0,
     };
-    return fallback;
+    return { kind: 'music' as const, spotify: fallback };
   }, [activities, myActivities, isSelf]);
 
   if (!cardData) return null;
-  return <SpotifyCard spotify={cardData} compact={compact} style={style} />;
+
+  // Match Card while a game is detected (already Netrex-gated above).
+  // Minimal card: icon + "Jugando a X". When Spotify plays too, remember it
+  // so the compact popout can crossfade to the music box on hover (FIX 2).
+  if (cardData.kind === 'game') {
+    return (
+      <GameCardWithHover
+        game={cardData.game}
+        spotify={cardData.spotify}
+        compact={compact ?? false}
+        style={style}
+      />
+    );
+  }
+
+  return <SpotifyCard spotify={cardData.spotify} compact={compact} style={style} />;
 }

@@ -8,6 +8,10 @@ interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
 
+declare module '*.md?raw' {
+  const content: string;
+  export default content;
+}
 declare module '@sapphi-red/web-noise-suppressor/rnnoiseWorklet.js?url' {
   const url: string;
   export default url;

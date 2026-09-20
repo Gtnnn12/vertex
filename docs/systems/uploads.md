@@ -13,6 +13,7 @@ Source files:
 - `packages/web/src/stores/pendingMessageRehydrate.ts` -- Orchestrator that fires the deferred `POST /messages` once all transfers in a bubble complete
 - `packages/web/src/utils/imageActions.ts` -- Client-side image save-to-disk and copy-to-clipboard actions
 - `packages/web/src/utils/cropImage.ts` -- Client-side image cropping pipeline (canvas-based, WebP output)
+- `packages/web/src/utils/isAnimatedGif.ts` -- Byte-level animated-GIF detector (counts image descriptors); drives the animated-GIF bypass in profile image editors
 - `packages/web/src/components/chat/AttachmentRenderer.tsx` -- Attachment display component (images, video, audio, generic files, federation badges)
 - `packages/web/src/components/chat/AttachmentProgress.tsx` -- Radial-progress overlay for in-flight transfers in optimistic bubbles
 - `packages/web/src/components/layout/TransferIndicator.tsx` -- Channel-header transfer indicator + global tray panel
@@ -205,13 +206,14 @@ Profile images (avatars, banners, space icons) use the general upload pipeline b
 
 When a user sets an avatar/banner or a space sets an icon/banner:
 
-1. Client uploads file via `POST /api/uploads` (creates attachment record)
-2. Client sends `PATCH /users/@me` or `PATCH /spaces/:id` with the filename
-3. Server strips `/api/uploads/` prefix if present
-4. Old file deleted from disk (`deleteUploadFile`)
-5. Old attachment record cleaned up (`deleteAttachmentByFilename`)
-6. New attachment record cleaned up (reference now lives in `users`/`spaces` table)
-7. File resized in-place via `resizeProfileImage`
+1. Client detects animated GIFs (`isAnimatedGif.ts`) and uploads the original file verbatim, skipping the crop modal; static images go through the canvas crop first (§11)
+2. Client uploads file via `POST /api/uploads` (creates attachment record)
+3. Client sends `PATCH /users/@me` or `PATCH /spaces/:id` with the filename
+4. Server strips `/api/uploads/` prefix if present
+5. Old file deleted from disk (`deleteUploadFile`)
+6. Old attachment record cleaned up (`deleteAttachmentByFilename`)
+7. New attachment record cleaned up (reference now lives in `users`/`spaces` table)
+8. File resized in-place via `resizeProfileImage`
 
 The attachment record for profile images is intentionally deleted -- the authoritative reference moves to the `users.avatar`/`users.banner` or `spaces.icon`/`spaces.banner` column.
 
@@ -598,6 +600,15 @@ Copies image to clipboard as PNG:
 ### `cropImage.ts:cropImage(imageSrc, pixelCrop, outputType?, options?)`
 
 Used by profile image editors (avatar/banner crop dialogs, integrated with `react-easy-crop`).
+
+**Animated GIFs bypass this pipeline.** `cropImage` draws only the first frame
+onto a canvas and re-exports a static WebP, which would destroy animation. The
+profile editors (`AccountPanel.tsx`, `RegisterPage.tsx`) detect animated GIFs
+via `utils/isAnimatedGif.ts` (a byte-level parser that counts GIF image
+descriptors) and upload the original file verbatim instead — no crop modal. The
+server then preserves every frame (`resizeProfileImage` uses
+`sharp(..., { animated: true })` and `generateThumbnail` skips animated images).
+Static images keep the crop flow described below.
 
 **Parameters:**
 

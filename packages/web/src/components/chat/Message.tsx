@@ -6,6 +6,8 @@ import { MentionBadge } from './MentionBadge';
 import { Avatar } from '../ui/Avatar';
 import { ProfileAvatar } from '../ui/ProfileAvatar';
 import { useContextMenuStore } from '../../stores/contextMenuStore';
+import { useSocialStore } from '../../stores/socialStore';
+import { buildUserContextMenuItems } from '../../utils/userContextMenu';
 import { buildMessageMenuItems } from './messageMenuItems';
 import { useAuthStore } from '../../stores/authStore';
 import { useChatStore } from '../../stores/chatStore';
@@ -19,6 +21,7 @@ import { EmojiPicker } from './EmojiPicker';
 import { hasPermissionBit, PermissionBits } from '../../utils/permissions';
 import { isDeletedPartnerDm } from '../../utils/dmFormatters';
 import { isSelf, resolveDisplayIdentity } from '../../utils/identity';
+import { StaffBadge, NetrexChip } from '../ui/StaffBadge';
 import { useCanonicalUserView } from '../../utils/userViewLookup';
 import {
   isPendingMessage,
@@ -27,6 +30,10 @@ import {
   type PendingAttachmentView,
 } from '../../stores/pendingMessageStore';
 import { useTransferStore } from '../../stores/transferStore';
+import { ConfirmDeleteDialog } from './ConfirmDeleteDialog';
+
+/** Platform hint for the Shift shortcut tooltip. */
+const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 import { useLanguage } from '../../contexts/LanguageContext';
 
 interface MessageProps {
@@ -124,7 +131,7 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content ?? '');
   const [isHovered, setIsHovered] = useState(false);
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const confirmDeleteTimeout = useRef<ReturnType<typeof setTimeout>>();
   const reactionPickerBtnRef = useRef<HTMLButtonElement>(null);
@@ -216,16 +223,24 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
     return acc;
   }, {} as Record<string, { count: number; me: boolean }>);
 
-  // Auto-cancel delete confirmation after timeout
-  const startDeleteConfirm = useCallback(() => {
-    setConfirmingDelete(true);
-    clearTimeout(confirmDeleteTimeout.current);
-    confirmDeleteTimeout.current = setTimeout(() => setConfirmingDelete(false), 3000);
-  }, []);
+  // ── Delete flow ──
+  // Plain click → confirmation dialog. Shift+click → immediate delete.
+  // The real deletion logic (chatStore.deleteMessage) is untouched.
+  const requestDelete = useCallback((bypassConfirm: boolean) => {
+    if (bypassConfirm) {
+      deleteMessage(message.id, channelKey);
+      return;
+    }
+    setShowDeleteDialog(true);
+  }, [deleteMessage, message.id, channelKey]);
 
-  const cancelDeleteConfirm = useCallback(() => {
-    setConfirmingDelete(false);
-    clearTimeout(confirmDeleteTimeout.current);
+  const confirmDelete = useCallback(() => {
+    setShowDeleteDialog(false);
+    deleteMessage(message.id, channelKey);
+  }, [deleteMessage, message.id, channelKey]);
+
+  const cancelDelete = useCallback(() => {
+    setShowDeleteDialog(false);
   }, []);
 
   useEffect(() => {
@@ -271,6 +286,49 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
     e.stopPropagation();
     openUserProfile(message.user, e.currentTarget.getBoundingClientRect());
   };
+
+  // Right-click on the avatar/username → user context menu (shared builder).
+  const handleUserContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      if (!message.user || pending) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const friends = useSocialStore.getState().friends;
+      const requests = useSocialStore.getState().requests;
+      useContextMenuStore.getState().open(
+        { x: e.clientX, y: e.clientY },
+        buildUserContextMenuItems({
+          user: message.user,
+          me: currentUser,
+          friends,
+          requests,
+          t,
+          onViewProfile: (u) => openUserProfile(u, e.currentTarget.getBoundingClientRect()),
+          onAddFriend: () => useSocialStore.getState().sendFriendRequest(message.user!.username).catch(() => {}),
+          onRemoveFriend: () => {
+            const f = friends.find((fr) => fr.id === message.user!.id);
+            if (f) useSocialStore.getState().removeFriend(f.id).catch(() => {});
+          },
+          onCancelRequest: () => {
+            const s = useSocialStore.getState();
+            const req = s.requests.find((r) => r.user && (r.user.homeUserId ?? r.user.id) === (message.user!.homeUserId ?? message.user!.id));
+            if (req) s.cancelFriendRequest(req.id).catch(() => {});
+          },
+          onAcceptRequest: () => {
+            const s = useSocialStore.getState();
+            const req = s.requests.find((r) => r.user && (r.user.homeUserId ?? r.user.id) === (message.user!.homeUserId ?? message.user!.id));
+            if (req) s.updateFriendRequest(req.id, 'accepted').catch(() => {});
+          },
+          onDeclineRequest: () => {
+            const s = useSocialStore.getState();
+            const req = s.requests.find((r) => r.user && (r.user.homeUserId ?? r.user.id) === (message.user!.homeUserId ?? message.user!.id));
+            if (req) s.updateFriendRequest(req.id, 'declined').catch(() => {});
+          },
+        }),
+      );
+    },
+    [message.user, pending, currentUser, t, openUserProfile],
+  );
 
   const handleContextMenu = (e: React.MouseEvent) => {
     if (pending) {
@@ -332,7 +390,7 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
         setEditContent(message.content ?? '');
         setIsEditing(true);
       },
-      onDelete: () => deleteMessage(message.id, channelKey),
+      onDelete: () => requestDelete(false),
       onReaction: (emoji: string) => toggleReaction(emoji),
       onOpenEmojiPicker: () => {
         // Close the context menu, then show the reaction picker
@@ -391,36 +449,26 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
   // Self-mention highlighting
   const isMentioned = currentUser && message.content?.includes('<@' + currentUser.id + '>');
 
-const content = (
+  const content = (
     <div
       id={`msg-${message.id}`}
-      className={`group relative flex-col gap-2 px-4 py-2.5 rounded-[14px] transition-colors ${
-        isFirstInGroup || message.replyTo ? 'mt-[1.0625rem]' : ''
-      } ${
+      className={`group relative flex gap-4 px-5 py-[3px] transition-colors ${isFirstInGroup || message.replyTo ? 'mt-[1.0625rem]' : ''} ${
         isMentioned
           ? 'bg-accent-amber/10 border-l-2 border-l-accent-amber hover:bg-accent-amber/15'
-          : isAuthor
-            ? 'bg-surface-base/50 hover:bg-surface-base/80'
-            : 'bg-surface-base/30 hover:bg-surface-base/50'}
+          : 'hover:bg-[rgba(255,255,255,0.03)]'
       }`}
       onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => {
-        setIsHovered(false);
-        if (confirmingDelete) {
-          clearTimeout(confirmDeleteTimeout.current);
-          confirmDeleteTimeout.current = setTimeout(() => setConfirmingDelete(false), 2000);
-        }
-      }}
+      onMouseLeave={() => setIsHovered(false)}
     >
       {/* Reply Line */}
       {message.replyTo && (
-        <div className="absolute left-[40px] top-[-12px] w-[30px] h-[20px] border-l-2 border-t-2 border-interactive-muted/60 rounded-tl-[6px] opacity-60" />
+        <div className="absolute left-[40px] top-[-14px] w-[30px] h-[22px] border-l-2 border-t-2 border-interactive-muted rounded-tl-[6px] opacity-50" />
       )}
 
       {/* Avatar or timestamp column */}
-      <div className="w-10 flex-shrink-0 flex items-start justify-start">
+      <div className="w-10 flex-shrink-0 flex items-start justify-center">
         {isFirstInGroup || message.replyTo ? (
-          <div className="mt-0.5">
+          <div className="mt-0.5" onContextMenu={handleUserContextMenu}>
             <ProfileAvatar
               src={displayIdentity.avatar}
               name={displayName}
@@ -445,11 +493,11 @@ const content = (
             : _rawReply;
           const replyDisplayName = replyIdentity.displayName ?? replyIdentity.username;
           return (
-            <div className="flex items-center gap-1 mb-1 ml-[-4px] opacity-80 hover:opacity-100 cursor-pointer group/reply">
+            <div className="flex items-center gap-1.5 mb-1 ml-[-4px] opacity-75 hover:opacity-100 cursor-pointer group/reply">
               <Avatar src={replyIdentity.avatar} name={replyDisplayName} size={16} user={replyIdentity} />
               <Username
                 username={replyDisplayName}
-                className="text-[14px] font-bold text-txt-primary hover:underline"
+                className="text-[14px] font-semibold text-txt-primary hover:underline"
                 style={replyRoleColor(message.replyTo)}
               />
               <span className="text-[14px] text-txt-message truncate max-w-[400px] hover:text-txt-primary">
@@ -461,14 +509,22 @@ const content = (
 
         {(isFirstInGroup || message.replyTo) && (
           <div className="flex items-baseline gap-2 mb-0.5">
-            <span onClick={handleUsernameClick}>
+            <span onClick={handleUsernameClick} onContextMenu={handleUserContextMenu} className="flex items-center gap-1.5">
               <Username
                 username={displayName}
                 className="font-semibold cursor-pointer hover:underline text-[15px] leading-tight"
                 style={roleColor}
               />
+              {displayIdentity.staffRole && <StaffBadge role={displayIdentity.staffRole} />}
+              {displayIdentity.netrexEnabled && <NetrexChip />}
             </span>
-            <span className="text-[11px] text-txt-tertiary leading-tight hover:cursor-default">
+            <span
+              className="text-[11px] text-txt-tertiary leading-tight hover:cursor-default hover:text-txt-secondary transition-colors duration-150"
+              title={new Date(message.createdAt).toLocaleString([], {
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+              })}
+            >
               {formatTime(message.createdAt)}
             </span>
           </div>
@@ -618,7 +674,7 @@ const content = (
                   <button
                     key={emoji}
                     onClick={() => toggleReaction(emoji)}
-                    className={`glass-pill flex items-center gap-1 rounded-[6px] cursor-pointer transition-all duration-[120ms] ease-out ${
+                    className={`glass-pill flex items-center gap-1 rounded-[7px] cursor-pointer transition-all duration-[120ms] ease-out ${
                       me ? 'glass-pill-mine' : ''
                     }`}
                     style={{ padding: '2px 8px', fontSize: '13px', lineHeight: 1 }}
@@ -664,15 +720,15 @@ const content = (
       })()}
 
       {/* Action buttons on hover */}
-      {showInteractions && (isHovered || showReactionPicker || confirmingDelete) && !isEditing && (
-        <div className="absolute -top-[18px] right-4 flex items-center glass rounded-[10px] overflow-hidden z-10 h-8">
+      {showInteractions && (isHovered || showReactionPicker) && !isEditing && (
+        <div className="dm-action-pop absolute -top-[16px] right-4 flex items-center glass rounded-[10px] overflow-hidden z-10 h-[30px] shadow-[0_2px_10px_rgba(0,0,0,0.35)]">
           {canAddReactions && (
-            <div className="flex items-center px-1 border-r border-white/[0.06] h-full">
+            <div className="flex items-center px-0.5 border-r border-white/[0.06] h-full">
               {['👍', '❤️', '😂', '😮'].map(emoji => (
                 <button
                   key={emoji}
                   onClick={() => toggleReaction(emoji)}
-                  className="p-1 hover:bg-interactive-hover rounded transition-colors text-[16px] leading-none"
+                  className="p-1 hover:bg-interactive-hover rounded-md transition-colors text-[15px] leading-none"
                 >
                   {emoji}
                 </button>
@@ -680,7 +736,7 @@ const content = (
               <button
                 ref={reactionPickerBtnRef}
                 onClick={() => setShowReactionPicker((v) => !v)}
-                className={`p-1 hover:bg-interactive-hover rounded transition-colors text-[14px] leading-none ${
+                className={`p-1 hover:bg-interactive-hover rounded-md transition-colors text-[14px] leading-none ${
                   showReactionPicker ? 'text-accent-primary' : 'text-txt-tertiary hover:text-txt-secondary'
                 }`}
                 title={t('add_reaction')}
@@ -716,38 +772,13 @@ const content = (
           )}
           {canDelete && (
             <button
-              onClick={() => {
-                if (confirmingDelete) {
-                  cancelDeleteConfirm();
-                  deleteMessage(message.id, channelKey);
-                } else {
-                  startDeleteConfirm();
-                }
-              }}
-              className={`px-2 h-full transition-all duration-150 flex items-center justify-center relative w-9 ${
-                confirmingDelete
-                  ? 'bg-green-500/20 text-green-400'
-                  : 'text-txt-tertiary hover:text-txt-danger hover:bg-interactive-hover'
-              }`}
-              title={confirmingDelete ? t('confirm_delete') : t('delete')}
+              onClick={(e) => requestDelete(e.shiftKey)}
+              className="px-2 h-full transition-all duration-150 flex items-center justify-center relative w-9 text-txt-tertiary hover:text-txt-danger hover:bg-interactive-hover"
+              title={`${t('delete')}${IS_MAC ? '' : ' (Shift)'}`}
             >
               {/* Trash icon */}
-              <svg
-                width="20" height="20" viewBox="0 0 24 24" fill="currentColor"
-                className={`absolute transition-all duration-150 ${
-                  confirmingDelete ? 'scale-0 opacity-0' : 'scale-100 opacity-100'
-                }`}
-              >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
-              </svg>
-              {/* Checkmark icon */}
-              <svg
-                width="20" height="20" viewBox="0 0 24 24" fill="currentColor"
-                className={`absolute transition-all duration-150 ${
-                  confirmingDelete ? 'scale-100 opacity-100' : 'scale-0 opacity-0'
-                }`}
-              >
-                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
               </svg>
             </button>
           )}
@@ -759,6 +790,12 @@ const content = (
   return (
     <div data-context-menu onContextMenu={handleContextMenu}>
       {content}
+      {/* Delete confirmation (plain click). Shift+click skips it entirely. */}
+      <ConfirmDeleteDialog
+        isOpen={showDeleteDialog}
+        onConfirm={confirmDelete}
+        onReject={cancelDelete}
+      />
     </div>
   );
 }

@@ -36,28 +36,39 @@ export interface User {
   musicWidgetStyle?: MusicWidgetStyle;
   /** Profile board (Tablero) widgets — visible to everyone; editing is Netrex-gated server-side. */
   profileBoard?: BoardWidget[];
+  /** Personal profile tint (hex) — colors the profile panel, banner glow and borders. */
+  profileAccent?: string | null;
+  /** Self-view only: epoch ms of the last nickname (displayName) change — drives the 15-day cooldown. */
+  nicknameChangedAt?: number | null;
 }
 
 /**
  * Catalogue of music-widget (Spotify card) visual styles. `vinyl` is the free
- * default; every other entry requires the Netrex entitlement. The SERVER is
+ * default (and the migration target for removed legacy styles — the server
+ * and the client both fall back to it for unknown/premium-without-entitlement
+ * values). Every other entry requires the Netrex entitlement. The SERVER is
  * the authority: it validates the style on save and falls back to `vinyl`
  * when the entitlement is missing.
+ *
+ * 2026-09 catalog renewal: the 7 legacy styles (cassette, holographic-cd,
+ * crystal-orbit, spectrum, boombox, glass-prism, arcade) were REMOVED —
+ * users with one stored fall back to `vinyl` automatically.
  */
 export const MUSIC_WIDGET_STYLES = [
   'vinyl',
-  'cassette',
-  'holographic-cd',
-  'crystal-orbit',
-  'spectrum',
-  'boombox',
-  'glass-prism',
-  'arcade',
+  'aurora',
+  'pixel-paradise',
+  'kawaii-dream',
+  'neon-city',
+  'holo-room',
+  'nihon',
+  'sweetie',
+  'ink-panic',
 ] as const;
 export type MusicWidgetStyle = (typeof MUSIC_WIDGET_STYLES)[number];
 
 /** Styles that do NOT require the Netrex entitlement. */
-export const MUSIC_WIDGET_FREE_STYLES: readonly MusicWidgetStyle[] = ['vinyl', 'arcade'];
+export const MUSIC_WIDGET_FREE_STYLES: readonly MusicWidgetStyle[] = ['vinyl', 'aurora', 'pixel-paradise'];
 
 // ─── Profile Board (Tablero) — Netrex-gated profile widgets ───────────────
 
@@ -174,6 +185,12 @@ export interface Space {
   inviteCode: string | null;
   visibility: SpaceVisibility;
   description: string | null;
+  /** Server Evolutions level (0 = base, 1, 2). Server-side gated on the owner's Netrex entitlement. */
+  serverEvoLevel: number;
+  /** Custom invite slug (Evolutions level 1+). Null = random code or none. */
+  customInviteSlug: string | null;
+  /** Uploaded media MIME type of the banner ('image/gif' = animated, N2 only). */
+  bannerContentType: string | null;
   createdAt: number;
 }
 
@@ -294,6 +311,8 @@ export interface Channel {
   position: number;
   categoryId: string | null;
   isPrivate?: boolean;
+  /** Salas de eventos (event rooms) — Evolutions level 1+, voice channels only. */
+  isEventStage?: boolean;
   createdAt: number;
   lastMessageId?: string | null;
   myPermissions?: string; // Computed per-user BigInt decimal string
@@ -469,6 +488,25 @@ export interface ActivityAssets {
   smallText?: string;
 }
 
+/**
+ * Real match data for game activities (local APIs / GSI-style sources).
+ * Every field is OPTIONAL — render only what actually arrived, never invent.
+ */
+export interface ActivityMatchData {
+  /** Stable game id for per-game rendering (e.g. 'cs2', 'valorant'). */
+  gameId?: string;
+  /** Real map name (e.g. "Dust II", "Split"). */
+  map?: string;
+  /** Local team's round score. */
+  scoreYou?: number;
+  /** Opponent's round score. */
+  scoreThem?: number;
+  /** Current round number. */
+  round?: number;
+  /** Real party size (local player included). */
+  partySize?: number;
+}
+
 /** Spotify “listening now” payload carried by a spotify-type activity. */
 export interface ActivitySpotify {
   song: string;
@@ -491,6 +529,8 @@ export interface Activity {
   assets?: ActivityAssets;
   url?: string;
   spotify?: ActivitySpotify;
+  /** Real match data when a local game API provides it (honest or absent). */
+  matchData?: ActivityMatchData;
 }
 
 // ─── WebSocket Event Types ──────────────────────────────────────────────────
@@ -662,6 +702,8 @@ export interface CreateChannelRequest {
   type: ChannelType;
   topic?: string;
   categoryId?: string;
+  /** Salas de eventos (event rooms) — Evolutions level 1+. Voice-only flag. */
+  isEventStage?: boolean;
 }
 
 export interface UpdateChannelRequest {
@@ -674,10 +716,204 @@ export interface UpdateChannelRequest {
 export interface UpdateSpaceRequest {
   name?: string;
   icon?: string;
+  /** Uploaded icon media MIME type — animated icon requires Evolutions N1+. */
+  iconContentType?: string;
   banner?: string;
+  /** Uploaded banner media MIME type — animated banner requires Evolutions N2. */
+  bannerContentType?: string;
   avatarColor?: string;
   visibility?: SpaceVisibility;
   description?: string;
+}
+
+/**
+ * POST /api/spaces/:id/boost — cualquier MIEMBRO canjea 1 crédito de mejora
+ * (comprado vía billing: 2€/mes por mejora). El nivel del server sube con el
+ * nº de boosts activos: 4+ → Nivel 1, 10+ → Nivel 2.
+ */
+export interface BoostSpaceRequest {
+  /** Ignorado (siempre 1 por compra); presente por simetría con el body JSON. */
+  count?: number;
+}
+
+/** Una mejora individual comprada por un miembro (space_boosts row). */
+export interface SpaceBoost {
+  id: string;
+  spaceId: string;
+  userId: string;
+  createdAt: number;
+  expiresAt: number;
+}
+
+// ─── Monedero de créditos (wallet) ───────────────────────────────────────────
+
+/** GET /api/credits/balance — saldo + créditos ya canjeables del usuario. */
+export interface CreditBalance {
+  balance: number;
+}
+
+/** Re-export del catálogo de paquetes (definido en evoConstants). */
+export type { CreditPack } from './evoConstants.js';
+export { CREDIT_PACKS, CREDIT_PACKS_BY_ID, isCreditPackId, BOOST_CREDIT_COST } from './evoConstants.js';
+
+/** Un movimiento auditado del monedero (credit_transactions row). */
+export interface CreditTransaction {
+  id: string;
+  amount: number;
+  reason: string;
+  createdAt: number;
+}
+
+/** GET /api/credits/transactions — historial de movimientos (más reciente primero). */
+export interface CreditHistory {
+  transactions: CreditTransaction[];
+}
+
+/** POST /api/credits/purchase — inicia la compra de un paquete de recarga. */
+export interface CreditPurchaseRequest {
+  packId: 'pack_2' | 'pack_5' | 'pack_10';
+}
+
+/**
+ * Respuesta de compra: la TIENDA (Gumroad) cobra al usuario; los créditos
+ * solo se acreditan cuando el webhook del billing confirma la venta.
+ * `checkoutUrl` apunta al producto del pack para abrir el pago.
+ */
+export interface CreditPurchaseResponse {
+  ok: boolean;
+  packId: string;
+  checkoutUrl: string | null;
+}
+
+/** POST /api/credits/purchase-netrex — compra un mes de Netrex con créditos (600). */
+export interface NetrexWithCreditsResponse {
+  ok: boolean;
+  plan: 'monthly';
+  until: number;
+  spent: number;
+}
+
+// ─── Chat de compra (recargas vía paypal.me in-app) ─────────────────────────
+
+export type RechargeTicketStatus = 'open' | 'approved' | 'rejected' | 'closed';
+export type RechargeSenderRole = 'user' | 'admin' | 'system';
+
+export interface RechargeTicket {
+  id: string;
+  userId: string;
+  /** '2' | '5' | '10' — euros del paquete elegido. */
+  packId: string;
+  status: RechargeTicketStatus;
+  createdAt: number;
+  resolvedAt: number | null;
+  adminNote: string | null;
+}
+
+export interface RechargeMessage {
+  id: string;
+  ticketId: string;
+  senderUserId: string;
+  senderRole: RechargeSenderRole;
+  body: string | null;
+  /** '/api/uploads/...' — captura adjunta (reutiliza la subida de la app). */
+  imageUrl: string | null;
+  createdAt: number;
+}
+
+export interface RechargeTicketWithMessages {
+  ticket: RechargeTicket;
+  messages: RechargeMessage[];
+}
+
+export interface CreateRechargeRequest {
+  packId: '2' | '5' | '10';
+}
+
+export interface RechargeMessageRequest {
+  body?: string | null;
+  imageUrl?: string | null;
+}
+
+export interface RechargeQueueTicket extends RechargeTicket {
+  /** Adjuntado por la cola admin para mostrar el nombre. */
+  username?: string;
+  /** Último mensaje del chat — alimenta el indicador "sin responder" del staff. */
+  lastMessageAt?: number | null;
+  lastMessageRole?: RechargeSenderRole | null;
+}
+
+export interface RechargeQueueResponse {
+  tickets: RechargeQueueTicket[];
+}
+
+export interface AdminRechargeResolveRequest {
+  note?: string | null;
+}
+
+/** GET /api/spaces/:id/boosts — estado de mejoras del server, visible para todos los miembros. */
+export interface BoostState {
+  /** Boosts no expirados (= nivel del server). */
+  activeBoosts: number;
+  serverEvoLevel: number;
+  /** Nivel real aplicable ahora mismo: activos, clamped a MAX_EVO_LEVEL. */
+  effectiveLevel: number;
+  boostsForLevel1: number;
+  boostsForLevel2: number;
+  /** Créditos sin canjear del usuario que consulta (para el CTA). */
+  myCredits: number;
+  /** Mejoras activas del usuario que consulta. */
+  myBoosts: number;
+  /** Fecha epoch ms en la que cae el próximo boost activo (progreso/barras). */
+  nextExpiryAt: number | null;
+}
+
+/** Custom space emoji (Server Evolutions level 1+). */
+export interface SpaceEmoji {
+  id: string;
+  spaceId: string;
+  name: string;
+  file: string;
+  createdBy: string;
+  createdAt: number;
+}
+
+export interface CreateSpaceEmojiRequest {
+  name: string;
+  file: string;
+}
+
+/** PATCH /api/spaces/:id/invite-slug — custom invite URL (Evolutions level 1+). */
+export interface SetInviteSlugRequest {
+  slug: string | null;
+}
+
+/** GET /api/spaces/:id/evolution — estado de evoluciones (nivel por boosts activos). */
+export interface EvolutionState {
+  serverEvoLevel: number;
+  effectiveLevel: number;
+  emojiLimit: number;
+  emojiCount: number;
+  benefits: {
+    banner: boolean;
+    animatedIcon: boolean;
+    customInviteSlug: boolean;
+    eventChannels: boolean;
+    animatedBanner: boolean;
+    spaceStats: boolean;
+  };
+}
+
+/** GET /api/spaces/:id/stats — space statistics (Evolutions level 2). */
+export interface SpaceStats {
+  spaceId: string;
+  memberCount: number;
+  messageCount: number;
+  channelCount: number;
+  voiceChannelCount: number;
+  roleCount: number;
+  emojiCount: number;
+  activeMembers7d: number;
+  createdAt: number;
 }
 
 export interface UpdateUserRequest {
@@ -696,6 +932,10 @@ export interface UpdateUserRequest {
   showActivity?: boolean;
   /** Requested music-card style. Server validates the Netrex entitlement; on failure it saves 'vinyl' and responds 200. */
   musicWidgetStyle?: string;
+  /** Personal profile tint. Server validates the hex format; empty string clears it. */
+  profileAccent?: string;
+  /** Response shape for a nickname-cooldown rejection (400). */
+  nextAllowedAt?: number;
 }
 
 export interface UpdateBoardResponse {
@@ -1712,6 +1952,16 @@ export interface InviteRedemption {
   currentUsername: string | null;
   isDeleted: boolean;
   redeemedAt: number;
+}
+
+/** A user-submitted improvement proposal for VERTEX (Admin Center queue). */
+export interface UserSuggestion {
+  id: string;
+  userId: string;
+  username: string | null;
+  text: string;
+  createdAt: number;
+  status: 'pending' | 'read' | 'approved' | 'rejected';
 }
 
 export interface CreateInviteRequest {

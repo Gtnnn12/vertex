@@ -3,6 +3,7 @@ import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { useUIStore } from '../../stores/uiStore';
 import { useSpaceStore, getApiForOrigin } from '../../stores/spaceStore';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { PermissionBits, permissionsToString, stringToPermissions, hasPermissionBit } from '../../utils/permissions';
 import { Toggle } from '../ui/Toggle';
 import { PermissionsEditor } from '../ui/PermissionsEditor';
@@ -11,19 +12,19 @@ import type { PermissionDef } from '../ui/OverrideEntry';
 // ─── Permission Definitions for Category Overrides ──────────────────────────────
 
 const CATEGORY_PERMISSIONS: PermissionDef[] = [
-  { key: 'VIEW_CHANNEL', label: 'View Channel', bit: PermissionBits.VIEW_CHANNEL },
-  { key: 'SEND_MESSAGES', label: 'Send Messages', bit: PermissionBits.SEND_MESSAGES },
-  { key: 'MANAGE_MESSAGES', label: 'Manage Messages', bit: PermissionBits.MANAGE_MESSAGES },
-  { key: 'ATTACH_FILES', label: 'Attach Files', bit: PermissionBits.ATTACH_FILES },
-  { key: 'READ_MESSAGE_HISTORY', label: 'Read Message History', bit: PermissionBits.READ_MESSAGE_HISTORY },
-  { key: 'ADD_REACTIONS', label: 'Add Reactions', bit: PermissionBits.ADD_REACTIONS },
-  { key: 'CONNECT', label: 'Connect', bit: PermissionBits.CONNECT },
-  { key: 'SPEAK', label: 'Speak', bit: PermissionBits.SPEAK },
-  { key: 'STREAM', label: 'Stream', bit: PermissionBits.STREAM },
-  { key: 'MUTE_MEMBERS', label: 'Mute Members', bit: PermissionBits.MUTE_MEMBERS },
-  { key: 'DEAFEN_MEMBERS', label: 'Deafen Members', bit: PermissionBits.DEAFEN_MEMBERS },
-  { key: 'MOVE_MEMBERS', label: 'Move Members', bit: PermissionBits.MOVE_MEMBERS },
-  { key: 'DISCONNECT_MEMBERS', label: 'Disconnect Members', bit: PermissionBits.DISCONNECT_MEMBERS },
+  { key: 'VIEW_CHANNEL', label: 'perm_view_channels', bit: PermissionBits.VIEW_CHANNEL },
+  { key: 'SEND_MESSAGES', label: 'perm_send_messages', bit: PermissionBits.SEND_MESSAGES },
+  { key: 'MANAGE_MESSAGES', label: 'perm_manage_messages', bit: PermissionBits.MANAGE_MESSAGES },
+  { key: 'ATTACH_FILES', label: 'perm_attach_files', bit: PermissionBits.ATTACH_FILES },
+  { key: 'READ_MESSAGE_HISTORY', label: 'perm_read_message_history', bit: PermissionBits.READ_MESSAGE_HISTORY },
+  { key: 'ADD_REACTIONS', label: 'perm_add_reactions', bit: PermissionBits.ADD_REACTIONS },
+  { key: 'CONNECT', label: 'perm_connect', bit: PermissionBits.CONNECT },
+  { key: 'SPEAK', label: 'perm_speak', bit: PermissionBits.SPEAK },
+  { key: 'STREAM', label: 'perm_stream', bit: PermissionBits.STREAM },
+  { key: 'MUTE_MEMBERS', label: 'perm_mute_members', bit: PermissionBits.MUTE_MEMBERS },
+  { key: 'DEAFEN_MEMBERS', label: 'perm_deafen_members', bit: PermissionBits.DEAFEN_MEMBERS },
+  { key: 'MOVE_MEMBERS', label: 'perm_move_members', bit: PermissionBits.MOVE_MEMBERS },
+  { key: 'DISCONNECT_MEMBERS', label: 'perm_disconnect_members', bit: PermissionBits.DISCONNECT_MEMBERS },
 ];
 
 // ─── Overview Tab ───────────────────────────────────────────────────────────────
@@ -55,6 +56,7 @@ function OverviewTab({
 }) {
   const [editName, setEditName] = useState(categoryName);
   const [isSavingName, setIsSavingName] = useState(false);
+  const { t } = useLanguage();
 
   // Sync edit name when category name changes externally
   useEffect(() => {
@@ -86,7 +88,7 @@ function OverviewTab({
     <div className="space-y-4">
       <div>
         <label className="block text-xs font-bold text-txt-secondary uppercase mb-2">
-          Category
+          {t('category')}
         </label>
         {canManageChannels ? (
           <div className="flex items-center gap-2">
@@ -123,9 +125,9 @@ function OverviewTab({
       <div className="pt-2 border-t border-border-soft">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-sm font-medium text-txt-primary">Private Category</div>
+            <div className="text-sm font-medium text-txt-primary">{t('private_category')}</div>
             <div className="text-xs text-txt-tertiary mt-0.5">
-              Only selected members and roles will be able to view channels in this category.
+              {t('private_category_desc')}
             </div>
           </div>
           <div className={`flex-shrink-0 ml-4 ${(isLoading || isFetching || !canManageRoles) ? 'opacity-50 pointer-events-none' : ''}`}>
@@ -140,19 +142,19 @@ function OverviewTab({
             <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" />
           </svg>
           <span>
-            This category is hidden from members without explicit access. Channels inside inherit this restriction unless they explicitly override it.
+            {t('hidden_category_hint')}
           </span>
         </div>
       )}
 
       {canManageChannels && (
         <div className="pt-4 border-t border-border-soft">
-          <label className="block text-xs font-bold text-accent-rose uppercase mb-2">Danger Zone</label>
+          <label className="block text-xs font-bold text-accent-rose uppercase mb-2">{t('danger_zone')}</label>
           <button
             onClick={onDeleteCategory}
             className="w-full px-3 py-2 bg-accent-rose/10 border border-accent-rose/30 rounded text-accent-rose text-sm font-medium hover:bg-accent-rose/20 transition-colors"
           >
-            Delete Category
+            {t('delete_category')}
           </button>
         </div>
       )}
@@ -163,6 +165,7 @@ function OverviewTab({
 // ─── Main Modal ─────────────────────────────────────────────────────────────────
 
 export function CategorySettingsModal() {
+  const { t } = useLanguage();
   const activeModal = useUIStore((s) => s.activeModal);
   const modalData = useUIStore((s) => s.modalData);
   const closeModal = useUIStore((s) => s.closeModal);
@@ -285,7 +288,7 @@ export function CategorySettingsModal() {
       await useSpaceStore.getState().deleteCategory(categoryId);
       closeModal();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete category');
+      setError(err instanceof Error ? err.message : t('failed_to_delete_category'));
       setIsDeleting(false);
     }
   };
@@ -299,7 +302,7 @@ export function CategorySettingsModal() {
 
   return (
     <>
-      <Modal isOpen={isOpen} onClose={closeModal} title="Category Settings" mobileStyle="fullscreen" maxWidth={showTabs ? 'max-w-2xl' : 'max-w-md'}>
+      <Modal isOpen={isOpen} onClose={closeModal} title={t('category_settings')} mobileStyle="fullscreen" maxWidth={showTabs ? 'max-w-2xl' : 'max-w-md'}>
         {showTabs ? (
           <div className="flex gap-4 h-[min(520px,70vh)]">
             {/* Tabs */}

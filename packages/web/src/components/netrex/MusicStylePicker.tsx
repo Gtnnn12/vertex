@@ -124,8 +124,16 @@ export function MusicStylePicker(): React.ReactElement {
     }
   };
 
-  const dirty = browsing !== null && browsing !== resolveMusicStyle(savedStyle, isNetrex);
+  // dirty ONLY means "another style is being previewed". Re-applying the
+  // already-saved style must stay possible (the preview flag can drift from
+  // the saved value) — it's a cheap idempotent PUT, never disabled for it.
+  const dirty = browsing !== null;
   const canApply = browsing !== null && (!getMusicStyle(browsing).requiresNetrex || isNetrex);
+
+  // HONEST STATE: a premium style selected while the front's cached user lacks
+  // the entitlement must NOT silently disable Apply — the server is the
+  // authority and accepts permanent grants. Surface the reason instead.
+  const blockedByEntitlement = browsing !== null && getMusicStyle(browsing).requiresNetrex && !isNetrex;
 
   return (
     <section className="mb-16 md:mb-20">
@@ -273,7 +281,7 @@ export function MusicStylePicker(): React.ReactElement {
               {t('music_style_reset')}
             </button>
           </div>
-          {browsing && getMusicStyle(browsing).requiresNetrex && !isNetrex && (
+          {browsing && blockedByEntitlement && (
             <button
               type="button"
               onClick={() => setNetrexPurchaseOpen(true)}

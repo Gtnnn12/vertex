@@ -270,13 +270,13 @@ describe('group DM owner routing — api.dm.* (Task 5.2)', () => {
     });
 
     // Mock fetch so sendMessage doesn't try a real network call.
-    const originalFetch = global.fetch;
+    const originalFetch = globalThis.fetch;
     const fetchSpy = vi.fn().mockResolvedValue(new Response(JSON.stringify({}), { status: 200, headers: { 'content-type': 'application/json' } }));
-    global.fetch = fetchSpy as unknown as typeof fetch;
+    globalThis.fetch = fetchSpy as unknown as typeof fetch;
     try {
       await api.dm.sendMessage('dm-1', { content: 'hi' });
     } finally {
-      global.fetch = originalFetch;
+      globalThis.fetch = originalFetch;
     }
 
     expect(mockGetApiForOrigin).not.toHaveBeenCalledWith('https://orbit.test');

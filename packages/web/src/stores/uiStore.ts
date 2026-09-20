@@ -18,6 +18,10 @@ type ModalType =
   | 'addDmMember'
   | 'groupDmSettings'
   | 'userProfile'
+  | 'personalization'
+  | 'premiumBlock'
+  | 'bulkPermissions'
+  | 'creditsShop'
   | null;
 
 interface MobileStackEntry {
@@ -38,6 +42,9 @@ interface UIState {
   modalData: Record<string, unknown>;
   isMobile: boolean;
   showDms: boolean;
+  /** Timestamp of the last Netrex activation — sidebar chip flashes green once. */
+  netrexFlashAt: number;
+  triggerNetrexFlash: () => void;
   imagePreviewUrl: string | null;
   userProfilePopout: {
     user: User | null;
@@ -84,6 +91,10 @@ interface UIState {
   // approves/denies a request from inside the panel)
   federationApprovalCount: number;
   setFederationApprovalCount: (count: number) => void;
+
+  // Netrex purchase modal (opened from locked CTAs: music styles, Tablero)
+  netrexPurchaseOpen: boolean;
+  setNetrexPurchaseOpen: (open: boolean) => void;
 }
 
 export const useUIStore = create<UIState>()(
@@ -185,6 +196,12 @@ export const useUIStore = create<UIState>()(
         // Note: do NOT call history.back() here if triggered by popstate event.
         // The MobileShell popstate handler manages this — see Task 5.
       },
+
+      netrexPurchaseOpen: false,
+      setNetrexPurchaseOpen: (open: boolean) => set({ netrexPurchaseOpen: open }),
+
+      netrexFlashAt: 0,
+      triggerNetrexFlash: () => set({ netrexFlashAt: Date.now() }),
 
       federationApprovalCount: 0,
       setFederationApprovalCount: (count) => set({ federationApprovalCount: count }),

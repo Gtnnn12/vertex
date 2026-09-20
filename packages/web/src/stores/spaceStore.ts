@@ -101,6 +101,16 @@ interface SpaceState {
   userViews: Map<string, UserViewEntry>;
   loadingSpaceId: string | null; // non-null while loadSpaceDetail is fetching
   /**
+   * SpaceId whose detail data is currently RESIDENT in the store
+   * (`members`, `channels`, `categories`, `roles` all belong to this space).
+   * Render sites combine it with `loadingSpaceId` to distinguish a first load
+   * (resident data belongs to another space or nothing) from a silent
+   * re-sync of the already-visible space (ready push, role changes,
+   * membership edits) — the latter must keep the list rendered and update
+   * in place instead of flashing loading skeletons.
+   */
+  detailSpaceId: string | null;
+  /**
    * Set of spaceIds whose `loadSpaceDetail` has completed at least once this
    * session. Distinct from `currentSpaceId` (which moves with selection) and
    * from `loadingSpaceId` (which only marks in-flight). Render sites use this
@@ -229,6 +239,7 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
   dmAlternatives: new Map(),
   userViews: new Map(),
   loadingSpaceId: null,
+  detailSpaceId: null,
   loadedSpaceIds: new Set(),
   _layoutUpdatedAt: 0,
 
@@ -255,6 +266,7 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
       dmAlternatives: new Map(),
       userViews: new Map(),
       loadingSpaceId: null,
+      detailSpaceId: null,
       loadedSpaceIds: new Set(),
       _layoutUpdatedAt: 0,
     });
@@ -511,6 +523,7 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
         loadedSpaceIds.add(spaceId);
         return {
           loadingSpaceId: null,
+          detailSpaceId: spaceId,
           currentSpaceId: spaceId,
           lastSelectedSpaceId: spaceId,
           channels: detail.channels.sort((a, b) => a.position - b.position),
@@ -889,6 +902,9 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
       inviteCode: s.inviteCode,
       visibility: s.visibility ?? 'private' as const,
       description: s.description ?? null,
+      serverEvoLevel: s.serverEvoLevel ?? 0,
+      customInviteSlug: s.customInviteSlug ?? null,
+      bannerContentType: s.bannerContentType ?? null,
       createdAt: s.createdAt,
       _instanceOrigin: origin,
     }));
@@ -1108,6 +1124,9 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
       inviteCode: space.inviteCode,
       visibility: space.visibility,
       description: space.description,
+      serverEvoLevel: space.serverEvoLevel ?? 0,
+      customInviteSlug: space.customInviteSlug ?? null,
+      bannerContentType: space.bannerContentType ?? null,
       createdAt: space.createdAt,
       _instanceOrigin: origin,
     };

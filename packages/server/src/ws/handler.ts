@@ -22,6 +22,7 @@ import type {
 } from '@backspace/shared';
 import { sanitizeUser } from '../utils/sanitize.js';
 import { collectProfileBroadcastTargetIds } from '../utils/userDeletion.js';
+import { getEvoState } from '../utils/evoLimits.js';
 
 // ─── Heartbeat State ──────────────────────────────────────────────────────────
 const wsIsAlive: WeakMap<WebSocket, boolean> = new WeakMap();
@@ -1092,7 +1093,7 @@ class WsRateLimiter {
   private readonly refillRate: number; // tokens per second
   private lastRefill: number;
 
-  constructor(maxTokens = 30, refillRate = 2) {
+  constructor(maxTokens = 60, refillRate = 5) {
     this.maxTokens = maxTokens;
     this.tokens = maxTokens;
     this.refillRate = refillRate;
@@ -1319,6 +1320,10 @@ function buildReadyPayload(userId: string): {
         inviteCode: spaceRow.inviteCode,
         visibility: (spaceRow.visibility ?? 'private') as SpaceWithChannelsAndMembers['visibility'],
         description: spaceRow.description ?? null,
+        // Modelo boosts: nivel derivado (nº de mejoras activas), no almacenado.
+        serverEvoLevel: getEvoState(spaceRow).effectiveLevel,
+        customInviteSlug: spaceRow.customInviteSlug ?? null,
+        bannerContentType: spaceRow.bannerContentType ?? null,
         createdAt: spaceRow.createdAt,
         channels: visibleChannels,
         categories: categoriesBySpace.get(spaceRow.id) ?? [],
@@ -1788,7 +1793,9 @@ export async function registerWebSocket(app: FastifyInstance): Promise<void> {
         return;
       }
 
-      // Rate limit all post-auth, non-ping messages (per-user, shared across tabs)
+      // Rate limit all post-auth, non-ping messages (per-user, shared across tabs).
+      // Generous bucket (60 burst / 5 tok/s) — anti-flood only, invisible to
+      // normal users: typing, presence and acks no longer starve message sends.
       if (!connectionManager.getUserRateLimiter(userId!).consume()) {
         ws.send(JSON.stringify({ type: 'error', message: 'Rate limited' }));
         return;

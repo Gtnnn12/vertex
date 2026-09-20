@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { useSpaceStore } from '../../stores/spaceStore';
 
 // ─── Preview state model ────────────────────────────────────────────────────
 
@@ -121,15 +120,16 @@ const SAMPLE_MEMBERS = [
 ];
 
 const SAMPLE_CHANNELS = [
+  { kind: 'text' as const, name: 'bienvenida', active: false },
   { kind: 'text' as const, name: 'general', active: true },
-  { kind: 'text' as const, name: 'proyectos', active: false },
-  { kind: 'text' as const, name: 'off-topic', active: false },
+  { kind: 'text' as const, name: 'gaming', active: false },
+  { kind: 'text' as const, name: 'música', active: false },
   { kind: 'voice' as const, name: 'Sala general', active: false },
 ];
 
 const SAMPLE_MESSAGES = [
-  { initial: 'A', tone: 'accent', name: 'Alex', time: '12:00', text: '¡Hola! Acabo de montar la nueva vista de actividad.' },
-  { initial: 'M', tone: 'surface', name: 'Mario', time: '12:01', text: 'Se ve genial… ¿la publicamos ya?' },
+  { initial: 'A', tone: 'accent', name: 'Alex', time: '12:00', text: '¡Hola a todos! ¿Cómo va la semana?' },
+  { initial: 'M', tone: 'surface', name: 'Mario', time: '12:01', text: 'Todo bien por aquí, ¡buenas!' },
 ];
 
 interface VERTEXAppPreviewProps {
@@ -140,13 +140,14 @@ interface VERTEXAppPreviewProps {
 }
 
 export function VERTEXAppPreview({ preview, seedServer, className = '' }: VERTEXAppPreviewProps) {
-  const spaces = useSpaceStore((s) => s.spaces);
 
+  // Mock identity ONLY: the preview is generic VERTEX marketing content, so
+  // it must never leak the user's real first space (a real server name like
+  // "Citas" would surface in every personalization preview).
   const server: PreviewSeedServer = useMemo(() => {
     if (seedServer) return seedServer;
-    if (spaces.length > 0) return { name: spaces[0]!.name, icon: spaces[0]!.icon };
-    return { name: 'VERTEX Studio', icon: null };
-  }, [seedServer, spaces]);
+    return { name: 'Comunidad Vertex', icon: null };
+  }, [seedServer]);
 
   const scale = preview.fontSize / 14;
 

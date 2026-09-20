@@ -168,27 +168,53 @@ async function getAppAccessToken(): Promise<string | null> {
   }
 }
 
-async function searchTrackCover(song: string, artist: string): Promise<string | null> {
-  const token = await getAppAccessToken();
-  if (!token) return null;
+/**
+ * iTunes Search API fallback (public, no auth). Returns the 600x600 artwork
+ * URL for the best match, or null. The desktop "Vía A" cover resolution
+ * uses this when Spotify Client Credentials are unavailable, and as a
+ * second-chance lookup when the Spotify search finds nothing.
+ */
+async function searchTrackCoverItunes(song: string, artist: string): Promise<string | null> {
   try {
-    const qs = new URLSearchParams({ q: `track:${song} artist:${artist}`, type: 'track', limit: '1' }).toString();
-    const res = await fetch(`${SPOTIFY_API_SEARCH_URL}?${qs}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const qs = new URLSearchParams({ term: `${artist} ${song}`.trim(), entity: 'song', limit: '1' }).toString();
+    const res = await fetch(`https://itunes.apple.com/search?${qs}`);
     if (!res.ok) return null;
-    const json = (await res.json()) as {
-      tracks?: { items?: Array<{ album?: { images?: Array<{ url?: string; width?: number }> } }> };
-    };
-    const images = json.tracks?.items?.[0]?.album?.images;
-    if (!Array.isArray(images) || images.length === 0) return null;
-    // Prefer a ~300–640px image; otherwise the first (largest).
-    const preferred =
-      images.find((i) => typeof i.width === 'number' && i.width >= 300 && i.width <= 640) ?? images[0];
-    return typeof preferred?.url === 'string' && preferred.url.startsWith('https://') ? preferred.url : null;
+    const json = (await res.json()) as { results?: Array<{ artworkUrl100?: unknown }> };
+    const art = json.results?.[0]?.artworkUrl100;
+    if (typeof art !== 'string' || !art.startsWith('https://')) return null;
+    return art.replace('100x100', '600x600');
   } catch {
     return null;
   }
+}
+
+async function searchTrackCover(song: string, artist: string): Promise<string | null> {
+  const token = await getAppAccessToken();
+  if (token) {
+    try {
+      const qs = new URLSearchParams({ q: `track:${song} artist:${artist}`, type: 'track', limit: '1' }).toString();
+      const res = await fetch(`${SPOTIFY_API_SEARCH_URL}?${qs}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const json = (await res.json()) as {
+          tracks?: { items?: Array<{ album?: { images?: Array<{ url?: string; width?: number }> } }> };
+        };
+        const images = json.tracks?.items?.[0]?.album?.images;
+        if (Array.isArray(images) && images.length > 0) {
+          // Prefer a ~300–640px image; otherwise the first (largest).
+          const preferred =
+            images.find((i) => typeof i.width === 'number' && i.width >= 300 && i.width <= 640) ?? images[0];
+          const url = preferred?.url;
+          if (typeof url === 'string' && url.startsWith('https://')) return url;
+        }
+      }
+    } catch {
+      // fall through to the iTunes fallback
+    }
+  }
+  // No credentials / no Spotify hit → iTunes Search (public, no auth).
+  return searchTrackCoverItunes(song, artist);
 }
 
 /** Cached cover URL for a track; failures are cached too (24h negative TTL). */

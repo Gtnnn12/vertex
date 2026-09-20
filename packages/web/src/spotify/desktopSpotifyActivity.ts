@@ -75,7 +75,13 @@ export async function resolveCoverForDesktopSpotify(spotify: ActivitySpotify): P
   const hit = coverCache.get(key);
   const fresh = hit && Date.now() - hit.fetchedAt < COVER_TTL_MS;
   const url = fresh ? hit!.url : await fetchCoverFromInstance(spotify.song, spotify.artist);
-  if (!fresh) coverCache.set(key, { url, fetchedAt: Date.now() });
+  if (!fresh) {
+    // Only cache SUCCESSFUL lookups. Caching `null` here used to poison the
+    // cover for 24h after one transient failure (server restart, network
+    // blip) — the widget then showed the fallback logo forever even though
+    // the cover exists upstream. A miss is cheap to retry on the next poll.
+    if (url) coverCache.set(key, { url, fetchedAt: Date.now() });
+  }
 
   return {
     type: 'spotify',
@@ -96,10 +102,19 @@ async function fetchCoverFromInstance(song: string, artist: string): Promise<str
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       credentials: 'omit',
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      // [TEMP-TRACE] cover fetch diagnostics
+      console.log(`[vinyl-cover fetch] miss http=${res.status} song="${song}"`);
+      return null;
+    }
     const data = (await res.json()) as { url?: unknown };
-    return typeof data.url === 'string' && data.url.startsWith('https://') ? data.url : null;
-  } catch {
+    const found = typeof data.url === 'string' && data.url.startsWith('https://') ? data.url : null;
+    // [TEMP-TRACE] cover fetch diagnostics
+    console.log(`[vinyl-cover fetch] ${found ? 'hit' : 'no-cover'} song="${song}"`);
+    return found;
+  } catch (err) {
+    // [TEMP-TRACE] cover fetch diagnostics
+    console.log(`[vinyl-cover fetch] error song="${song}"`, err);
     return null;
   }
 }

@@ -58,7 +58,7 @@ export const SPACE_GRADIENT_MAP: Record<AvatarColor, GradientEntry> = {
   mint:     SPACE_GRADIENTS[6]!,   // mint
 };
 
-// ── Home button (DM / Backspace) — fixed indigo-purple gradient ──
+// ── Home button (DM / VERTEX) — fixed indigo-purple gradient ──
 export const HOME_GRADIENT: GradientEntry = grad('#6366f1', '#8b5cf6', '#8b5cf6');
 
 /** djb2 hash → stable unsigned 32-bit integer. */

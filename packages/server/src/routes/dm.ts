@@ -2453,11 +2453,13 @@ export async function dmRoutes(app: FastifyInstance): Promise<void> {
   });
 
   // POST /api/dm/:id/messages - Send a DM message
+  // Generous anti-flood-only limit (30 msgs/10s per user): protects the server
+  // from API abuse without a visible cooldown for normal users (Discord-style).
   app.post<{ Params: { id: string }; Body: CreateDmMessageRequest }>('/api/dm/:id/messages', {
     config: {
       rateLimit: {
-        max: 5,
-        timeWindow: '5 seconds',
+        max: 30,
+        timeWindow: '10 seconds',
         keyGenerator: (request: any) => request.userId || request.ip,
       },
     },

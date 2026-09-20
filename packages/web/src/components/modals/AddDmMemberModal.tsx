@@ -9,6 +9,7 @@ import { useSocialStore, type TaggedFriend } from '../../stores/socialStore';
 import { api } from '../../api/client';
 import { isSelf, parseFederatedUsername } from '../../utils/identity';
 import { useCanonicalUserView } from '../../utils/userViewLookup';
+import { useLanguage } from '../../contexts/LanguageContext';
 import type { User } from '@backspace/shared';
 
 function AddDmFriendRow({
@@ -77,6 +78,7 @@ function AddDmFriendRow({
 }
 
 export function AddDmMemberModal() {
+  const { t } = useLanguage();
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [error, setError] = useState('');
@@ -190,23 +192,24 @@ export function AddDmMemberModal() {
         closeModal();
       }
     } catch (err) {
-      setError((err as Error).message || 'Failed to add members');
+      setError((err as Error).message || t('failed_to_add_members'));
     } finally {
       setIsAdding(false);
     }
   };
 
   const buttonText = selectedFriends.length === 0
-    ? 'Select Friends'
-    : `Add ${selectedFriends.length} Friend${selectedFriends.length > 1 ? 's' : ''}`;
+    ? t('select_friends')
+    : t('add_friends_count')
+        .replace('{count}', String(selectedFriends.length));
 
   return (
-    <Modal isOpen={isOpen} onClose={closeModal} title="Add Friends to DM" mobileStyle="sheet">
+    <Modal isOpen={isOpen} onClose={closeModal} title={t('add_friends_to_dm')} mobileStyle="sheet">
       <div className="space-y-3">
         {/* Header with member count */}
         <div className="flex items-center justify-between">
           <p className="text-[13px] text-txt-tertiary">
-            Select friends to add to this conversation.
+            {t('select_friends_to_add')}
           </p>
           <span className="text-[12px] text-txt-tertiary flex-shrink-0 ml-2">
             {memberCount}/{maxMembers}
@@ -239,13 +242,13 @@ export function AddDmMemberModal() {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search friends..."
+          placeholder={t('search_friends')}
           className="input-search w-full py-2 text-[14px]"
           disabled={remainingSlots <= 0}
         />
 
         {remainingSlots <= 0 && (
-          <p className="text-txt-danger text-[13px]">This group DM has reached the 10-member limit.</p>
+          <p className="text-txt-danger text-[13px]">{t('group_dm_limit')}</p>
         )}
 
         {error && (
@@ -256,7 +259,7 @@ export function AddDmMemberModal() {
         <div className="max-h-[300px] overflow-y-auto space-y-[2px]">
           {filteredFriends.length === 0 && (
             <div className="py-4 text-center text-txt-tertiary text-[14px]">
-              {query.trim() ? 'No friends match your search' : 'No friends yet'}
+              {query.trim() ? t('no_friends_match_search') : t('no_friends_yet_short')}
             </div>
           )}
 

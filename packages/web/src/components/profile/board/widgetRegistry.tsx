@@ -3,6 +3,7 @@ import type { BoardWidget, BoardWidgetType, StaffRole } from '@backspace/shared'
 import { BOARD_FIELD_LIMITS, BOARD_WIDGET_TYPES } from '@backspace/shared';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { StaffBadge, NetrexChip } from '../../ui/StaffBadge';
+import { useAuthStore } from '../../../stores/authStore';
 import { SpotifyVinylBlock } from '../../spotify/SpotifyVinylBlock';
 import { resolveUploadSrc } from './boardUtils';
 
@@ -24,21 +25,22 @@ export function WidgetCardShell({ icon, labelKey, children, accent }: WidgetShel
   return (
     <div
       tabIndex={0}
-      className="board-widget group/board min-w-0 rounded-xl border border-white/[0.07] bg-white/[0.03] p-3 outline-none transition-[transform,opacity,border-color,background-color] duration-200 hover:border-white/[0.12] hover:bg-white/[0.05] focus-visible:border-accent-primary/50 focus-visible:ring-1 focus-visible:ring-accent-primary/30"
+      className="board-widget group/board min-w-0 rounded-[14px] border border-white/[0.07] bg-white/[0.045] p-5 outline-none transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-white/[0.14] hover:shadow-[0_12px_30px_-14px_var(--profile-accent,rgb(var(--accent-primary)))66] focus-visible:border-accent-primary/50 focus-visible:ring-1 focus-visible:ring-accent-primary/30 motion-reduce:transition-none motion-reduce:hover:transform-none"
+      style={{ boxShadow: '0 2px 10px -6px rgba(0,0,0,0.35)' }}
     >
-      <div className="mb-2 flex items-center gap-2">
+      <div className="mb-3 flex items-baseline gap-2">
+        <span className="text-[10px] text-txt-tertiary" aria-hidden>✦</span>
         <span
-          className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-txt-secondary"
-          style={accent ? { background: `${accent}1f`, color: accent } : { background: 'rgb(var(--accent-primary)/0.12)', color: 'rgb(var(--accent-primary))' }}
-          aria-hidden
+          className="truncate text-[10px] font-bold uppercase tracking-[0.18em] text-txt-tertiary"
+          style={accent ? { color: accent } : undefined}
         >
-          {icon}
-        </span>
-        <span className="truncate text-[10px] font-bold uppercase tracking-[0.14em] text-txt-tertiary">
           {t(labelKey)}
         </span>
+        <span className="sr-only">{icon}</span>
       </div>
       <div className="min-w-0">{children}</div>
+      {/* Footer hairline — closes the card visually (shared language). */}
+      <div className="mt-3 border-t border-white/[0.06]" aria-hidden />
     </div>
   );
 }
@@ -47,35 +49,80 @@ export function WidgetCardShell({ icon, labelKey, children, accent }: WidgetShel
 
 type RendererProps = { config: Record<string, unknown>; lookupUserId: string; isSelf: boolean };
 
+/**
+ * The viewer's own real badges (session user): staffRole + Netrex. Used by
+ * the badges widget — staff roles can never be hand-picked in the editor.
+ */
+function useRealBadges(): string[] {
+  const staffRole = useAuthStore((s) => s.user?.staffRole ?? null);
+  const netrexEnabled = useAuthStore((s) => s.user?.netrexEnabled ?? false);
+  const badges: string[] = [];
+  if (staffRole) badges.push(staffRole);
+  if (netrexEnabled) badges.push('netrex');
+  return badges.slice(0, BOARD_FIELD_LIMITS.maxBadges);
+}
+
 function FavoriteGameValue({ config }: RendererProps) {
-  const { t } = useLanguage();
   const title = typeof config.title === 'string' ? config.title : null;
   const description = typeof config.description === 'string' ? config.description : null;
   const cover = typeof config.coverUrl === 'string' ? config.coverUrl : null;
   if (!title && !cover) {
     return <EmptyValue textKey="board_empty_default" />;
   }
+  // Editorial two-column card: BIG cover (40%) with soft overlay + fluid text
+  // column (60%) — uppercase caption title, serif-italic quote description,
+  // tag chips row. Discord-inspired but VERTEX-flavoured.
+  const tags = title ? title.split(/[,;·|]+/).map((s) => s.trim()).filter(Boolean) : [];
   return (
-    <div className="flex items-start gap-2.5">
+    <div className="flex items-stretch gap-4">
       {cover && (
-        <img
-          src={resolveUploadSrc(cover)}
-          alt=""
-          loading="lazy"
-          className="h-14 w-14 shrink-0 rounded-lg border border-white/[0.08] object-cover"
-        />
+        <div className="relative w-[40%] max-w-[150px] shrink-0 overflow-hidden rounded-lg ring-1 ring-white/[0.08]">
+          <img
+            src={resolveUploadSrc(cover)}
+            alt=""
+            loading="lazy"
+            className="aspect-[3/4] h-full w-full object-cover"
+          />
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{ background: 'linear-gradient(180deg, transparent 55%, rgba(0,0,0,0.5) 100%)' }}
+            aria-hidden
+          />
+        </div>
       )}
-      <div className="min-w-0">
-        {title && <div className="truncate text-[13px] font-semibold text-txt-primary">{title}</div>}
+      <div className="flex min-w-0 flex-1 flex-col justify-center gap-2">
+        {title && (
+          <div
+            className="break-words text-[20px] font-semibold uppercase italic leading-tight"
+            style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
+          >
+            {title}
+          </div>
+        )}
         {description && (
-          <p className="mt-0.5 line-clamp-3 text-[12px] leading-snug text-txt-secondary">{description}</p>
+          <p
+            className="line-clamp-4 text-[13px] italic leading-relaxed text-txt-secondary"
+            style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
+          >
+            “{description}”
+          </p>
+        )}
+        {tags.length > 0 && (
+          <div className="mt-0.5 flex flex-wrap gap-1.5">
+            {tags.slice(0, 3).map((tag) => (
+              <span
+                key={tag}
+                className="rounded-md border border-white/[0.09] bg-white/[0.05] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-txt-tertiary"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
         )}
         {!title && !description && <EmptyValue textKey="board_empty_default" />}
       </div>
     </div>
   );
-  // t referenced for i18n parity; labels come from the shell.
-  void t;
 }
 
 function NowSongValue({ lookupUserId, isSelf }: RendererProps) {
@@ -89,9 +136,14 @@ function QuoteValue({ config }: RendererProps) {
   if (!text) return <EmptyValue textKey="board_empty_quote" />;
   return (
     <blockquote className="min-w-0">
-      <p className="break-words text-[14px] font-medium italic leading-snug text-txt-primary">“{text}”</p>
+      <p
+        className="break-words text-[16px] font-medium italic leading-snug text-txt-primary"
+        style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
+      >
+        “{text}”
+      </p>
       {author && (
-        <footer className="mt-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-txt-tertiary">
+        <footer className="mt-2 text-[10px] font-bold uppercase tracking-[0.16em] text-txt-tertiary">
           — {author}
         </footer>
       )}
@@ -100,25 +152,19 @@ function QuoteValue({ config }: RendererProps) {
 }
 
 function MoodValue({ config }: RendererProps) {
-  const { t } = useLanguage();
   const text = typeof config.text === 'string' ? config.text : null;
   const emoji = typeof config.emoji === 'string' ? config.emoji : '✦';
   const color = typeof config.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(config.color) ? config.color : null;
   if (!text) return <EmptyValue textKey="board_empty_mood" />;
   return (
-    <div className="flex items-center gap-2.5">
-      <span
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border text-[18px] leading-none"
-        style={{
-          borderColor: color ? `${color}44` : 'rgba(255,255,255,0.08)',
-          background: color ? `${color}1a` : 'rgba(255,255,255,0.04)',
-        }}
-        aria-hidden
-      >
+    <div className="flex items-start gap-2.5">
+      <span className="mt-0.5 shrink-0 text-[14px] leading-none" style={color ? { color } : undefined} aria-hidden>
         {emoji}
       </span>
-      <span className="min-w-0 break-words text-[13px] text-txt-primary">{text}</span>
-      {void t}
+      <span className="min-w-0 break-words text-[14px] italic leading-snug text-txt-primary"
+        style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}>
+        {text}
+      </span>
     </div>
   );
 }
@@ -148,17 +194,22 @@ function SocialLinksValue({ config }: RendererProps) {
 }
 
 function BadgesValue({ config }: RendererProps) {
-  const badges = Array.isArray(config.badges) ? (config.badges as string[]) : [];
-  if (badges.length === 0) return <EmptyValue textKey="board_empty_badges" />;
+  // SECURITY: badges are never taken from config — they are derived from the
+  // signed-in user's REAL entitlements (auth store). A viewer's board always
+  // shows that board owner's own real badges via lookupUserId; self-edit
+  // derives from the session user. The server strips fake badges on save.
+  const realBadges = useRealBadges();
+  if (realBadges.length === 0) return <EmptyValue textKey="board_empty_badges" />;
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      {badges.map((b) =>
+      {realBadges.map((b) =>
         b === 'netrex'
           ? <NetrexChip key={b} showLabel />
           : <StaffBadge key={b} role={b as StaffRole} showLabel />,
       )}
     </div>
   );
+  void config;
 }
 
 function GoalValue({ config }: RendererProps) {
@@ -169,7 +220,7 @@ function GoalValue({ config }: RendererProps) {
   return (
     <div className="min-w-0">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="min-w-0 truncate text-[13px] font-medium text-txt-primary">{title}</span>
+        <span className="min-w-0 break-words line-clamp-2 text-[13px] font-medium text-txt-primary">{title}</span>
         <span className="shrink-0 text-[11px] font-semibold tabular-nums text-txt-tertiary">{progress}%</span>
       </div>
       <div
@@ -211,7 +262,7 @@ function FriendSpotlightValue({ config, lookupUserId }: RendererProps) {
         </span>
       )}
       <div className="min-w-0">
-        {name && <div className="truncate text-[13px] font-semibold text-txt-primary">{name}</div>}
+        {name && <div className="break-words line-clamp-1 text-[13px] font-semibold text-txt-primary">{name}</div>}
         {message && <p className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-txt-secondary">{message}</p>}
         {!name && !message && <EmptyValue textKey="board_empty_friend" />}
       </div>

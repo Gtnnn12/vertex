@@ -42,6 +42,20 @@ import type {
   AdminUserListResponse,
   AdminUser,
   AdminResetPasswordResponse,
+  AdminCenterSummary,
+  AdminCenterUsersResponse,
+  AdminCenterUserDetail,
+  NetrexGrantRequest,
+  NetrexStatusResult,
+  StaffAssignResult,
+  StaffMember,
+  StaffRole,
+  ModerationRequest,
+  ModerationResult,
+  AuditLogResponse,
+  AdminCenterSpacesResponse,
+  AdminCenterSpaceDetail,
+  AdminCenterActivityResponse,
   ExploreSpace,
   JoinRequest,
   Role,
@@ -71,10 +85,17 @@ import type {
   AttachProofResponse,
   ReattachRequest,
   ReattachResponse,
+  UserSuggestion,
 } from '@backspace/shared';
 import { getApiForOrigin, getOwnerInstanceForDm } from '../utils/crossStoreResolvers';
 
-export type { FederationPeer, FederationOrphanedAccount, FederationResetEvent, FederationResetEventsResponse, ApprovalRequest, PeeringSubscription, PeeringNotification };
+export type { FederationPeer, FederationOrphanedAccount, FederationResetEvent, FederationResetEventsResponse, ApprovalRequest, PeeringSubscription, PeeringNotification };/** The server could not be reached at all (down, DNS, proxy refused). */
+export class NetworkError extends Error {
+  constructor() {
+    super('Cannot reach the server');
+    this.name = 'NetworkError';
+  }
+}
 
 export class RateLimitError extends Error {
   readonly retryAfter: number;
@@ -96,6 +117,16 @@ export class HttpError extends Error {
   }
 }
 
+/** Vertex AI chat reply: success carries text; failures carry an honest message. */
+export interface AIChatClientResult {
+  ok: boolean;
+  text?: string;
+  model?: string;
+  netrex?: boolean;
+  remaining: number | null;
+  message?: string;
+}
+
 export class BackspaceApiClient {
   readonly auth: {
     register: (data: RegisterRequest) => Promise<AuthResponse>;
@@ -113,6 +144,7 @@ export class BackspaceApiClient {
     changePassword: (data: ChangePasswordRequest) => Promise<ChangePasswordResponse>;
     deleteAccount: (data: DeleteAccountRequest) => Promise<{ success: boolean }>;
     getMutuals: (id: string, homeUserId?: string) => Promise<{ mutualFriends: User[]; mutualSpaces: { id: string; name: string; icon: string | null; avatarColor: string | null }[] }>;
+    saveBoard: (widgets: unknown[]) => Promise<{ widgets: unknown[] }>;
     getFederationRegistry: () => Promise<{ registry: FederationRegistryEntry[]; updatedAt: number }>;
     putFederationRegistry: (data: { registry: FederationRegistryEntry[]; updatedAt: number }) => Promise<{ ok: boolean; updatedAt: number }>;
     deleteFederationIdentity: (data: FederationIdentityDeleteRequest) => Promise<FederationIdentityDeleteResponse>;
@@ -139,6 +171,30 @@ export class BackspaceApiClient {
     ban: (spaceId: string, userId: string, reason?: string) => Promise<{ success: boolean }>;
     unban: (spaceId: string, userId: string) => Promise<{ success: boolean }>;
     transferOwnership: (spaceId: string, newOwnerId: string) => Promise<Space>;
+    evolution: (spaceId: string) => Promise<import('@backspace/shared').EvolutionState>;
+    boosts: (spaceId: string) => Promise<import('@backspace/shared').BoostState>;
+    boostList: (spaceId: string) => Promise<{ boosts: import('@backspace/shared').SpaceBoost[] }>;
+    boost: (spaceId: string) => Promise<{ boost: import('@backspace/shared').SpaceBoost; activeBoosts: number; serverEvoLevel: number; previousLevel: number }>;
+    creditBalance: () => Promise<import('@backspace/shared').CreditBalance>;
+    creditTransactions: () => Promise<import('@backspace/shared').CreditHistory>;
+    creditPacks: () => Promise<{ packs: import('@backspace/shared').CreditPack[] }>;
+    purchaseCredits: (packId: 'pack_2' | 'pack_5' | 'pack_10') => Promise<import('@backspace/shared').CreditPurchaseResponse>;
+    purchaseNetrexWithCredits: () => Promise<import('@backspace/shared').NetrexWithCreditsResponse>;
+    rechargeMy: () => Promise<import('@backspace/shared').RechargeTicketWithMessages>;
+    rechargeClose: () => Promise<import('@backspace/shared').RechargeTicketWithMessages>;
+    rechargeCreate: (packId: 'pack_2' | 'pack_5' | 'pack_10') => Promise<import('@backspace/shared').RechargeTicketWithMessages>;
+    rechargeSendMessage: (data: { body?: string; imageUrl?: string }) => Promise<{ message: import('@backspace/shared').RechargeMessage }>;
+    rechargeQueue: (status?: 'open' | 'approved' | 'rejected' | 'closed' | 'all') => Promise<import('@backspace/shared').RechargeQueueResponse>;
+    rechargeTicket: (id: string) => Promise<import('@backspace/shared').RechargeTicketWithMessages & { username: string }>;
+    rechargeReply: (id: string, data: { body?: string; imageUrl?: string }) => Promise<{ message: import('@backspace/shared').RechargeMessage }>;
+    rechargeApprove: (id: string, note?: string) => Promise<import('@backspace/shared').RechargeTicketWithMessages>;
+    rechargeReject: (id: string, note: string) => Promise<import('@backspace/shared').RechargeTicketWithMessages>;
+    rechargeAdminClose: (id: string, note?: string) => Promise<import('@backspace/shared').RechargeTicketWithMessages>;
+    emojis: (spaceId: string) => Promise<{ emojis: import('@backspace/shared').SpaceEmoji[]; limit: number }>;
+    createEmoji: (spaceId: string, data: { name: string; file: string }) => Promise<{ emoji: import('@backspace/shared').SpaceEmoji | null; limit: number }>;
+    deleteEmoji: (spaceId: string, emojiId: string) => Promise<{ success: boolean }>;
+    setInviteSlug: (spaceId: string, slug: string | null) => Promise<{ customInviteSlug: string | null }>;
+    stats: (spaceId: string) => Promise<import('@backspace/shared').SpaceStats>;
     invitePreview: (code: string) => Promise<InvitePreview>;
   };
 
@@ -313,6 +369,21 @@ export class BackspaceApiClient {
     redemptions: (id: string) => Promise<{ redemptions: InviteRedemption[] }>;
   };
 
+  readonly ai: {
+    status: () => Promise<{ configured: boolean; remaining: number }>;
+    chat: (message: string) => Promise<AIChatClientResult>;
+    support: (message: string) => Promise<AIChatClientResult>;
+    reset: (scope?: 'assistant' | 'support') => Promise<{ ok: boolean }>;
+  };
+
+  readonly suggestions: {
+    create: (text: string) => Promise<{ suggestion: UserSuggestion }>;
+    mine: () => Promise<{ suggestions: UserSuggestion[] }>;
+    // Admin
+    list: () => Promise<{ suggestions: UserSuggestion[] }>;
+    updateStatus: (id: string, status: 'read' | 'approved' | 'rejected') => Promise<{ suggestion: UserSuggestion }>;
+  };
+
   readonly admin: {
     storageStats: () => Promise<StorageStats>;
     storageOrphans: () => Promise<{ orphans: OrphanedFile[] }>;
@@ -324,6 +395,24 @@ export class BackspaceApiClient {
     setUserRole: (userId: string, isAdmin: boolean) => Promise<AdminUser>;
     resetUserPassword: (userId: string) => Promise<AdminResetPasswordResponse>;
     deleteUser: (userId: string) => Promise<{ success: boolean }>;
+  };
+
+  readonly adminCenter: {
+    summary: () => Promise<AdminCenterSummary>;
+    users: (params?: { q?: string; filter?: string; presence?: string; sort?: string; page?: number; pageSize?: number }) => Promise<AdminCenterUsersResponse>;
+    userDetail: (userId: string) => Promise<AdminCenterUserDetail>;
+    netrex: (params?: { q?: string; filter?: string; page?: number; pageSize?: number }) => Promise<AdminCenterUsersResponse>;
+    grantNetrex: (userId: string, body: NetrexGrantRequest) => Promise<NetrexStatusResult>;
+    revokeNetrex: (userId: string) => Promise<NetrexStatusResult>;
+    staff: () => Promise<{ staff: StaffMember[] }>;
+    assignStaff: (userId: string, role: StaffRole) => Promise<StaffAssignResult>;
+    changeStaffRole: (userId: string, role: StaffRole) => Promise<{ success: boolean }>;
+    removeStaff: (userId: string) => Promise<{ success: boolean }>;
+    moderate: (userId: string, body: ModerationRequest) => Promise<ModerationResult>;
+    auditLog: (params?: { q?: string; action?: string; actor?: string; from?: number; to?: number; page?: number; pageSize?: number }) => Promise<AuditLogResponse>;
+    spaces: (params?: { q?: string; sort?: string; visibility?: string; page?: number; pageSize?: number }) => Promise<AdminCenterSpacesResponse>;
+    spaceDetail: (spaceId: string) => Promise<AdminCenterSpaceDetail>;
+    activity: () => Promise<AdminCenterActivityResponse>;
   };
 
   constructor(baseUrl: string, getToken: () => string | null, onUnauthorized?: () => void) {
@@ -346,8 +435,11 @@ export class BackspaceApiClient {
         }
       }
 
+      // AI endpoints can take >30s (PRO model, chain fallbacks) — give them
+      // a longer window. Everything else keeps the 30s default.
+      const isAI = path.startsWith('/ai/');
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      const timeoutId = setTimeout(() => controller.abort(), isAI ? 90000 : 30000);
 
       let response: Response;
       try {
@@ -362,7 +454,10 @@ export class BackspaceApiClient {
         if (err instanceof DOMException && err.name === 'AbortError') {
           throw new Error('Request timed out');
         }
-        throw err;
+        // Network-level failure (server down, DNS, proxy refused): surface a
+        // recognisable error type so UIs can say "cannot reach the server"
+        // instead of the browser's raw "Failed to fetch".
+        throw new NetworkError();
       }
       clearTimeout(timeoutId);
 
@@ -376,7 +471,26 @@ export class BackspaceApiClient {
             ?? (parseInt(response.headers.get('retry-after') || '', 10) || 60);
           throw new RateLimitError(retryAfter);
         }
-        const error = await response.json().catch(() => ({ error: 'Request failed' }));
+        const error = await response.json().catch(() => ({}));
+        // 5xx (typically the dev proxy failing to reach the backend) or a body
+        // without any error text means the server itself is unreachable —
+        // surface NetworkError so UIs show "cannot reach the server".
+        // 5xx means the server WAS reached (a real network failure throws
+        // before this line). Only treat it as "unreachable" when the body
+        // carries no JSON error (dev proxy down, raw HTML crash page). With a
+        // structured body (e.g. Vertex AI "saturated" 503) surface the
+        // server's honest message instead of the lying "Cannot reach the
+        // server".
+        if (response.status >= 500) {
+          const errObj = error as { error?: unknown; message?: unknown };
+          const hasErrorBody = typeof errObj.error === 'string' || typeof errObj.message === 'string';
+          if (!hasErrorBody) throw new NetworkError();
+          throw new HttpError(
+            response.status,
+            typeof errObj.message === 'string' ? errObj.message : (errObj.error as string),
+            error,
+          );
+        }
         throw new HttpError(response.status, (error as { error?: string }).error || `HTTP ${response.status}`, error);
       }
 
@@ -428,6 +542,8 @@ export class BackspaceApiClient {
         ),
       reattach: (data: ReattachRequest) =>
         request<ReattachResponse>('POST', '/users/@me/reattach', data),
+      saveBoard: (widgets: unknown[]) =>
+        request<{ widgets: unknown[] }>('PUT', '/users/@me/board', { widgets }),
     };
 
     this.spaceLayout = {
@@ -457,6 +573,54 @@ export class BackspaceApiClient {
         request<{ success: boolean }>('DELETE', `/spaces/${spaceId}/bans/${userId}`),
       transferOwnership: (spaceId: string, newOwnerId: string) =>
         request<Space>('PATCH', `/spaces/${spaceId}/transfer-ownership`, { newOwnerId }),
+      evolution: (spaceId: string) =>
+        request<import('@backspace/shared').EvolutionState>('GET', `/spaces/${spaceId}/evolution`),
+      boosts: (spaceId: string) =>
+        request<import('@backspace/shared').BoostState>('GET', `/spaces/${spaceId}/boosts`),
+      boostList: (spaceId: string) =>
+        request<{ boosts: import('@backspace/shared').SpaceBoost[] }>('GET', `/spaces/${spaceId}/boosts/list`),
+      boost: (spaceId: string) =>
+        request<{ boost: import('@backspace/shared').SpaceBoost; activeBoosts: number; serverEvoLevel: number; previousLevel: number }>('POST', `/spaces/${spaceId}/boost`, {}),
+      creditBalance: () =>
+        request<import('@backspace/shared').CreditBalance>('GET', '/credits/balance'),
+      creditTransactions: () =>
+        request<import('@backspace/shared').CreditHistory>('GET', '/credits/transactions'),
+      creditPacks: () =>
+        request<{ packs: import('@backspace/shared').CreditPack[] }>('GET', '/credits/packs'),
+      purchaseCredits: (packId: 'pack_2' | 'pack_5' | 'pack_10') =>
+        request<import('@backspace/shared').CreditPurchaseResponse>('POST', '/credits/purchase', { packId }),
+      purchaseNetrexWithCredits: () =>
+        request<import('@backspace/shared').NetrexWithCreditsResponse>('POST', '/credits/purchase-netrex', {}),
+      rechargeMy: () =>
+        request<import('@backspace/shared').RechargeTicketWithMessages>('GET', '/credits/recharge/my'),
+      rechargeCreate: (packId: 'pack_2' | 'pack_5' | 'pack_10') =>
+        request<import('@backspace/shared').RechargeTicketWithMessages>('POST', '/credits/recharge', { packId }),
+      rechargeSendMessage: (data: { body?: string; imageUrl?: string }) =>
+        request<{ message: import('@backspace/shared').RechargeMessage }>('POST', '/credits/recharge/my/message', data),
+      rechargeClose: () =>
+        request<import('@backspace/shared').RechargeTicketWithMessages>('POST', '/credits/recharge/my/close', {}),
+      rechargeQueue: (status?: 'open' | 'approved' | 'rejected' | 'closed' | 'all') =>
+        request<import('@backspace/shared').RechargeQueueResponse>('GET', `/admin/recharge${status ? `?status=${status}` : ''}`),
+      rechargeTicket: (id: string) =>
+        request<import('@backspace/shared').RechargeTicketWithMessages & { username: string }>('GET', `/admin/recharge/${id}`),
+      rechargeReply: (id: string, data: { body?: string; imageUrl?: string }) =>
+        request<{ message: import('@backspace/shared').RechargeMessage }>('POST', `/admin/recharge/${id}/message`, data),
+      rechargeApprove: (id: string, note?: string) =>
+        request<import('@backspace/shared').RechargeTicketWithMessages>('POST', `/admin/recharge/${id}/approve`, { note }),
+      rechargeReject: (id: string, note: string) =>
+        request<import('@backspace/shared').RechargeTicketWithMessages>('POST', `/admin/recharge/${id}/reject`, { note }),
+      rechargeAdminClose: (id: string, note?: string) =>
+        request<import('@backspace/shared').RechargeTicketWithMessages>('POST', `/admin/recharge/${id}/close`, { note }),
+      emojis: (spaceId: string) =>
+        request<{ emojis: import('@backspace/shared').SpaceEmoji[]; limit: number }>('GET', `/spaces/${spaceId}/emojis`),
+      createEmoji: (spaceId: string, data: { name: string; file: string }) =>
+        request<{ emoji: import('@backspace/shared').SpaceEmoji | null; limit: number }>('POST', `/spaces/${spaceId}/emojis`, data),
+      deleteEmoji: (spaceId: string, emojiId: string) =>
+        request<{ success: boolean }>('DELETE', `/spaces/${spaceId}/emojis/${emojiId}`),
+      setInviteSlug: (spaceId: string, slug: string | null) =>
+        request<{ customInviteSlug: string | null }>('PATCH', `/spaces/${spaceId}/invite-slug`, { slug }),
+      stats: (spaceId: string) =>
+        request<import('@backspace/shared').SpaceStats>('GET', `/spaces/${spaceId}/stats`),
       invitePreview: (code: string) =>
         request<InvitePreview>('GET', `/spaces/invite/${encodeURIComponent(code)}/preview`, undefined, false),
     };
@@ -786,6 +950,35 @@ export class BackspaceApiClient {
         request<{ redemptions: InviteRedemption[] }>('GET', `/admin/invites/${id}/redemptions`),
     };
 
+    // AI endpoints: the server replies with honest messages for quota/limit/
+    // saturation (429/503) — unwrap them so the chat shows "estoy saturado,
+    // prueba en un minuto" instead of a raw error class name.
+    const aiChat = async (path: string, message: string): Promise<AIChatClientResult> => {
+      try {
+        return await request<{ ok: true; text: string; model: string; netrex: boolean; remaining: number }>('POST', path, { message });
+      } catch (err) {
+        const body = err instanceof HttpError ? (err.body as { message?: unknown } | undefined) : undefined;
+        if (err instanceof HttpError && typeof body?.message === 'string') {
+          return { ok: false, message: body.message, remaining: null };
+        }
+        throw err;
+      }
+    };
+
+    this.ai = {
+      status: () => request<{ configured: boolean; remaining: number }>('GET', '/ai/status'),
+      chat: (message: string) => aiChat('/ai/chat', message),
+      support: (message: string) => aiChat('/ai/support', message),
+      reset: (scope = 'assistant') => request<{ ok: boolean }>('POST', '/ai/reset', { scope }),
+    };
+
+    this.suggestions = {
+      create: (text: string) => request<{ suggestion: UserSuggestion }>('POST', '/suggestions', { text }),
+      mine: () => request<{ suggestions: UserSuggestion[] }>('GET', '/suggestions/mine'),
+      list: () => request<{ suggestions: UserSuggestion[] }>('GET', '/admin/suggestions'),
+      updateStatus: (id, status) => request<{ suggestion: UserSuggestion }>('PATCH', `/admin/suggestions/${id}`, { status }),
+    };
+
     this.admin = {
       storageStats: () => request<StorageStats>('GET', '/admin/storage/stats'),
       storageOrphans: () => request<{ orphans: OrphanedFile[] }>('GET', '/admin/storage/orphans'),
@@ -814,6 +1007,64 @@ export class BackspaceApiClient {
         request<AdminResetPasswordResponse>('POST', `/admin/users/${userId}/reset-password`),
       deleteUser: (userId) =>
         request<{ success: boolean }>('DELETE', `/admin/users/${userId}`),
+    };
+
+    this.adminCenter = {
+      summary: () => request<AdminCenterSummary>('GET', '/admin-center/summary'),
+      users: (params) => {
+        const qs = new URLSearchParams();
+        if (params?.q) qs.set('q', params.q);
+        if (params?.filter) qs.set('filter', params.filter);
+        if (params?.presence) qs.set('presence', params.presence);
+        if (params?.sort) qs.set('sort', params.sort);
+        if (params?.page !== undefined) qs.set('page', String(params.page));
+        if (params?.pageSize !== undefined) qs.set('pageSize', String(params.pageSize));
+        return request<AdminCenterUsersResponse>('GET', `/admin-center/users?${qs}`);
+      },
+      userDetail: (userId) => request<AdminCenterUserDetail>('GET', `/admin-center/users/${userId}`),
+      netrex: (params) => {
+        const qs = new URLSearchParams();
+        if (params?.q) qs.set('q', params.q);
+        if (params?.filter) qs.set('filter', params.filter);
+        if (params?.page !== undefined) qs.set('page', String(params.page));
+        if (params?.pageSize !== undefined) qs.set('pageSize', String(params.pageSize));
+        return request<AdminCenterUsersResponse>('GET', `/admin-center/netrex?${qs}`);
+      },
+      grantNetrex: (userId, body) =>
+        request<NetrexStatusResult>('POST', `/admin-center/users/${userId}/netrex`, body),
+      revokeNetrex: (userId) =>
+        request<NetrexStatusResult>('POST', `/admin-center/users/${userId}/netrex/revoke`),
+      staff: () => request<{ staff: StaffMember[] }>('GET', '/admin-center/staff'),
+      assignStaff: (userId, role) =>
+        request<StaffAssignResult>('POST', '/admin-center/staff', { userId, role }),
+      changeStaffRole: (userId, role) =>
+        request<{ success: boolean }>('PATCH', `/admin-center/staff/${userId}`, { role }),
+      removeStaff: (userId) =>
+        request<{ success: boolean }>('DELETE', `/admin-center/staff/${userId}`),
+      moderate: (userId, body) =>
+        request<ModerationResult>('POST', `/admin-center/users/${userId}/moderation`, body),
+      auditLog: (params) => {
+        const qs = new URLSearchParams();
+        if (params?.q) qs.set('q', params.q);
+        if (params?.action) qs.set('action', params.action);
+        if (params?.actor) qs.set('actor', params.actor);
+        if (params?.from !== undefined) qs.set('from', String(params.from));
+        if (params?.to !== undefined) qs.set('to', String(params.to));
+        if (params?.page !== undefined) qs.set('page', String(params.page));
+        if (params?.pageSize !== undefined) qs.set('pageSize', String(params.pageSize));
+        return request<AuditLogResponse>('GET', `/admin-center/audit-log?${qs}`);
+      },
+      spaces: (params) => {
+        const qs = new URLSearchParams();
+        if (params?.q) qs.set('q', params.q);
+        if (params?.sort) qs.set('sort', params.sort);
+        if (params?.visibility) qs.set('visibility', params.visibility);
+        if (params?.page !== undefined) qs.set('page', String(params.page));
+        if (params?.pageSize !== undefined) qs.set('pageSize', String(params.pageSize));
+        return request<AdminCenterSpacesResponse>('GET', `/admin-center/spaces?${qs}`);
+      },
+      spaceDetail: (spaceId) => request<AdminCenterSpaceDetail>('GET', `/admin-center/spaces/${spaceId}`),
+      activity: () => request<AdminCenterActivityResponse>('GET', '/admin-center/activity'),
     };
   }
 }

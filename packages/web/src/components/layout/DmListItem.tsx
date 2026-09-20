@@ -73,31 +73,30 @@ export function DmListItem({ dm, isActive, isUnread, user, onSelect, onClose, on
     : undefined;
 
   // ── State-driven classes ──────────────────────────────────────────────
-  // Container: 6px radius (up from 4px), 44px height (up from 42px)
-  const containerClass = `relative flex items-center gap-3 px-2 h-[44px] rounded-[8px] cursor-pointer transition-colors group ${
+  const containerClass = `relative flex items-center gap-2.5 px-2.5 h-[40px] rounded-[9px] cursor-pointer transition-colors group ${
     isActive
-      ? 'bg-interactive-selected/20 text-txt-primary'
+      ? 'bg-surface-elevated text-txt-primary ring-1 ring-white/[0.05]'
       : isUnread
-        ? 'border-l-2 border-accent-primary/40 text-txt-primary'
-        : 'text-txt-tertiary hover:bg-interactive-hover/40 hover:text-txt-secondary'
+        ? 'text-white hover:bg-white/[0.04]'
+        : 'text-txt-tertiary hover:bg-white/[0.04] hover:text-txt-secondary'
   }`;
 
   // Name: font-semibold for unread (deliberately NOT font-bold — design decision)
   const nameClass = `text-[14px] truncate leading-tight ${
-    isActive ? 'text-txt-primary font-medium'
-      : isUnread ? 'text-txt-primary font-semibold'
+    isActive ? 'text-white font-medium'
+      : isUnread ? 'text-white font-semibold'
       : 'text-txt-tertiary group-hover:text-txt-secondary font-medium'
   }`;
 
   // Timestamp: brightens on hover and lifts for unread/selected
-  const timestampClass = `text-[10px] ml-auto flex-shrink-0 ${
+  const timestampClass = `text-[11px] ml-auto flex-shrink-0 ${
     isActive || isUnread
       ? 'text-txt-secondary'
       : 'text-txt-tertiary group-hover:text-txt-secondary'
   }`;
 
   // Preview: brightens on hover and lifts for unread/selected
-  const previewClass = `text-[11px] truncate leading-tight mt-0.5 ${
+  const previewClass = `text-[12px] truncate leading-tight mt-0.5 ${
     isActive || isUnread
       ? 'text-txt-secondary'
       : 'text-txt-tertiary group-hover:text-txt-secondary'
@@ -113,7 +112,7 @@ export function DmListItem({ dm, isActive, isUnread, user, onSelect, onClose, on
   // Close button: always visible when selected, hover-reveal otherwise
   const closeClass = `${
     isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-  } text-txt-tertiary/60 hover:text-txt-primary transition-opacity flex-shrink-0 ml-1`;
+  } text-txt-tertiary hover:text-txt-primary transition-opacity flex-shrink-0 ml-1`;
 
   // ── Preview text ──────────────────────────────────────────────────────
   // formatDmSidebarPreview handles user/system messages and applies the
@@ -127,17 +126,9 @@ export function DmListItem({ dm, isActive, isUnread, user, onSelect, onClose, on
       onClick={handleClick}
       className={containerClass}
     >
-      {/* Selected accent bar */}
-      {isActive && (
-        <div
-          className="absolute -left-[2px] top-1/2 -translate-y-1/2 w-[3px] bg-accent-primary/40 rounded-r-full"
-          style={{ height: '55%', opacity: 0.7 }}
-        />
-      )}
-
       {/* Unread indicator */}
       {isUnread && (
-        <div className="absolute -left-1 w-1 h-2 bg-white rounded-r-full" />
+        <div className="absolute -left-[2px] top-1/2 -translate-y-1/2 w-[5px] h-[5px] rounded-full bg-accent-mint" />
       )}
 
       {/* Avatar */}
@@ -207,8 +198,8 @@ export function DmListItem({ dm, isActive, isUnread, user, onSelect, onClose, on
     </div>
   );
 
-  // Group DMs get a context menu wrapper
-  if (isGroup && handleContextMenu) {
+  // Context menu wrapper — 1-on-1 DMs (user menu) and group DMs (leave) alike.
+  if (handleContextMenu) {
     return <div onContextMenu={handleContextMenu}>{itemJsx}</div>;
   }
 

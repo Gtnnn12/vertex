@@ -1,9 +1,12 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import crypto from 'crypto';
-import { eq } from 'drizzle-orm';
-import { getDb } from '../db/index.js';
+import { eq, and, gt, desc } from 'drizzle-orm';
+import { getDb, schema } from '../db/index.js';
 import { users } from '../db/schema.js';
 import { authenticate } from '../utils/auth.js';
+import { getBoosterRoleId } from '../utils/evoLimits.js';
+import { creditWallet } from './credits.js';
+import { CREDIT_PACKS_BY_ID, isCreditPackId } from '@backspace/shared/src/evoConstants.js';
 
 /**
  * Netrex Premium billing:
@@ -18,6 +21,13 @@ import { authenticate } from '../utils/auth.js';
  * Plan windows: monthly +30d, six_months +180d, yearly +365d. For recurring
  * subscriptions Gumroad includes the next charge date in the ping — when
  * present it wins over the flat window.
+ *
+ * SERVER BOOSTS: the product "Mejora de server — 2€/mes" (GUMROAD_BOOST_PRODUCT_ID)
+ * does NOT grant Netrex — each sale credits one boost credit to the buyer
+ * (boost_credits). The buyer redeems it in any space they belong to via
+ * POST /api/spaces/:id/boost. A refund of a boost product revokes that
+ * buyer's most recent ACTIVE boost across all spaces (freeze rule: rows are
+ * kept but expired immediately, so the level recount drops without deleting).
  */
 
 export type NetrexPlan = 'monthly' | 'six_months' | 'yearly' | 'lifetime';
@@ -62,6 +72,32 @@ function planForProduct(productId: string): NetrexPlan | null {
   if (GUMROAD_PRODUCT_PLAN_MAP[productId]) return GUMROAD_PRODUCT_PLAN_MAP[productId];
   // The original monthly product (single source: desktop config uses the same id).
   if (productId === 'U7HOiXnRmFeO5WU3xCP_MA==') return 'monthly';
+  return null;
+}
+
+/**
+ * Product id of "Mejora de server — 2€/mes". The owner configures it in
+ * GUMROAD_PRODUCT_PLAN_MAP once the product exists; until then the boost
+ * product can be set via the BOOST_PRODUCT_ID env var. Pings for this product
+ * are routed to the boost-credit path instead of the Netrex plan path.
+ */
+export function isBoostProduct(productId: string): boolean {
+  const configured = process.env.BOOST_PRODUCT_ID ?? '';
+  return !!configured && productId === configured;
+}
+
+/**
+ * Credit-pack product routing: env CREDIT_PACK_PRODUCT_<PACKID> maps a Gumroad
+ * product id to a wallet pack (pack_2 / pack_5 / pack_10). A confirmed sale
+ * credits the buyer's wallet via creditWallet (with its audit row); a refund
+ * debits it back (balance floor 0 — never negative from a refund).
+ */
+export function creditPackForProduct(productId: string): 'pack_2' | 'pack_5' | 'pack_10' | null {
+  for (const packId of ['pack_2', 'pack_5', 'pack_10'] as const) {
+    if (process.env[`CREDIT_PACK_PRODUCT_${packId.toUpperCase()}`] === productId) {
+      return packId;
+    }
+  }
   return null;
 }
 
@@ -138,13 +174,89 @@ export async function netrexRoutes(app: FastifyInstance): Promise<void> {
       return reply.code(400).send({ ok: false, error: 'missing_email' });
     }
 
+    const db = getDb();
+
+    // ── Credit packs (monedero): venta confirmada → acreditar wallet ────
+    const creditPackId = creditPackForProduct(productId);
+    if (creditPackId) {
+      const buyer = db.select({ id: users.id }).from(users).where(eq(users.billingEmail, email)).get();
+      if (!buyer) {
+        console.warn(`[gumroad-ping] credit pack sale for unknown user ${email.slice(0, 3)}***`);
+        return reply.code(200).send({ ok: false, error: 'unknown_user' });
+      }
+
+      if (refunded || disputed || chargebacked) {
+        // Refund → debitar el pack (auditado). El floor está en creditWallet,
+        // pero un reembolso puede dejar saldo negativo si ya se gastó: clampeamos.
+        const pack = CREDIT_PACKS_BY_ID[creditPackId];
+        const current = db.select({ creditBalance: users.creditBalance })
+          .from(users).where(eq(users.id, buyer.id)).get()?.creditBalance ?? 0;
+        const debit = -Math.min(pack.credits, Math.max(current, 0));
+        if (debit < 0) {
+          creditWallet({ userId: buyer.id, amount: debit, reason: `refund:${creditPackId}` });
+        }
+        console.log(`[gumroad-ping] credit pack refund ${creditPackId} for ${email.slice(0, 3)}*** (${debit})`);
+        return reply.send({ ok: true, revoked: true });
+      }
+
+      const pack = CREDIT_PACKS_BY_ID[creditPackId];
+      creditWallet({ userId: buyer.id, amount: pack.credits, reason: `topup:${creditPackId}` });
+      console.log(`[gumroad-ping] CREDITED +${pack.credits} (${creditPackId}) for ${email.slice(0, 3)}***`);
+      return reply.send({ ok: true, creditPack: creditPackId, credits: pack.credits });
+    }
+
+    // ── Server boost product: "Mejora de server — 2€/mes" ────────────────
+    // Money goes to the platform (like Discord); each sale = 1 boost credit
+    // the buyer redeems in any space they belong to via POST /boost.
+    if (isBoostProduct(productId)) {
+      const buyer = db.select({ id: users.id }).from(users).where(eq(users.billingEmail, email)).get();
+      if (!buyer) {
+        console.warn(`[gumroad-ping] boost sale for unknown user ${email.slice(0, 3)}***`);
+        return reply.code(200).send({ ok: false, error: 'unknown_user' });
+      }
+
+      const now = Date.now();
+      if (refunded || disputed || chargebacked) {
+        // Revoke the buyer's most recent ACTIVE boost, wherever it lives:
+        // expire the row immediately (freeze rule — nothing is deleted), so
+        // the level recount drops without touching history.
+        const row = db.select()
+          .from(schema.spaceBoosts)
+          .where(and(eq(schema.spaceBoosts.userId, buyer.id), gt(schema.spaceBoosts.expiresAt, now)))
+          .orderBy(desc(schema.spaceBoosts.createdAt))
+          .get();
+        if (row) {
+          db.update(schema.spaceBoosts)
+            .set({ expiresAt: now })
+            .where(eq(schema.spaceBoosts.id, row.id))
+            .run();
+          console.log(`[gumroad-ping] boost refund — expired boost ${row.id} for ${email.slice(0, 3)}***`);
+        } else {
+          console.warn(`[gumroad-ping] boost refund with no active boost for ${email.slice(0, 3)}***`);
+        }
+        return reply.send({ ok: true, revoked: true });
+      }
+
+      // Sale → +1 boost credit. No expiry: the credit is redeemed via POST /boost.
+      const creditRow = db.select().from(schema.boostCredits)
+        .where(eq(schema.boostCredits.userId, buyer.id)).get();
+      if (creditRow) {
+        db.update(schema.boostCredits)
+          .set({ credits: creditRow.credits + 1, updatedAt: now })
+          .where(eq(schema.boostCredits.userId, buyer.id))
+          .run();
+      } else {
+        db.insert(schema.boostCredits).values({ userId: buyer.id, credits: 1, updatedAt: now }).run();
+      }
+      console.log(`[gumroad-ping] ACTIVATED +1 boost credit for ${email.slice(0, 3)}***`);
+      return reply.send({ ok: true, boostCredit: true });
+    }
+
     const plan = planForProduct(productId);
     if (!plan) {
       console.warn(`[gumroad-ping] unknown product_id ${productId} — add it to GUMROAD_PRODUCT_PLAN_MAP`);
       return reply.code(200).send({ ok: false, error: 'unknown_product' }); // 200 so Gumroad stops retrying
     }
-
-    const db = getDb();
 
     // Refund / dispute / chargeback → revoke immediately.
     if (refunded || disputed || chargebacked) {

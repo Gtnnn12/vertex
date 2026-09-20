@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-const homeSendRequest = vi.fn(async () => ({ success: true, requestId: 'req-1' }));
+const homeSendRequest = vi.fn(async (...args: unknown[]) => ({ success: true, requestId: 'req-1' }));
 const homeRequests = vi.fn(async () => []);
 
 vi.mock('../api/client', () => ({

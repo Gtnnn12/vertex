@@ -335,7 +335,7 @@ export function KeybindsPanel() {
             <KeybindRow
               key={action.id}
               actionId={action.id}
-              label={action.label}
+              label={t(action.i18nKey)}
               keybind={getKeybind(action.id)}
               isRecording={recordingActionId === action.id}
               recordingDisplay={recordingDisplay}
@@ -356,7 +356,7 @@ export function KeybindsPanel() {
           <div className="text-sm text-txt-primary">
             <span className="font-medium">{conflict.pendingKeybind.displayLabel}</span> {t('is_already_bound_to')}{' '}
             <span className="font-medium">
-              {BINDABLE_ACTIONS.find((a) => a.id === conflict.existingKeybind.actionId)?.label}
+              {t(BINDABLE_ACTIONS.find((a) => a.id === conflict.existingKeybind.actionId)?.i18nKey ?? '')}
             </span>
             . {t('overwrite_question')}
           </div>

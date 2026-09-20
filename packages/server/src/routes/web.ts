@@ -19,10 +19,9 @@ const SUPPORT_CATEGORIES = new Set(['doubt', 'bug', 'report', 'other']);
  */
 
 function webOriginAllowed(origin: string | undefined): boolean {
-  // Local dev origins + the deployed marketing site (Vercel). Extra origins
-  // can be appended via WEB_EXTRA_ORIGINS (comma-separated, no trailing /).
+  // Local dev origins for the marketing site. Extend with the production
+  // site origin when it is deployed.
   const allowed = [
-    'https://vertexpag.vercel.app',
     'http://localhost:5173',
     'http://127.0.0.1:5173',
     'http://localhost:5174',
@@ -31,11 +30,7 @@ function webOriginAllowed(origin: string | undefined): boolean {
     'http://127.0.0.1:4173',
   ];
   if (!origin) return true; // same-origin / non-browser client
-  const extra = (process.env.WEB_EXTRA_ORIGINS ?? '')
-    .split(',')
-    .map((o) => o.trim())
-    .filter(Boolean);
-  return allowed.includes(origin) || extra.includes(origin);
+  return allowed.includes(origin);
 }
 
 function netrexStatus(row: typeof schema.users.$inferSelect | undefined) {

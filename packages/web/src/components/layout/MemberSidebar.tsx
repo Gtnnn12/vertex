@@ -1,8 +1,12 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import type { MemberWithUser, Activity } from '@backspace/shared';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useActivityStore } from '../../stores/activityStore';
+import { useAuthStore } from '../../stores/authStore';
+import { useSocialStore } from '../../stores/socialStore';
+import { useContextMenuStore } from '../../stores/contextMenuStore';
+import { buildUserContextMenuItems } from '../../utils/userContextMenu';
 import { Avatar } from '../ui/Avatar';
 import { Username } from '../ui/Username';
 import { ActivityCard, hasRichActivity, getActivityAccentClass } from '../ui/ActivityCard';
@@ -11,12 +15,13 @@ import { parseFederatedUsername, isFederationGlobeApplicable } from '../../utils
 import { useCanonicalUserView } from '../../utils/userViewLookup';
 import { useDelayedLoading } from '../../hooks/useDelayedLoading';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { StaffBadge, NetrexChip } from '../ui/StaffBadge';
 
 /**
  * Derives the display group for a member based on their highest-positioned role
  * or owner status. Returns { key, label, color, position }.
  */
-function getMemberGroup(member: MemberWithUser, ownerId: string | undefined, t: (k: string) => string) {
+export function getMemberGroup(member: MemberWithUser, ownerId: string | undefined, t: (k: string) => string) {
   if (ownerId && member.userId === ownerId) {
     // Owner always sorts first — position Infinity so it's above all roles
     const ownerRole = member.roles?.find(r => r.position > 0);
@@ -47,7 +52,7 @@ function getMemberGroup(member: MemberWithUser, ownerId: string | undefined, t: 
   };
 }
 
-function MemberSidebarRow({
+export function MemberSidebarRow({
   member,
   isOffline,
   colorStyle,
@@ -68,6 +73,52 @@ function MemberSidebarRow({
   const { baseName } = parseFederatedUsername(canonical.username);
   const displayName = canonical.displayName ?? baseName;
 
+  const { t } = useLanguage();
+  const openContextMenu = useContextMenuStore((s) => s.open);
+  const openUserProfile = useUIStore((s) => s.openUserProfile);
+  const me = useAuthStore((s) => s.user);
+  const friends = useSocialStore((s) => s.friends);
+  const friendRequests = useSocialStore((s) => s.requests);
+
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openContextMenu(
+        { x: e.clientX, y: e.clientY },
+        buildUserContextMenuItems({
+          user: canonical,
+          me,
+          friends,
+          requests: friendRequests,
+          t,
+          onViewProfile: (u) => openUserProfile(u, e.currentTarget.getBoundingClientRect(), 'left'),
+          onAddFriend: () => useSocialStore.getState().sendFriendRequest(canonical.username).catch(() => {}),
+          onRemoveFriend: () => {
+            const f = friends.find((fr) => fr.id === canonical.id);
+            if (f) useSocialStore.getState().removeFriend(f.id).catch(() => {});
+          },
+          onCancelRequest: () => {
+            const s = useSocialStore.getState();
+            const req = s.requests.find((r) => r.user && (r.user.homeUserId ?? r.user.id) === (canonical.homeUserId ?? canonical.id));
+            if (req) s.cancelFriendRequest(req.id).catch(() => {});
+          },
+          onAcceptRequest: () => {
+            const s = useSocialStore.getState();
+            const req = s.requests.find((r) => r.user && (r.user.homeUserId ?? r.user.id) === (canonical.homeUserId ?? canonical.id));
+            if (req) s.updateFriendRequest(req.id, 'accepted').catch(() => {});
+          },
+          onDeclineRequest: () => {
+            const s = useSocialStore.getState();
+            const req = s.requests.find((r) => r.user && (r.user.homeUserId ?? r.user.id) === (canonical.homeUserId ?? canonical.id));
+            if (req) s.updateFriendRequest(req.id, 'declined').catch(() => {});
+          },
+        }),
+      );
+    },
+    [canonical, me, friends, friendRequests, t, openContextMenu, openUserProfile],
+  );
+
   const rowClass = isRichActivity
     ? `flex items-center gap-2.5 px-2.5 py-2 rounded-[10px] mb-1 cursor-pointer transition-colors border-l-2 ${accentClass}`
     : 'flex items-center gap-2.5 px-2 py-1.5 rounded-[4px] hover:bg-interactive-hover cursor-pointer group transition-colors';
@@ -76,7 +127,8 @@ function MemberSidebarRow({
     <div
       key={member.userId}
       onClick={(e) => onClickMember(e, canonical)}
-      className={rowClass}
+      onContextMenu={handleContextMenu}
+      className={`${rowClass} member-row-enter`}
     >
       <Avatar
         src={canonical.avatar}
@@ -87,11 +139,15 @@ function MemberSidebarRow({
         user={canonical}
       />
       <div className="flex-1 min-w-0">
-        <Username
-          username={displayName}
-          className={`text-[13.5px] leading-[1.2] font-medium truncate ${isOffline ? 'text-txt-tertiary' : (!colorStyle ? 'text-txt-primary' : '')}`}
-          style={colorStyle}
-        />
+        <div className="flex items-center gap-1.5 min-w-0">
+          <Username
+            username={displayName}
+            className={`text-[13.5px] leading-[1.2] font-medium truncate ${isOffline ? 'text-txt-tertiary' : (!colorStyle ? 'text-txt-primary' : '')}`}
+            style={colorStyle}
+          />
+          {!isOffline && canonical.staffRole && <StaffBadge role={canonical.staffRole} />}
+          {!isOffline && canonical.netrexEnabled && <NetrexChip />}
+        </div>
         {!isOffline && isFederationGlobeApplicable(canonical) && (
           <div className="text-[10px] leading-[1.3] text-txt-tertiary truncate opacity-60">@{parseFederatedUsername(canonical.username).domain}</div>
         )}
@@ -142,7 +198,13 @@ export function MemberSidebar() {
   }, [members, ownerId, t]);
 
   const isLoadingSpace = !!loadingSpaceId && loadingSpaceId === currentSpaceId;
-  const showMemberSkeleton = useDelayedLoading(isLoadingSpace);
+  // Silent re-sync: when the resident detail data already belongs to the
+  // current space (ready push, role/membership edits), keep the list rendered
+  // and let the refresh update rows in place. Skeletons are for first load
+  // only — when the resident data belongs to another space (or nothing).
+  const detailSpaceId = useSpaceStore((s) => s.detailSpaceId);
+  const isForeignLoad = isLoadingSpace && detailSpaceId !== currentSpaceId;
+  const showMemberSkeleton = useDelayedLoading(isForeignLoad);
 
   if (!memberListOpen) return null;
 

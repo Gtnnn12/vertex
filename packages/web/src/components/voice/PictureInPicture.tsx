@@ -123,7 +123,6 @@ export function PictureInPicture() {
 
   // Store state
   const currentVoiceChannelId = useVoiceStore((s) => s.currentVoiceChannelId);
-  const activeDmCall = useVoiceStore((s) => s.activeDmCall);
   const participants = useVoiceStore((s) => s.participants);
   const focusedParticipantId = useVoiceStore((s) => s.focusedParticipantId);
   const watchingStreams = useVoiceStore((s) => s.watchingStreams);
@@ -144,21 +143,17 @@ export function PictureInPicture() {
 
   // Reset pipCollapsed when joining a new call
   const prevVoiceChannel = useRef(currentVoiceChannelId);
-  const prevDmCall = useRef(activeDmCall?.dmChannelId ?? null);
   useEffect(() => {
     const voiceChanged = currentVoiceChannelId !== prevVoiceChannel.current;
-    const dmChanged = (activeDmCall?.dmChannelId ?? null) !== prevDmCall.current;
     prevVoiceChannel.current = currentVoiceChannelId;
-    prevDmCall.current = activeDmCall?.dmChannelId ?? null;
-    if ((voiceChanged && currentVoiceChannelId) || (dmChanged && activeDmCall)) {
+    if (voiceChanged && currentVoiceChannelId) {
       setPipCollapsed(false);
     }
-  }, [currentVoiceChannelId, activeDmCall, setPipCollapsed]);
+  }, [currentVoiceChannelId, setPipCollapsed]);
 
   // Visibility — split into wouldShow (ignores collapsed) and shouldShow (full check)
   const isInServerVoice = currentVoiceChannelId !== null && currentChannelId !== currentVoiceChannelId;
-  const isInDmCall = activeDmCall !== null && currentChannelId !== activeDmCall.dmChannelId;
-  const wouldShow = (isInServerVoice || isInDmCall) && !voiceFullscreen;
+  const wouldShow = isInServerVoice && !voiceFullscreen;
   const shouldShow = wouldShow && !pipCollapsed;
 
   // Reset pipCollapsed when wouldShow transitions false → true
@@ -353,9 +348,7 @@ export function PictureInPicture() {
 
     if (!hasMoved.current) {
       // Click — navigate back to voice channel
-      if (activeDmCall) {
-        navigate(`/channels/@me/${activeDmCall.dmChannelId}`);
-      } else if (currentVoiceChannelId) {
+      if (currentVoiceChannelId) {
         const spaceId = channelToSpaceMap.get(currentVoiceChannelId);
         if (spaceId) {
           navigate(`/channels/${spaceId}/${currentVoiceChannelId}`);
@@ -365,7 +358,7 @@ export function PictureInPicture() {
       // Drag ended — snap to edge
       snapToEdge(position.x, position.y);
     }
-  }, [isDragging, activeDmCall, currentVoiceChannelId, channelToSpaceMap, navigate, snapToEdge, position]);
+  }, [isDragging, currentVoiceChannelId, channelToSpaceMap, navigate, snapToEdge, position]);
 
   const handleClose = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();

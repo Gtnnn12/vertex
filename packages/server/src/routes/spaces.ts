@@ -27,6 +27,7 @@ import { AVATAR_COLORS } from '@backspace/shared';
 import { sanitizeUser } from '../utils/sanitize.js';
 import { checkVoicePermissions } from '../ws/events.js';
 import { getLocalInviteSnapshot } from '../utils/spaceInviteSnapshot.js';
+import { requireEvoLevel, assertRoleColorLimit, getEmojiLimit, assertEmojiLimit, validateInviteSlug, getEvoState } from '../utils/evoLimits.js';
 
 function rowToSpace(row: typeof schema.spaces.$inferSelect): Space {
   return {
@@ -39,6 +40,11 @@ function rowToSpace(row: typeof schema.spaces.$inferSelect): Space {
     inviteCode: row.inviteCode,
     visibility: (row.visibility ?? 'private') as Space['visibility'],
     description: row.description ?? null,
+    // Modelo boosts: el nivel es DERIVADO (nº de mejoras activas), nunca
+    // almacenado. La columna server_evo_level queda como legacy siempre-0.
+    serverEvoLevel: getEvoState(row).effectiveLevel,
+    customInviteSlug: row.customInviteSlug ?? null,
+    bannerContentType: row.bannerContentType ?? null,
     createdAt: row.createdAt,
   };
 }
@@ -385,7 +391,7 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
     preHandler: authenticate,
   }, async (request, reply) => {
     const { id } = request.params;
-    const { name, icon, banner, avatarColor, visibility, description } = request.body;
+    const { name, icon, banner, bannerContentType, iconContentType, avatarColor, visibility, description } = request.body;
     const db = getDb();
 
     const server = db.select().from(schema.spaces).where(eq(schema.spaces.id, id)).get();
@@ -412,11 +418,53 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
     const oldBanner = server.banner;
 
     if (icon !== undefined) {
-      updates.icon = icon || null;
+      if (icon) {
+        // Animated icon (gif/webp-animated/apng) is an Evolutions level 1+
+        // benefit. Static icons remain free for every server. Content type is
+        // passed by the client from the uploaded file; absent → treat static.
+        const iconAnimated = iconContentType === 'image/gif' || iconContentType === 'image/webp' || iconContentType === 'image/apng';
+        if (iconAnimated) {
+          try {
+            requireEvoLevel(server, 'animatedIcon');
+          } catch (e) {
+            const ev = e as Error & { statusCode?: number; code?: string };
+            if (ev.statusCode === 403 && ev.code) {
+              return reply.code(403).send({ error: ev.message, code: ev.code, statusCode: 403 });
+            }
+            throw e;
+          }
+        }
+        updates.icon = icon;
+      } else {
+        updates.icon = null;
+      }
     }
 
     if (banner !== undefined) {
-      updates.banner = banner || null;
+      // Server Evolutions cosmetic gate (modelo boosts): a custom banner
+      // requires level 1+, computed from the space's active boosts. When the
+      // level is below the requirement the request still succeeds (200) and
+      // the banner silently clears, so client and server agree on stored
+      // data. An ANIMATED banner (gif/webp-animated) is level 2 only.
+      if (banner) {
+        const contentType = typeof bannerContentType === 'string' && bannerContentType ? bannerContentType : null;
+        const animated = contentType === 'image/gif' || contentType === 'image/webp' || contentType === 'image/apng';
+        try {
+          requireEvoLevel(server, 'banner');
+          if (animated) requireEvoLevel(server, 'animatedBanner');
+          updates.banner = banner;
+          updates.bannerContentType = animated ? contentType : (contentType ? null : null);
+        } catch (e) {
+          const ev = e as Error & { statusCode?: number; code?: string };
+          if (ev.statusCode === 403 && ev.code) {
+            return reply.code(403).send({ error: ev.message, code: ev.code, statusCode: 403 });
+          }
+          throw e;
+        }
+      } else {
+        updates.banner = null;
+        updates.bannerContentType = null;
+      }
     }
 
     if (avatarColor !== undefined) {
@@ -491,6 +539,10 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
 
     return reply.code(200).send(spaceData);
   });
+
+  // (POST /api/spaces/:id/evolution REMOVED — modelo boosts: owners ya no
+  // compran directo. El nivel sube con las mejoras acumuladas de la comunidad
+  // vía POST /api/spaces/:id/boost, disponible para cualquier miembro.)
 
   // DELETE /api/spaces/:id - Delete server (owner only)
   app.delete<{ Params: { id: string } }>('/api/spaces/:id', {
@@ -1048,6 +1100,23 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
       return reply.code(409).send({ error: 'A role with this name already exists', statusCode: 409 });
     }
 
+    // Server Evolutions: custom role colors are limited per level (base 1,
+    // N1 5, N2 unlimited). Only enforced when SETTING a non-default color.
+    if (color && typeof color === 'string' && color.toLowerCase() !== '#b9bbbe') {
+      const space = db.select().from(schema.spaces).where(eq(schema.spaces.id, id)).get();
+      if (space) {
+        try {
+          assertRoleColorLimit(space);
+        } catch (e) {
+          const ev = e as Error & { statusCode?: number; code?: string; limit?: number };
+          if (ev.statusCode === 403 && ev.code) {
+            return reply.code(403).send({ error: ev.message, code: ev.code, limit: ev.limit, statusCode: 403 });
+          }
+          throw e;
+        }
+      }
+    }
+
     const roleId = generateSnowflake();
     db.insert(schema.roles).values({
       id: roleId,
@@ -1099,7 +1168,27 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
       }
       updates.name = trimmed;
     }
-    if (color !== undefined) updates.color = color;
+    if (color !== undefined) {
+      // Same Evolutions color gate as POST — counts all OTHER custom-colored
+      // roles, so re-saving the same color on the same role never trips it.
+      if (color && typeof color === 'string' && color.toLowerCase() !== '#b9bbbe') {
+        const space = db.select().from(schema.spaces).where(eq(schema.spaces.id, id)).get();
+        if (space) {
+          try {
+            const existing = db.select().from(schema.roles).where(eq(schema.roles.id, roleId)).get();
+            const wasCustom = existing && (existing.color ?? '#b9bbbe').toLowerCase() !== '#b9bbbe';
+            if (!wasCustom) assertRoleColorLimit(space);
+          } catch (e) {
+            const ev = e as Error & { statusCode?: number; code?: string; limit?: number };
+            if (ev.statusCode === 403 && ev.code) {
+              return reply.code(403).send({ error: ev.message, code: ev.code, limit: ev.limit, statusCode: 403 });
+            }
+            throw e;
+          }
+        }
+      }
+      updates.color = color;
+    }
     if (position !== undefined) updates.position = position;
 
     if (permissions !== undefined) {

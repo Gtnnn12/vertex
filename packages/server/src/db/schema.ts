@@ -22,6 +22,8 @@ export const users = sqliteTable('users', {
   discoverable: integer('discoverable').default(1),
   profileUpdatedAt: integer('profile_updated_at'),
   passwordChangedAt: integer('password_changed_at'),
+  /** Epoch ms of the last nickname (displayName) change — drives the 15-day cooldown. */
+  nicknameChangedAt: integer('nickname_changed_at'),
   showActivity: integer('show_activity').notNull().default(1),
   federationRegistryUpdatedAt: integer('federation_registry_updated_at').default(0),
   federationHealPending: integer('federation_heal_pending').default(0),
@@ -37,6 +39,10 @@ export const users = sqliteTable('users', {
   musicWidgetStyle: text('music_widget_style'),
   /** Profile board (Tablero): JSON array of BoardWidget — Netrex-gated on save. */
   profileBoard: text('profile_board'),
+  /** Personal profile tint (hex) — colors panel, banner glow and borders. */
+  profileAccent: text('profile_accent'),
+  /** Monedero de créditos (wallet). Solo se mueve vía credit_transactions. */
+  creditBalance: integer('credit_balance').notNull().default(0),
   staffRole: text('staff_role'),
   lastSeenAt: integer('last_seen_at'),  bannedUntil: integer('banned_until'),
   banReason: text('ban_reason'),
@@ -55,8 +61,95 @@ export const spaces = sqliteTable('spaces', {
   inviteCode: text('invite_code').unique(),
   visibility: text('visibility').default('private'),
   description: text('description'),
+  /** Server Evolutions level (0 = base, 1, 2). Gated on the owner's real Netrex entitlement. */
+  serverEvoLevel: integer('server_evo_level').notNull().default(0),
+  /** Custom invite slug (Evolutions level 1+). Null = random code. */
+  customInviteSlug: text('custom_invite_slug'),
+  /** Uploaded media MIME type of the banner ('image/gif' = animated, N2 only). */
+  bannerContentType: text('banner_content_type'),
   createdAt: integer('created_at').notNull(),
 });
+
+/**
+ * Audit trail de TODO movimiento de créditos: amount con signo (+ recarga,
+ * − gasto) y reason. Nunca créditos de la nada sin registro.
+ */
+export const creditTransactions = sqliteTable('credit_transactions', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  /** Signed delta: positive = top-up, negative = spend. */
+  amount: integer('amount').notNull(),
+  /** e.g. 'topup:pack_2' | 'spend:boost:<spaceId>' | 'spend:netrex:monthly' */
+  reason: text('reason').notNull(),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  userIdx: index('idx_credit_transactions_user_id').on(table.userId),
+}));
+
+/**
+ * Ticket de compra de créditos: el usuario confirma "Ya he pagado" (flujo
+ * paypal.me in-app) y conversa con el staff. status: open→approved|rejected.
+ * packId es '2' | '5' | '10' (euros del paquete).
+ */
+export const rechargeTickets = sqliteTable('recharge_tickets', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  packId: text('pack_id').notNull(),
+  status: text('status').notNull().default('open'),
+  createdAt: integer('created_at').notNull(),
+  resolvedAt: integer('resolved_at'),
+  adminNote: text('admin_note'),
+}, (table) => ({
+  userIdx: index('idx_recharge_tickets_user_id').on(table.userId),
+  statusIdx: index('idx_recharge_tickets_status').on(table.status),
+}));
+
+/** Mensaje del chat de un ticket (texto o captura; sender: 'user' | 'admin'). */
+export const rechargeMessages = sqliteTable('recharge_messages', {
+  id: text('id').primaryKey(),
+  ticketId: text('ticket_id').notNull().references(() => rechargeTickets.id, { onDelete: 'cascade' }),
+  /** NULL = mensaje de sistema (aprobado/rechazado/bienvenida). */
+  senderUserId: text('sender_user_id').references(() => users.id, { onDelete: 'cascade' }),
+  senderRole: text('sender_role').notNull(),
+  body: text('body'),
+  imageUrl: text('image_url'),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  ticketIdx: index('idx_recharge_messages_ticket_id').on(table.ticketId),
+}));
+
+export const spaceBoosts = sqliteTable('space_boosts', {
+  id: text('id').primaryKey(),
+  spaceId: text('space_id').notNull().references(() => spaces.id, { onDelete: 'cascade' }),
+  /** Member who purchased this boost (any member, not just the owner). */
+  userId: text('user_id').notNull().references(() => users.id),
+  createdAt: integer('created_at').notNull(),
+  /** Epoch ms. Expired boosts keep the row (freeze rule) but stop counting. */
+  expiresAt: integer('expires_at').notNull(),
+}, (table) => ({
+  spaceIdx: index('idx_space_boosts_space_id').on(table.spaceId),
+  userIdx: index('idx_space_boosts_user_id').on(table.userId),
+}));
+
+/** Purchased-but-not-yet-redeemed boost credits per user (billing webhook → POST /boost). */
+export const boostCredits = sqliteTable('boost_credits', {
+  userId: text('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
+  credits: integer('credits').notNull().default(0),
+  updatedAt: integer('updated_at').notNull(),
+});
+
+export const spaceEmojis = sqliteTable('space_emojis', {
+  id: text('id').primaryKey(),
+  spaceId: text('space_id').notNull().references(() => spaces.id, { onDelete: 'cascade' }),
+  /** Lowercase handle used as :name: — unique per space. */
+  name: text('name').notNull(),
+  /** Upload filename/path, same convention as avatars/banners. */
+  file: text('file').notNull(),
+  createdBy: text('created_by').notNull().references(() => users.id),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  uniqueName: uniqueIndex('space_emojis_space_name_unique').on(table.spaceId, table.name),
+}));
 
 export const spaceMembers = sqliteTable('space_members', {
   spaceId: text('space_id').notNull().references(() => spaces.id, { onDelete: 'cascade' }),
@@ -86,6 +179,8 @@ export const channels = sqliteTable('channels', {
   topic: text('topic'),
   position: integer('position').default(0),
   categoryId: text('category_id'),
+  /** Salas de eventos (event rooms) — Evolutions level 1+, voice only. */
+  isEventStage: integer('is_event_stage', { mode: 'boolean' }).default(false),
   createdAt: integer('created_at').notNull(),
 }, (table) => ({
   spaceIdx: index('idx_channels_space_id').on(table.spaceId),
@@ -686,4 +781,15 @@ export const spotifyTokens = sqliteTable('spotify_tokens', {
   connectedAt: integer('connected_at').notNull(),
   /** Epoch ms of the last successful currently-playing poll. */
   lastPolledAt: integer('last_polled_at'),
+});
+
+/** User-submitted improvement proposals, triaged in the Admin Center. */
+export const userSuggestions = sqliteTable('user_suggestions', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
+  /** Author snapshot — survives user deletion. */
+  username: text('username'),
+  text: text('text').notNull(),
+  createdAt: integer('created_at').notNull(),
+  status: text('status').notNull().default('pending'),
 });

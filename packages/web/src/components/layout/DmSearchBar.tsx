@@ -52,8 +52,8 @@ function DmSearchUserRow({ user, isSelected, selectedRef, onClick }: {
     <div
       ref={isSelected ? selectedRef : undefined}
       onClick={onClick}
-      className={`flex items-center gap-2.5 px-2 py-1.5 mx-1 rounded cursor-pointer transition-colors ${
-        isSelected ? 'bg-interactive-selected' : 'hover:bg-interactive-hover'
+      className={`flex items-center gap-2.5 px-2.5 py-1.5 mx-1 rounded-[8px] cursor-pointer transition-colors ${
+        isSelected ? 'bg-white/[0.06]' : 'hover:bg-white/[0.04]'
       }`}
     >
       <Avatar
@@ -101,8 +101,8 @@ function DmSearchDmRow({ item, isSelected, selectedRef, onClick }: {
     <div
       ref={isSelected ? selectedRef : undefined}
       onClick={onClick}
-      className={`flex items-center gap-2.5 px-2 py-1.5 mx-1 rounded cursor-pointer transition-colors ${
-        isSelected ? 'bg-interactive-selected' : 'hover:bg-interactive-hover'
+      className={`flex items-center gap-2.5 px-2.5 py-1.5 mx-1 rounded-[8px] cursor-pointer transition-colors ${
+        isSelected ? 'bg-white/[0.06]' : 'hover:bg-white/[0.04]'
       }`}
     >
       {item.isGroup ? (
@@ -359,7 +359,7 @@ export function DmSearchBar() {
       style={{ ...style, width: dropdownWidth > 0 ? dropdownWidth : undefined }}
       className="animate-fade-in"
     >
-      <div className="glass rounded-lg shadow-xl max-h-[360px] overflow-y-auto scrollbar-thin py-1">
+      <div className="glass rounded-[12px] shadow-xl max-h-[360px] overflow-y-auto scrollbar-thin py-1.5">
         {error && (
           <div className="px-3 py-2 text-txt-danger text-[13px]">{error}</div>
         )}
@@ -431,8 +431,8 @@ export function DmSearchBar() {
   return (
     <div ref={anchorRef} className="flex-1 min-w-0">
       {active ? (
-        <div className="flex-1 min-h-8 bg-surface-input rounded-[4px] flex items-center px-2 gap-1.5 border border-white/[0.06] shadow-input">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-txt-tertiary flex-shrink-0">
+        <div className="flex-1 h-9 bg-white/[0.05] rounded-[9px] flex items-center px-2.5 gap-2 border border-white/[0.07] shadow-[0_1px_4px_rgba(0,0,0,0.2)] hover:bg-white/[0.07] hover:border-white/[0.11] focus-within:bg-white/[0.07] focus-within:border-white/[0.16] transition-all">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" className="text-txt-tertiary flex-shrink-0">
             <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
           </svg>
           <input
@@ -448,9 +448,12 @@ export function DmSearchBar() {
       ) : (
         <button
           onClick={open}
-          className="w-full min-h-8 bg-surface-input text-txt-tertiary text-[13px] font-medium py-[5px] px-2 rounded-[4px] text-left border border-white/[0.06] shadow-input hover:border-white/[0.1] transition-colors"
+          className="w-full h-9 bg-white/[0.05] text-txt-tertiary text-[13px] font-medium px-2.5 rounded-[9px] text-left flex items-center gap-2 border border-white/[0.07] shadow-[0_1px_4px_rgba(0,0,0,0.2)] hover:bg-white/[0.07] hover:border-white/[0.11] hover:text-txt-primary transition-colors"
         >
-          {t('find_or_start_a_conversation')}
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" className="opacity-70 flex-shrink-0">
+            <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+          </svg>
+          <span className="flex-1 truncate">{t('find_or_start_a_conversation')}</span>
         </button>      )}
       {dropdown}
     </div>

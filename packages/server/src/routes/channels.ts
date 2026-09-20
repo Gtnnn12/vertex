@@ -8,6 +8,7 @@ import { permissionsToString } from '@backspace/shared/src/permissions.js';
 import { connectionManager } from '../ws/handler.js';
 import { checkVoicePermissions } from '../ws/events.js';
 import { deleteAttachmentFiles } from '../utils/fileCleanup.js';
+import { assertChannelLimit, requireEvoLevel } from '../utils/evoLimits.js';
 import type {
   CreateChannelRequest,
   UpdateChannelRequest,
@@ -24,6 +25,7 @@ function rowToChannel(row: typeof schema.channels.$inferSelect): Channel {
     topic: row.topic,
     position: row.position ?? 0,
     categoryId: row.categoryId ?? null,
+    isEventStage: row.isEventStage ?? false,
     createdAt: row.createdAt,
   };
 }
@@ -173,7 +175,7 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
     preHandler: authenticate,
   }, async (request, reply) => {
     const { id } = request.params;
-    const { name, type, topic, categoryId } = request.body;
+    const { name, type, topic, categoryId, isEventStage } = request.body;
     const db = getDb();
 
     const space = db.select().from(schema.spaces).where(eq(schema.spaces.id, id)).get();
@@ -221,16 +223,55 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
     const channelId = generateSnowflake();
     const now = Date.now();
 
-    db.insert(schema.channels).values({
-      id: channelId,
-      spaceId: id,
-      name: trimmedName,
-      type,
-      topic: topic?.trim() || null,
-      position: maxPosition + 1,
-      categoryId: validCategoryId,
-      createdAt: now,
-    }).run();
+    // Server Evolutions: salas de eventos (event stages) are a level 1+
+    // benefit, voice channels only.
+    let eventStage = false;
+    if (isEventStage === true) {
+      if (type !== 'voice') {
+        return reply.code(400).send({ error: 'Event stages must be voice channels', statusCode: 400 });
+      }
+      try {
+        requireEvoLevel(space, 'eventChannels');
+        eventStage = true;
+      } catch (e) {
+        const ev = e as Error & { statusCode?: number; code?: string };
+        if (ev.statusCode === 403 && ev.code) {
+          return reply.code(403).send({ error: ev.message, code: ev.code, statusCode: 403 });
+        }
+        throw e;
+      }
+    }
+
+    // Server Evolutions channel-limit enforcement: count real channels and
+    // reject inside the same write transaction that inserts the channel, so
+    // concurrent creations cannot race past the limit.
+    try {
+      db.transaction((tx) => {
+        assertChannelLimit(space, type);
+        tx.insert(schema.channels).values({
+          id: channelId,
+          spaceId: id,
+          name: trimmedName,
+          type,
+          topic: topic?.trim() || null,
+          position: maxPosition + 1,
+          categoryId: validCategoryId,
+          isEventStage: eventStage,
+          createdAt: now,
+        }).run();
+      });
+    } catch (err) {
+      const e = err as Error & { statusCode?: number; code?: string; limit?: number };
+      if (e.statusCode === 403 && e.code) {
+        return reply.code(403).send({
+          error: e.message,
+          code: e.code,
+          limit: e.limit,
+          statusCode: 403,
+        });
+      }
+      throw err;
+    }
 
     const channel = db.select().from(schema.channels).where(eq(schema.channels.id, channelId)).get();
     if (!channel) {

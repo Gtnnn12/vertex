@@ -9,6 +9,7 @@ import { checkFfmpeg } from './utils/thumbnail.js';
 import { authRoutes } from './routes/auth.js';
 import { userRoutes } from './routes/users.js';
 import { spaceRoutes } from './routes/spaces.js';
+import { spaceEvolutionRoutes } from './routes/spaceEvolution.js';
 import { channelRoutes } from './routes/channels.js';
 import { messageRoutes } from './routes/messages.js';
 import { uploadRoutes } from './routes/uploads.js';
@@ -30,7 +31,11 @@ import { adminCenterRoutes } from './routes/adminCenter.js';
 import { gifRoutes } from './routes/gif.js';
 import { federationRoutes } from './routes/federation.js';
 import { netrexRoutes } from './routes/netrex.js';
+import { creditsRoutes } from './routes/credits.js';
+import { registerRechargeRoutes } from './routes/recharge.js';
 import { spotifyRoutes } from './routes/spotify.js';
+import { registerAIRoutes } from './routes/ai.js';
+import { registerSuggestionRoutes } from './routes/suggestions.js';
 import { startFederationWorkers, stopFederationWorkers } from './utils/federationWorker.js';
 import { startBackupWorker, stopBackupWorker } from './utils/backupWorker.js';
 import { startNetrexExpiryWorker } from './utils/netrexWorker.js';
@@ -128,6 +133,7 @@ async function main(): Promise<void> {
   await app.register(authRoutes);
   await app.register(userRoutes);
   await app.register(spaceRoutes);
+  await app.register(spaceEvolutionRoutes);
   await app.register(channelRoutes);
   await app.register(messageRoutes);
   await app.register(uploadRoutes);
@@ -149,7 +155,11 @@ async function main(): Promise<void> {
   await app.register(gifRoutes);
   await app.register(federationRoutes);
   await app.register(netrexRoutes);
+  await app.register(creditsRoutes);
+  await app.register(registerRechargeRoutes);
   await app.register(spotifyRoutes);
+  await registerAIRoutes(app);
+  await registerSuggestionRoutes(app);
   await app.register(registerWebSocket);
 
   app.get('/api/health', async () => {

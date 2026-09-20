@@ -21,6 +21,19 @@ vi.mock('../../utils/mutuals', () => ({
   loadFederatedMutuals: vi.fn().mockResolvedValue({ mutualFriends: [], mutualSpaces: [] }),
 }));
 vi.mock('../../utils/userViewLookup', () => ({ useCanonicalUserView: (u: User) => u }));
+// Spotify presence reads this store; mocking it keeps the AudioManager
+// (AudioWorkletNode) import chain out of the jsdom test environment.
+vi.mock('../../stores/activityStore', () => ({
+  useActivityStore: (selector: (s: Record<string, unknown>) => unknown) =>
+    selector({ userActivities: new Map() }),
+}));
+// The Spotify vinyl block now lives in the popout footer; its style store
+// reaches the api client (unmocked chain → AudioManager → AudioWorkletNode,
+// absent in jsdom). Mock at the block level — the popout test only asserts
+// placement/clicks, not the vinyl.
+vi.mock('../spotify/SpotifyVinylBlock', () => ({
+  SpotifyVinylBlock: () => null,
+}));
 
 import { UserProfilePopout } from './UserProfilePopout';
 import { useUIStore } from '../../stores/uiStore';

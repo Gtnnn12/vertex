@@ -16,5 +16,6 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "isolatedModules": true
-  }
+  },
+  "exclude": ["**/contexts/**", "**/*.test.ts", "**/*.test.tsx"]
 }

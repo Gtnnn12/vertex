@@ -44,19 +44,23 @@ export function useAudioTrackPlayer(
 
   // Effect 1: Track attachment (keep-alive) + Web Audio pipeline build
   useEffect(() => {
+    console.log('[VERTEX useAudioTrackPlayer] Effect 1 triggered, track:', track?.id ?? 'null', 'kind:', track?.kind ?? 'n/a', 'readyState:', track?.readyState ?? 'n/a');
     const audioEl = audioRef.current;
 
     // Tear down previous Web Audio graph
     if (sourceRef.current) {
+      console.log('[VERTEX useAudioTrackPlayer]   tearing down previous source node');
       sourceRef.current.disconnect();
       sourceRef.current = null;
     }
     if (gainRef.current) {
+      console.log('[VERTEX useAudioTrackPlayer]   tearing down previous gain node');
       gainRef.current.disconnect();
       gainRef.current = null;
     }
 
     if (!track) {
+      console.log('[VERTEX useAudioTrackPlayer]   no track, clearing audioEl.srcObject');
       if (audioEl) audioEl.srcObject = null;
       return;
     }
@@ -64,32 +68,57 @@ export function useAudioTrackPlayer(
     // --- Keep-alive: attach track to <audio> element (always muted) ---
     // Chrome needs an HTML element consuming the WebRTC track or it
     // stops the audio pipeline for that track entirely.
+    console.log('[VERTEX useAudioTrackPlayer]   setting up keep-alive <audio> element');
     if (audioEl) {
-      audioEl.srcObject = new MediaStream([track]);
+      const stream = new MediaStream([track]);
+      console.log('[VERTEX useAudioTrackPlayer]   MediaStream created, id:', stream.id, 'active:', stream.active, 'tracks:', stream.getTracks().length);
+      audioEl.srcObject = stream;
       audioEl.muted = true;
       audioEl.volume = 0;
-      audioEl.play().catch(() => {});
+      console.log('[VERTEX useAudioTrackPlayer]   audioEl.srcObject set, calling play()');
+      audioEl.play().then(() => console.log('[VERTEX useAudioTrackPlayer]   audioEl.play() succeeded')).catch((e) => console.log('[VERTEX useAudioTrackPlayer]   audioEl.play() failed:', e));
     }
 
     // --- Web Audio pipeline for actual output ---
+    console.log('[VERTEX useAudioTrackPlayer]   getting AudioContext');
     const ctx = AudioManager.getInstance().ensureContext();
+    console.log('[VERTEX useAudioTrackPlayer]   AudioContext state:', ctx.state, 'sampleRate:', ctx.sampleRate);
 
-    const stream = new MediaStream([track]);
-    const source = ctx.createMediaStreamSource(stream);
+    const audioStream = new MediaStream([track]);
+    console.log('[VERTEX useAudioTrackPlayer]   MediaStream for WebAudio, id:', audioStream.id, 'active:', audioStream.active);
+    const source = ctx.createMediaStreamSource(audioStream);
+    console.log('[VERTEX useAudioTrackPlayer]   MediaStreamAudioSourceNode created');
     const gain = ctx.createGain();
+    console.log('[VERTEX useAudioTrackPlayer]   GainNode created');
 
     // Start gain at 0 to prevent pop, then ramp to target
     gain.gain.setValueAtTime(0, ctx.currentTime);
     const targetGain = mutedRef.current ? 0 : volumeRef.current;
     gain.gain.setTargetAtTime(targetGain, ctx.currentTime, 0.015);
+    console.log('[VERTEX useAudioTrackPlayer]   gain set to', targetGain, '(muted:', mutedRef.current, ')');
 
     source.connect(gain);
-    gain.connect(AudioManager.getInstance().getMasterOutput());
+    const masterOutput = AudioManager.getInstance().getMasterOutput();
+    gain.connect(masterOutput);
+    console.log('[VERTEX useAudioTrackPlayer]   connected source -> gain -> masterOutput');
 
     sourceRef.current = source;
     gainRef.current = gain;
 
+    // Resume AudioContext if suspended
+    if (ctx.state === 'suspended') {
+      console.log('[VERTEX useAudioTrackPlayer]   AudioContext is suspended, attempting resume()');
+      ctx.resume().then(() => {
+        console.log('[VERTEX useAudioTrackPlayer]   AudioContext.resume() succeeded, state:', ctx.state);
+      }).catch((e) => {
+        console.log('[VERTEX useAudioTrackPlayer]   AudioContext.resume() failed:', e);
+      });
+    } else {
+      console.log('[VERTEX useAudioTrackPlayer]   AudioContext state is:', ctx.state, '- no resume needed');
+    }
+
     return () => {
+      console.log('[VERTEX useAudioTrackPlayer]   cleanup - disconnecting nodes');
       source.disconnect();
       gain.disconnect();
       sourceRef.current = null;

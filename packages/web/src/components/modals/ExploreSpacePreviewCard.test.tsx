@@ -36,20 +36,20 @@ describe('ExploreSpacePreviewCard', () => {
   it('renders name, member count and a Join button for public spaces', () => {
     render(<ExploreSpacePreviewCard space={makeSpace()} onJoinSuccess={vi.fn()} />);
     expect(screen.getByText('Design Guild')).toBeInTheDocument();
-    expect(screen.getByText(/5 members/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /join/i })).toBeInTheDocument();
+    expect(screen.getByText(/5\s+Miembros/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /unirse/i })).toBeInTheDocument();
   });
 
   it('joins a public space and reports success', async () => {
     const user = userEvent.setup();
     const onJoinSuccess = vi.fn();
     render(<ExploreSpacePreviewCard space={makeSpace()} onJoinSuccess={onJoinSuccess} />);
-    await user.click(screen.getByRole('button', { name: /join/i }));
+    await user.click(screen.getByRole('button', { name: /unirse/i }));
     await waitFor(() => expect(onJoinSuccess).toHaveBeenCalledWith('s1'));
   });
 
   it('shows Request for request-visibility spaces', () => {
     render(<ExploreSpacePreviewCard space={makeSpace({ visibility: 'request' })} onJoinSuccess={vi.fn()} />);
-    expect(screen.getByRole('button', { name: /request/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /solicitar/i })).toBeInTheDocument();
   });
 });

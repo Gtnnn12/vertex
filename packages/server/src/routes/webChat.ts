@@ -174,26 +174,6 @@ export async function webChatRoutes(app: FastifyInstance): Promise<void> {
       config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
     },
     async (request, reply) => {
-      // Same origin policy as the web portal: only the marketing site (prod +
-      // dev) may call the public chat endpoint.
-      const origin = request.headers.origin;
-      const allowed = [
-        'https://vertexpag.vercel.app',
-        'http://localhost:5173',
-        'http://127.0.0.1:5173',
-        'http://localhost:5174',
-        'http://127.0.0.1:5174',
-        'http://localhost:4173',
-        'http://127.0.0.1:4173',
-      ];
-      const extra = (process.env.WEB_EXTRA_ORIGINS ?? '')
-        .split(',')
-        .map((o) => o.trim())
-        .filter(Boolean);
-      if (origin && !allowed.includes(origin) && !extra.includes(origin)) {
-        return reply.code(403).send({ error: 'Origin not allowed', statusCode: 403 });
-      }
-
       const { message } = request.body ?? {};
       if (typeof message !== 'string' || message.trim().length === 0 || message.length > 1000) {
         return reply.code(400).send({ error: 'Message is required (max 1000 chars)', statusCode: 400 });

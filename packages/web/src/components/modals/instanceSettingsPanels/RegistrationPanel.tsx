@@ -1172,6 +1172,7 @@ function InviteRow({ invite, expanded, onToggleExpand, onMutate }: InviteRowProp
   const [confirmRevoke, setConfirmRevoke] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const { t } = useLanguage();
 
   const usageLabel =
     invite.maxUses === null
@@ -1225,8 +1226,8 @@ function InviteRow({ invite, expanded, onToggleExpand, onMutate }: InviteRowProp
   //   active   → "X / Y uses · Expires in 3 days · Created by alice"
   //   archived → "X / Y uses · Revoked 4/12/2026 · 2d ago"
   const subtitle = isActive
-    ? `${usageLabel} uses · ${formatExpiry(invite)} · Created by ${createdByLabel}`
-    : `${usageLabel} uses · ${formatExpiry(invite)} · ${formatRelative(invite.createdAt)}`;
+    ? `${usageLabel} uses · ${formatExpiry(invite, t)} · Created by ${createdByLabel}`
+    : `${usageLabel} uses · ${formatExpiry(invite, t)} · ${formatRelative(invite.createdAt, t)}`;
 
   // Archived row 1 second-cell label + value. EXHAUSTED has no dedicated terminal
   // timestamp on the invite, so we surface lastRedeemedAt (the moment that drove
@@ -1235,20 +1236,20 @@ function InviteRow({ invite, expanded, onToggleExpand, onMutate }: InviteRowProp
   let archivedTerminalValue: string;
   if (invite.status === 'expired') {
     archivedTerminalLabel = 'EXPIRED AT';
-    archivedTerminalValue = invite.expiresAt !== null ? formatRelative(invite.expiresAt) : '—';
+    archivedTerminalValue = invite.expiresAt !== null ? formatRelative(invite.expiresAt, t) : '—';
   } else if (invite.status === 'revoked') {
     archivedTerminalLabel = 'REVOKED AT';
-    archivedTerminalValue = invite.revokedAt !== null ? formatRelative(invite.revokedAt) : '—';
+    archivedTerminalValue = invite.revokedAt !== null ? formatRelative(invite.revokedAt, t) : '—';
   } else {
     // exhausted
     archivedTerminalLabel = 'EXHAUSTED';
     archivedTerminalValue =
-      invite.lastRedeemedAt !== null ? formatRelative(invite.lastRedeemedAt) : '—';
+      invite.lastRedeemedAt !== null ? formatRelative(invite.lastRedeemedAt, t) : '—';
   }
 
   const tokenDisplay = `…${invite.token.slice(-6)}`;
   const lastRedeemedDisplay =
-    invite.lastRedeemedAt !== null ? formatRelative(invite.lastRedeemedAt) : '—';
+    invite.lastRedeemedAt !== null ? formatRelative(invite.lastRedeemedAt, t) : '—';
 
   return (
     <>
@@ -1279,7 +1280,7 @@ function InviteRow({ invite, expanded, onToggleExpand, onMutate }: InviteRowProp
               <span
                 className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded ${inviteStatusPillColor(invite.status)}`}
               >
-                {inviteStatusLabel(invite.status)}
+                {inviteStatusLabel(invite.status, t)}
               </span>
             )}
             <span className="text-txt-tertiary text-xs">{expanded ? '▾' : '▸'}</span>
@@ -1305,7 +1306,7 @@ function InviteRow({ invite, expanded, onToggleExpand, onMutate }: InviteRowProp
                 {isActive ? (
                   <div>
                     <div className="text-[10px] text-txt-tertiary uppercase tracking-wider mb-0.5">Expires</div>
-                    <div className="text-xs text-txt-secondary">{formatExpiry(invite)}</div>
+                    <div className="text-xs text-txt-secondary">{formatExpiry(invite, t)}</div>
                   </div>
                 ) : (
                   <div>
@@ -1317,7 +1318,7 @@ function InviteRow({ invite, expanded, onToggleExpand, onMutate }: InviteRowProp
                 )}
                 <div>
                   <div className="text-[10px] text-txt-tertiary uppercase tracking-wider mb-0.5">Created</div>
-                  <div className="text-xs text-txt-secondary">{formatRelative(invite.createdAt)}</div>
+                  <div className="text-xs text-txt-secondary">{formatRelative(invite.createdAt, t)}</div>
                 </div>
               </div>
 

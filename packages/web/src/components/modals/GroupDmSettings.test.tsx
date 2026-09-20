@@ -207,7 +207,7 @@ describe('GroupDmSettings — non-owner', () => {
 
     renderModal();
 
-    const input = screen.getByLabelText('Group name') as HTMLInputElement;
+    const input = screen.getByLabelText('Nombre del grupo') as HTMLInputElement;
     expect(input.disabled).toBe(true);
 
     // Save button is not rendered for non-owners; only "Close".
@@ -234,7 +234,7 @@ describe('GroupDmSettings — owner overview', () => {
 
     renderModal();
 
-    const input = screen.getByLabelText('Group name') as HTMLInputElement;
+    const input = screen.getByLabelText('Nombre del grupo') as HTMLInputElement;
     expect(input.disabled).toBe(false);
     expect(input.value).toBe('Old Name');
 
@@ -314,7 +314,7 @@ describe('GroupDmSettings — icon staging', () => {
     expect(mockStartUpload).not.toHaveBeenCalled();
     expect(mockUpdateMetadata).not.toHaveBeenCalled();
     // Direct /api/uploads POSTs (legacy paths) also must not have happened.
-    const uploadCalls = fetchSpy.mock.calls.filter(([url]: [string]) =>
+    const uploadCalls = fetchSpy.mock.calls.filter(([url]) =>
       typeof url === 'string' && url.includes('/api/uploads'),
     );
     expect(uploadCalls.length).toBe(0);
@@ -372,7 +372,7 @@ describe('GroupDmSettings — leave', () => {
     await user.click(leaveBtn);
 
     // The ConfirmDialog mounts in the same tree (no portal-mocking needed).
-    const confirmBtn = await screen.findByRole('button', { name: /^leave$/i });
+    const confirmBtn = await screen.findByRole('button', { name: /^salir$/i });
     await user.click(confirmBtn);
 
     await waitFor(() => expect(mockLeave).toHaveBeenCalledWith('dm-1'));

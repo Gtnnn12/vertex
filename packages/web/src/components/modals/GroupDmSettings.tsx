@@ -13,6 +13,7 @@ import { api } from '../../api/client';
 import { isSelf, parseFederatedUsername } from '../../utils/identity';
 import { AvatarStack } from '../ui/AvatarStack';
 import { DmMemberRow, type DmMemberRowAction } from '../layout/DmMemberRow';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { pointAnchor } from '../../hooks/useFloatingPosition';
 
 const MAX_NAME_LENGTH = 50;
@@ -40,6 +41,7 @@ type Tab = 'overview' | 'members';
  * Cancel discards the staged blob; no upload fires.
  */
 export function GroupDmSettings() {
+  const { t } = useLanguage();
   const activeModal = useUIStore((s) => s.activeModal);
   const modalData = useUIStore((s) => s.modalData);
   const closeModal = useUIStore((s) => s.closeModal);
@@ -221,7 +223,7 @@ export function GroupDmSettings() {
       // (`dm_channel_updated`) updates the open channel in-place.
       closeModal();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to save settings';
+      const msg = err instanceof Error ? err.message : t('failed_to_save_settings');
       setSaveError(msg);
       addToast(msg, 'warning', 4000);
     } finally {
@@ -240,7 +242,7 @@ export function GroupDmSettings() {
       await api.dm.leave(dmChannelId);
       closeModal();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to leave group';
+      const msg = err instanceof Error ? err.message : t('failed_to_leave_group');
       addToast(msg, 'warning', 4000);
     } finally {
       setLeaving(false);
@@ -316,14 +318,14 @@ export function GroupDmSettings() {
     try {
       await api.dm.transferOwnership(dmChannelId, pendingTransfer.id);
       addToast(
-        `Ownership transferred to ${pendingTransfer.displayName ?? parseFederatedUsername(pendingTransfer.username).baseName}`,
+        t('ownership_transferred_to').replace('{name}', pendingTransfer.displayName ?? parseFederatedUsername(pendingTransfer.username).baseName),
         'success',
         3000,
       );
       setPendingTransfer(null);
     } catch (err) {
       addToast(
-        err instanceof Error ? err.message : 'Failed to transfer ownership',
+        err instanceof Error ? err.message : t('failed_to_transfer_ownership'),
         'warning',
         3000,
       );
@@ -345,12 +347,12 @@ export function GroupDmSettings() {
     if (isMobile) setMobileView('content');
   };
 
-  const headerName = dmChannel.name && dmChannel.name.length > 0 ? dmChannel.name : (fallbackName || 'Group DM');
+  const headerName = dmChannel.name && dmChannel.name.length > 0 ? dmChannel.name : (fallbackName || t('new_direct_message'));
 
   // ── Overview panel ─────────────────────────────────────────────────────
   const overviewPanel = (
     <div className="space-y-5">
-      <h2 className="text-lg font-semibold text-txt-primary mb-6">Overview</h2>
+      <h2 className="text-lg font-semibold text-txt-primary mb-6">{t('overview')}</h2>
 
       {/* Hero icon */}
       <div className="flex flex-col items-center gap-3">
@@ -360,7 +362,7 @@ export function GroupDmSettings() {
             onClick={handleHeroClick}
             disabled={!isOwner}
             data-group-dm-icon-hero
-            aria-label={isOwner ? 'Change group icon' : 'Group icon'}
+            aria-label={isOwner ? t('change_group_icon') : t('group_icon')}
             className={`relative block rounded-full overflow-hidden group ${
               isOwner ? 'cursor-pointer' : 'cursor-default'
             }`}
@@ -381,7 +383,7 @@ export function GroupDmSettings() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
-                <span className="mt-1">Click to upload</span>
+                <span className="mt-1">{t('click_to_upload')}</span>
               </div>
             )}
           </button>
@@ -392,7 +394,7 @@ export function GroupDmSettings() {
               type="button"
               onClick={handleClearIcon}
               data-group-dm-icon-clear
-              aria-label="Remove group icon"
+              aria-label={t('remove_group_icon')}
               className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-surface-elevated border border-border-hard flex items-center justify-center text-txt-tertiary hover:text-txt-danger hover:bg-accent-rose/10 transition-colors"
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
@@ -416,18 +418,18 @@ export function GroupDmSettings() {
       {/* Group name */}
       <div>
         <label className="block text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">
-          Group Name
+          {t('group_name')}
         </label>
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value.slice(0, MAX_NAME_LENGTH))}
-          placeholder={fallbackName || 'Group DM'}
+          placeholder={fallbackName || t('new_direct_message')}
           disabled={!isOwner}
           maxLength={MAX_NAME_LENGTH}
           className="input-standard w-full"
           data-group-dm-name-input
-          aria-label="Group name"
+          aria-label={t('group_name')}
         />
         {isOwner && (
           <div className="text-[11px] text-txt-tertiary text-right mt-1">
@@ -530,9 +532,9 @@ export function GroupDmSettings() {
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         </svg>
-        Add Member
+        {t('add_member')}
         {!canAddMembers && (
-          <span className="ml-auto text-[11px] text-txt-tertiary">Group is full</span>
+          <span className="ml-auto text-[11px] text-txt-tertiary">{t('group_is_full')}</span>
         )}
       </button>
 
@@ -585,13 +587,13 @@ export function GroupDmSettings() {
           {/* Nav list */}
           <div className="glass-bubble rounded-lg p-2 flex-1 flex flex-col">
             <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-3 py-1">
-              General
+              {t('general')}
             </div>
             <button type="button" onClick={() => handleTabClick('overview')} className={tabBtnClass('overview')}>
-              Overview
+              {t('overview')}
             </button>
             <button type="button" onClick={() => handleTabClick('members')} className={tabBtnClass('members')}>
-              Members
+              {t('members')}
             </button>
           </div>
         </div>
@@ -613,13 +615,13 @@ export function GroupDmSettings() {
 
             <div className="glass-bubble rounded-lg p-2 space-y-0.5">
               <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-3 py-1">
-                General
+                {t('general')}
               </div>
               <button type="button" onClick={() => handleTabClick('overview')} className={tabBtnClass('overview')}>
-                Overview
+                {t('overview')}
               </button>
               <button type="button" onClick={() => handleTabClick('members')} className={tabBtnClass('members')}>
-                Members
+                {t('members')}
               </button>
             </div>
           </div>
@@ -634,12 +636,12 @@ export function GroupDmSettings() {
                   type="button"
                   onClick={() => setMobileView('tabs')}
                   className="flex items-center gap-1.5 text-txt-tertiary hover:text-txt-secondary mb-4 text-sm"
-                  aria-label="Back to group DM settings menu"
+                  aria-label={t('back_to_group_settings')}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
                   </svg>
-                  Group Settings
+                  {t('group_settings')}
                 </button>
               )}
               {tab === 'overview' && overviewPanel}
@@ -655,7 +657,7 @@ export function GroupDmSettings() {
         onClose={() => setCropSrc(null)}
         imageSrc={cropSrc ?? ''}
         onCropComplete={handleCropComplete}
-        title="Crop Group Icon"
+        title={t('crop_group_icon')}
         cropShape="round"
         aspectRatio={1}
         maxOutputDimension={256}
@@ -666,9 +668,9 @@ export function GroupDmSettings() {
         isOpen={confirmLeave}
         onClose={() => { if (!leaving) setConfirmLeave(false); }}
         onConfirm={handleConfirmLeave}
-        title="Leave Group"
-        description={`Leave "${headerName}"? You will stop receiving messages from this conversation.`}
-        confirmLabel="Leave"
+        title={t('leave_group')}
+        description={t('leave_group_desc').replace('{name}', headerName)}
+        confirmLabel={t('leave')}
         variant="danger"
         loading={leaving}
       />
@@ -677,13 +679,13 @@ export function GroupDmSettings() {
         isOpen={!!pendingKick}
         onClose={() => { if (!memberActionSubmitting) setPendingKick(null); }}
         onConfirm={confirmKick}
-        title="Remove from Group"
+        title={t('remove_from_group')}
         description={
           pendingKick
-            ? `Remove ${pendingKick.displayName ?? parseFederatedUsername(pendingKick.username).baseName} from this group? They won't be able to see new messages.`
+            ? t('remove_user_from_group').replace('{name}', pendingKick.displayName ?? parseFederatedUsername(pendingKick.username).baseName)
             : ''
         }
-        confirmLabel="Remove"
+        confirmLabel={t('remove')}
         variant="danger"
         loading={memberActionSubmitting}
       />
@@ -692,13 +694,13 @@ export function GroupDmSettings() {
         isOpen={!!pendingTransfer}
         onClose={() => { if (!memberActionSubmitting) setPendingTransfer(null); }}
         onConfirm={confirmTransfer}
-        title="Transfer Ownership"
+        title={t('transfer_ownership')}
         description={
           pendingTransfer
-            ? `Transfer ownership to ${pendingTransfer.displayName ?? parseFederatedUsername(pendingTransfer.username).baseName}? You'll lose owner privileges.`
+            ? t('transfer_ownership_to').replace('{name}', pendingTransfer.displayName ?? parseFederatedUsername(pendingTransfer.username).baseName)
             : ''
         }
-        confirmLabel="Transfer"
+        confirmLabel={t('transfer')}
         variant="warning"
         loading={memberActionSubmitting}
       />

@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { Modal } from '../ui/Modal';
 import { useUIStore } from '../../stores/uiStore';
 import { useSpaceStore } from '../../stores/spaceStore';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 export function CreateCategoryModal() {
+  const { t } = useLanguage();
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -19,12 +21,12 @@ export function CreateCategoryModal() {
     setError('');
 
     if (!name.trim()) {
-      setError('Category name is required');
+      setError(t('category_name_required'));
       return;
     }
 
     if (!currentSpaceId) {
-      setError('No space selected');
+      setError(t('no_space_selected'));
       return;
     }
 
@@ -34,14 +36,14 @@ export function CreateCategoryModal() {
       closeModal();
       setName('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create category');
+      setError(err instanceof Error ? err.message : t('failed_to_create_category'));
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={closeModal} title="Create Category" mobileStyle="sheet">
+    <Modal isOpen={isOpen} onClose={closeModal} title={t('create_category')} mobileStyle="sheet">
       <form onSubmit={handleSubmit}>
         {error && (
           <div className="mb-3 p-2 bg-accent-rose/10 border border-accent-rose/30 rounded text-txt-danger text-sm">
@@ -51,7 +53,7 @@ export function CreateCategoryModal() {
 
         <div className="mb-4">
           <label className="block text-xs font-bold text-txt-secondary uppercase mb-2">
-            Category Name
+            {t('category_name')}
           </label>
           <input
             type="text"
@@ -71,14 +73,14 @@ export function CreateCategoryModal() {
                 onClick={closeModal}
                 className="px-3 py-1 text-sm text-txt-tertiary hover:text-txt-secondary transition-colors"
               >
-                Cancel
+                {t('cancel')}
               </button>
               <button
                 type="submit"
                 disabled={isLoading}
                 className="px-3 py-1.5 bg-accent-primary hover:bg-accent-primary/80 text-white text-sm font-medium rounded-full transition-colors disabled:opacity-50"
               >
-                {isLoading ? 'Creating...' : 'Create Category'}
+                {isLoading ? t('creating') : t('create_category')}
               </button>
             </div>
           </div>

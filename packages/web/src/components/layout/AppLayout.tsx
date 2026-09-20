@@ -14,12 +14,15 @@ import { InviteModal } from '../modals/InviteModal';
 import { UserSettingsModal } from '../modals/UserSettings';
 import { SpaceSettingsModal } from '../modals/SpaceSettings';
 import { ChannelSettingsModal } from '../modals/ChannelSettingsModal';
+import { BulkPermissionsModal } from '../modals/BulkPermissionsModal';
 import { CategorySettingsModal } from '../modals/CategorySettingsModal';
 import { NewDmModal } from '../modals/NewDmModal';
 import { AddDmMemberModal } from '../modals/AddDmMemberModal';
 import { GroupDmSettings } from '../modals/GroupDmSettings';
 import { UserProfileModal } from '../modals/UserProfileModal';
-import { IncomingCallModal } from '../voice/IncomingCallModal';
+import { PersonalizationEditorModal } from '../netrex/PersonalizationEditorModal';
+import { PremiumBlockModal } from '../netrex/PremiumBlockModal';
+import { CreditsShopModal } from '../credits/CreditsShop';
 import { PictureInPicture } from '../voice/PictureInPicture';
 import { SoundController } from '../voice/SoundController';
 import { GlobalAudioRenderer } from '../voice/GlobalAudioRenderer';
@@ -36,6 +39,8 @@ import { useLiveKit } from '../../hooks/useLiveKit';
 import { useKeybinds } from '../../hooks/useKeybinds';
 import { useDeepLinkHandler } from '../../platform/deepLink';
 import { initActivityBridge, teardownActivityBridge } from '../../platform/activityBridge';
+import { initManualActivityProvider, useActivityProviderRegistry } from '../../activity';
+import { useActivityStore } from '../../stores/activityStore';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { useChatStore } from '../../stores/chatStore';
 import { useUIStore } from '../../stores/uiStore';
@@ -92,7 +97,20 @@ export function AppLayout() {
   // so this is safe to call before any user interaction.
   const outputDeviceId = useVoiceStore((s) => s.outputDeviceId);
   useEffect(() => {
-    AudioManager.getInstance().setOutputDevice(outputDeviceId);
+    let cancelled = false;
+    const syncOutputDevice = async () => {
+      // If a non-default device is configured, ensure it is still available before passing to AudioManager
+      if (outputDeviceId !== 'default' && typeof navigator !== 'undefined' && typeof navigator.mediaDevices?.enumerateDevices === 'function') {
+        await useVoiceStore.getState().pruneStaleDevices();
+        if (cancelled) return;
+      }
+      const activeId = useVoiceStore.getState().outputDeviceId;
+      AudioManager.getInstance().setOutputDevice(activeId);
+    };
+    void syncOutputDevice();
+    return () => {
+      cancelled = true;
+    };
   }, [outputDeviceId]);
 
   // Audio device hot-plug handler.
@@ -214,7 +232,6 @@ export function AppLayout() {
   }, []);
 
   const { user, isLoading } = useAuth();
-  const toggleSidebar = useUIStore((s) => s.toggleSidebar);
   const showBootSkeleton = useDelayedLoading(isLoading);
   const setCurrentSpace = useSpaceStore((s) => s.setCurrentSpace);
   const loadSpaceDetail = useSpaceStore((s) => s.loadSpaceDetail);
@@ -257,6 +274,32 @@ export function AppLayout() {
 
   // Deep link handler for Electron (backspace:// protocol)
   useDeepLinkHandler();
+
+  // Activity provider system: manual/web provider registered first; the
+  // Electron desktop provider is wrapped as a registry provider below, and a
+  // future Tauri/native provider is a one-line registration away.
+  useEffect(() => {
+    initManualActivityProvider();
+
+    // DesktopActivityProvider seam: adapts the existing Electron bridge
+    // (window.backspace process detection) to the provider registry.
+    if (window.backspace?.getCurrentActivity) {
+      const desktopProvider = {
+        id: 'desktop-electron',
+        getCurrentActivity: () => {
+          const acts = useActivityStore.getState().myActivities;
+          return acts && acts.length > 0 ? acts[0]! : null;
+        },
+      };
+      const registry = useActivityProviderRegistry.getState();
+      // Register the desktop provider FIRST (wins over manual) and keep the
+      // manual provider registered too; desktop returning null falls through
+      // to the manual activity.
+      registry.unregister('manual');
+      registry.register(desktopProvider);
+      initManualActivityProvider();
+    }
+  }, []);
 
   // Electron activity detection bridge (game/app process scanning → activityStore)
   useEffect(() => {
@@ -342,23 +385,23 @@ export function AppLayout() {
 
   if (!user || showBootSkeleton) {
     return (
-      <div className="h-full flex bg-surface-base" role="status" aria-label={t('loading_backspace')}>
-        {/* Space strip */}
-        <div className="w-[72px] hidden md:flex flex-col items-center gap-3 pt-4 bg-surface-base flex-shrink-0">
+      <div className="h-full flex bg-surface-base" role="status" aria-label={t('loading_vertex')}>
+        {/* Space strip — floating dock skeleton */}
+        <div className="w-[72px] hidden md:flex flex-col items-center gap-3 pt-4 bg-surface-base flex-shrink-0 md:mx-3 md:my-4 md:rounded-[18px] md:border md:border-white/[0.05]">
           {Array.from({ length: 5 }, (_, i) => (
             <div key={i} className="skeleton skeleton-circle w-12 h-12" style={{ animationDelay: `${i * 0.1}s` }} />
           ))}
         </div>
 
         {/* Sidebar */}
-        <div className="w-60 hidden md:flex bg-surface-channel flex-shrink-0 flex-col pt-4 px-2">
+        <div className="w-60 hidden md:flex bg-surface-channel flex-shrink-0 flex-col pt-4 px-2 md:pl-[96px]">
           {/* Header bar */}
-          <div className="h-4 mb-6 w-[60%] rounded-[8px] bg-interactive-muted" />
+          <div className="skeleton skeleton-bar w-[60%] h-4 mb-6 ml-2" />
           {/* Channel items */}
           {Array.from({ length: 8 }, (_, i) => (
             <div key={i} className="flex items-center gap-2 px-2 py-1.5 mb-0.5" style={{ animationDelay: `${i * 0.08}s` }}>
-              <div className="w-3.5 h-3.5 rounded-sm flex-shrink-0 bg-interactive-muted" style={{ animationDelay: `${i * 0.08}s` }} />
-              <div className="h-1.5 rounded-[4px] bg-interactive-muted flex-1" style={{ width: `${45 + (i * 11) % 35}%`, animationDelay: `${i * 0.08}s` }} />
+              <div className="skeleton w-3.5 h-3.5 rounded-sm flex-shrink-0" style={{ animationDelay: `${i * 0.08}s` }} />
+              <div className="skeleton skeleton-bar flex-1" style={{ width: `${45 + (i * 11) % 35}%`, animationDelay: `${i * 0.08}s` }} />
             </div>
           ))}
         </div>
@@ -366,20 +409,20 @@ export function AppLayout() {
         {/* Main chat area */}
         <div className="flex-1 bg-surface-chat flex flex-col">
           {/* Channel header */}
-          <div className="h-12 flex items-center px-4 border-b border-interactive-muted">
-            <div className="w-32 h-3.5 rounded-[4px] bg-interactive-muted" />
+          <div className="h-12 flex items-center px-4 border-b border-white/[0.04]">
+            <div className="skeleton skeleton-bar w-32 h-3.5" />
           </div>
 
           {/* Messages area — bottom-aligned */}
           <div className="flex-1 flex flex-col justify-end px-4 pb-6">
             {Array.from({ length: 6 }, (_, i) => (
               <div key={i} className="flex gap-3 mb-5" style={{ animationDelay: `${i * 0.12}s` }}>
-                <div className="w-10 h-10 rounded-full flex-shrink-0 bg-interactive-muted" style={{ animationDelay: `${i * 0.12}s` }} />
-                <div className="space-y-2 pt-1">
-                  <div className="h-2.5 rounded-[2px] bg-interactive-muted" style={{ width: `${20 + (i * 7) % 20}%`, animationDelay: `${i * 0.12}s` }} />
-                  <div className="h-2.5 rounded-[2px] bg-interactive-muted" style={{ width: `${50 + (i * 13) % 40}%`, animationDelay: `${i * 0.12}s` }} />
+                <div className="skeleton skeleton-circle w-10 h-10 flex-shrink-0" style={{ animationDelay: `${i * 0.12}s` }} />
+                <div className="flex-1 space-y-2 pt-1">
+                  <div className="skeleton skeleton-bar" style={{ width: `${20 + (i * 7) % 20}%`, animationDelay: `${i * 0.12}s` }} />
+                  <div className="skeleton skeleton-bar h-2.5" style={{ width: `${50 + (i * 13) % 40}%`, animationDelay: `${i * 0.12}s` }} />
                   {i % 3 === 0 && (
-                    <div className="h-2.5 rounded-[2px] bg-interactive-muted" style={{ width: `${30 + (i * 11) % 35}%`, animationDelay: `${i * 0.12}s` }} />
+                    <div className="skeleton skeleton-bar h-2.5" style={{ width: `${30 + (i * 11) % 35}%`, animationDelay: `${i * 0.12}s` }} />
                   )}
                 </div>
               </div>
@@ -404,12 +447,12 @@ export function AppLayout() {
         {/* UserSettings is a pushed screen on mobile (MobileSettingsScreen), not a modal */}
         <SpaceSettingsModal />
         <ChannelSettingsModal />
+        <BulkPermissionsModal />
         <CategorySettingsModal />
         <NewDmModal />
         <AddDmMemberModal />
         <GroupDmSettings />
         <UserProfileModal />
-        <IncomingCallModal />
         <ImagePreview />
         {/* PictureInPicture is desktop-only. Mobile has its own purpose-built
             voice chrome (MobileVoiceMiniBar + MobileVoiceFullScreen) mounted
@@ -430,64 +473,20 @@ export function AppLayout() {
 
   // ── Desktop layout ──
   return (
-    <div className="h-full flex flex-col relative bg-surface-base overflow-hidden">
-      {/* Top app header */}
-      <header className="h-14 flex items-center justify-between px-6 border-b border-border-hard bg-surface-base/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={toggleSidebar}
-            className="p-2 rounded-lg hover:bg-white/[0.06] transition-colors flex-shrink-0"
-            aria-label={t('toggle_sidebar')}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="shrink-0">
-              <path d="M3 12l2-2m0 0l7-7M5 10l7-7 7 7M5 14l7-7 7 7" />
-            </svg>
-          </button>
-          <span className="text-txt-primary font-medium text-[13px]">{t('app_name')}</span>
-        </div>
-        <div className="flex items-center gap-2 hidden md:block">
-          <button
-            onClick={toggleSidebar}
-            className="p-2 rounded-lg hover:bg-white/[0.06] transition-colors"
-            aria-label={t('toggle_sidebar')}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="shrink-0">
-              <path d="M3 12l2-2m0 0l7-7M5 10l7-7 7 7M5 14l7-7 7 7" />
-            </svg>
-          </button>
-        </div>
-      </header>
-
-      {/* Main layout */}
-      <div className="flex flex-col md:flex-row gap-6 p-4 md:p-6 min-h-screen">
-        {/* Space sidebar - reduced visual weight */}
-        <div
-          className={`w-[280px] transition-transform duration-200 ${sidebarOpen ? 'transform-none' : 'transform-translate-x-full'} md:translate-x-0 md:transform-none bg-surface-base/50 backdrop-blur-md border-r border-border-hard/30`}
-        >
-          <SpaceSidebar />
-        </div>
-
-        {/* Main content area with proper spacing */}
-        <div className="flex-1 flex flex-col gap-4 md:gap-6 min-w-0 pb-8">
-          <MainContent />
-          <RightPanel className="mt-4 md:mt-0" />
-        </div>
+    <div className="h-full flex flex-col md:grid md:grid-cols-[336px_1fr] md:grid-rows-[minmax(0,1fr)] bg-surface-base overflow-hidden">
+      {/* Space sidebar - always visible on desktop */}
+      <div className={`fixed inset-y-0 left-0 z-40 flex w-[312px] transition-transform duration-200 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} md:static md:z-auto md:w-auto md:transform-none`}>
+        <SpaceSidebar />
+        <ChannelSidebar />
       </div>
 
-      {/* Side toggler on mobile */}
-      {isMobile && (
-        <button
-          className="fixed left-4 top-1/2 -translate-y-1/2 z-50 p-2 rounded-lg hover:bg-white/[0.06] transition-colors"
-          onClick={toggleSidebar}
-          aria-label={t('toggle_sidebar')}
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="shrink-0">
-            <path d="M3 12l2-2m0 0l7-7M5 10l7-7 7 7M5 14l7-7 7 7" />
-          </svg>
-        </button>
-      )}
+      {/* Main content area */}
+      <div className="flex-1 flex min-w-0 min-h-0 bg-surface-chat relative overflow-hidden">
+        <MainContent />
+        <RightPanel />
+      </div>
 
-      {/* Modals - layer above everything */}
+      {/* Modals */}
       <CreateSpaceModal />
       <JoinSpaceModal />
       <CreateChannelModal />
@@ -496,12 +495,15 @@ export function AppLayout() {
       <UserSettingsModal />
       <SpaceSettingsModal />
       <ChannelSettingsModal />
+      <BulkPermissionsModal />
       <CategorySettingsModal />
       <NewDmModal />
       <AddDmMemberModal />
       <GroupDmSettings />
       <UserProfileModal />
-      <IncomingCallModal />
+      <PersonalizationEditorModal />
+      <PremiumBlockModal />
+      <CreditsShopModal />
       <ImagePreview />
       <PictureInPicture />
       <SoundController />

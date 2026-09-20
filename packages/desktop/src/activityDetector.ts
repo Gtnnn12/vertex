@@ -3,6 +3,8 @@ import https from 'https';
 import path from 'path';
 import fs from 'fs';
 import { app } from 'electron';
+import { getSpotifyEnrichment } from './spotifyDesktop';
+import { getRiotMatchInfo, type RiotMatchInfo } from './riotSession';
 
 // ─── Local Activity type (structural match with @backspace/shared Activity) ─
 
@@ -17,6 +19,21 @@ interface Activity {
   details?: string;
   state?: string;
   timestamps?: ActivityTimestamps;
+  /** Desktop-detected Spotify track (Vía A — free accounts). */
+  spotify?: {
+    song: string;
+    artist: string;
+    albumCover?: string;
+  };
+  /** Real match data when a local game API provides it (honest or absent). */
+  matchData?: {
+    gameId?: string;
+    map?: string;
+    scoreYou?: number;
+    scoreThem?: number;
+    round?: number;
+    partySize?: number;
+  };
 }
 
 // ─── Game dictionary types ──────────────────────────────────────────────────
@@ -35,18 +52,149 @@ interface VersionedDictionary {
 
 const VALID_TYPES = new Set(['playing', 'listening', 'watching', 'streaming']);
 const POLL_INTERVAL_MS = 15_000;
-const REMOTE_URL = 'https://raw.githubusercontent.com/TheZwiss/backspace/main/packages/desktop/resources/games.json';
+const REMOTE_URL = 'https://raw.githubusercontent.com/gtnn12/VERTEX/main/packages/desktop/resources/games.json';
+
+// ─── Dev game mock (VERTEX_MOCK_GAMES) ──────────────────────────────────────
+// Off by default. VERTEX_MOCK_GAMES=cs2[+valorant] injects a fully-populated
+// simulated activity so the Match Card can be developed/tested without the
+// real game running. NEVER active in production builds unless the env var is
+// explicitly set. Mock ids map to dictionary games for name/type.
+
+interface MockGameSpec {
+  /** Dictionary game id this mock simulates. */
+  id: string;
+  state: 'ingame' | 'menu';
+  details?: string;
+  matchData?: Activity['matchData'];
+}
+
+const MOCK_GAME_SPECS: Record<string, MockGameSpec> = {
+  cs2: {
+    id: 'cs2',
+    state: 'ingame',
+    details: 'Competitivo · Dust II',
+    matchData: { gameId: 'cs2', map: 'Dust II', scoreYou: 8, scoreThem: 6, round: 14 },
+  },
+  valorant: {
+    id: 'valorant',
+    state: 'ingame',
+    details: 'Swiftplay · Split',
+    matchData: { gameId: 'valorant', map: 'Split' },
+  },
+};
+
+function parseMockGames(): MockGameSpec[] {
+  const raw = process.env.VERTEX_MOCK_GAMES;
+  if (!raw) return [];
+  return raw
+    .split(/[+,]/)
+    .map((s) => s.trim().toLowerCase())
+    // Optional "@lobby" suffix → menu state (e.g. VERTEX_MOCK_GAMES=cs2@lobby).
+    // Without it the spec keeps its default (in-match) state.
+    .map((key) => {
+      const lobby = key.endsWith('@lobby');
+      const base = lobby ? key.slice(0, -'@lobby'.length) : key;
+      const spec = MOCK_GAME_SPECS[base];
+      if (!spec) return null;
+      if (!lobby) return spec;
+      // Lobby variant: same game, menu state, NO invented match data.
+      return {
+        ...spec,
+        state: 'menu',
+        details: undefined,
+        matchData: undefined,
+      } as MockGameSpec;
+    })
+    .filter((spec): spec is MockGameSpec => Boolean(spec));
+}
+
+let mockActivities: Activity[] | null = null;
+
+function getMockActivities(): Activity[] | null {
+  if (mockActivities) return mockActivities;
+  const specs = parseMockGames();
+  if (specs.length === 0) return null;
+  const start = Date.now() - 14 * 60 * 1000; // match "running" for 14 minutes
+  mockActivities = specs.map((spec) => {
+    const dict = gameEntries.find((g) => g.id === spec.id);
+    return {
+      type: 'playing' as const,
+      name: dict?.name ?? spec.id,
+      state: spec.state,
+      ...(spec.details ? { details: spec.details } : {}),
+      ...(spec.matchData ? { matchData: spec.matchData } : {}),
+      timestamps: { start },
+    };
+  });
+  console.log(`[ActivityDetector] MOCK GAMES ACTIVE: ${specs.map((s) => s.id).join(', ')} (dev only)`);
+  return mockActivities;
+}
 
 // ─── Module state ───────────────────────────────────────────────────────────
+
+/** Shared real-game scan: first dictionary match in the running process set. */
+function matchRealGame(runningProcesses: Set<string>, excludeId?: string): GameEntry | null {
+  for (const entry of gameEntries) {
+    if (excludeId && entry.id === excludeId) continue;
+    for (const proc of entry.processes) {
+      if (runningProcesses.has(proc.toLowerCase())) {
+        return entry;
+      }
+    }
+  }
+  return null;
+}
 
 let processMap: Map<string, GameEntry> = new Map();
 let gameEntries: GameEntry[] = [];
 let currentGameId: string | null = null;
+/** The GAME (or mock) activity — Spotify is tracked separately so a game
+ * match can never erase it (regression: playing + listening must coexist). */
 let currentActivity: Activity | null = null;
+let currentSpotifyActivity: Activity | null = null;
+/** Serialized current combined state — dedupes async Spotify/game re-emits. */
+let activityKey: string | null = null;
 let intervalId: NodeJS.Timeout | null = null;
 let isPolling = false;
 let hasErrored = false;
-let onChangeCallback: ((activity: Activity | null) => void) | null = null;
+let onChangeCallback: ((activities: Activity[] | null) => void) | null = null;
+
+/**
+ * Emit the combined state: game activity FIRST (primary), Spotify second
+ * (secondary). Order defines primarity downstream — never an overwrite.
+ * A single-activity state emits a 1-element array; nothing emits null.
+ */
+function emitCombined(): void {
+  const combined: Activity[] = [
+    ...(currentActivity ? [currentActivity] : []),
+    ...(currentSpotifyActivity ? [currentSpotifyActivity] : []),
+  ];
+  const key = combined.length > 0 ? JSON.stringify(combined) : null;
+  if (key === activityKey) return; // nothing changed
+  activityKey = key;
+  onChangeCallback?.(combined.length > 0 ? combined : null);
+}
+
+/**
+ * Spotify enrichment state: the last track parsed from Spotify's window
+ * title. Enrichment is async (title read + cover lookup), so the poll loop
+ * uses a keyed guard to avoid emitting stale or duplicate activities across
+ * 15s polls.
+ */
+let enrichmentJobId = 0;
+/** Independent job id for the Spotify enrichment — a Riot-enrichment tick
+ * must not supersede an in-flight Spotify track parse (they now run in
+ * parallel when a game and music coexist). */
+let spotifyJobId = 0;
+
+/**
+ * Riot (VALORANT) enrichment state: last known real match info from the
+ * local lockfile API. Cached so the timer/state survives the 15s polls;
+ * cleared when the game exits.
+ */
+let riotInfo: RiotMatchInfo | null = null;
+/** Map/gameId → only VALORANT uses the Riot lockfile enrichment today. */
+const RIOT_ENRICHED_GAME_IDS = new Set(['valorant']);
 
 // ─── Dictionary loading ────────────────────────────────────────────────────
 
@@ -251,7 +399,7 @@ function fetchRemote(url: string, etag: string | null): Promise<{
 } | null> {
   return new Promise((resolve) => {
     const headers: Record<string, string> = {
-      'User-Agent': 'Backspace-Desktop/1.0',
+      'User-Agent': 'VERTEX-Desktop/1.0',
     };
     if (etag) {
       headers['If-None-Match'] = etag;
@@ -442,6 +590,11 @@ function parseProcessList(stdout: string): Set<string> {
 
 function poll(): void {
   if (isPolling) return; // Previous poll still in-flight
+
+  // ── REAL SCAN (always first) ──
+  // The dev mock (VERTEX_MOCK_GAMES) NEVER overrides a real game: the normal
+  // scan decides what's real, and the mock only fills the gap when no real
+  // game was found (handled inside the callback's else-branch).
   isPolling = true;
 
   const { executable, args } = getProcessCommand();
@@ -460,36 +613,128 @@ function poll(): void {
 
     const runningProcesses = parseProcessList(stdout);
 
-    // Find first matching game (dictionary order = priority)
-    let matchedEntry: GameEntry | null = null;
-    for (const entry of gameEntries) {
-      for (const proc of entry.processes) {
-        if (runningProcesses.has(proc.toLowerCase())) {
-          matchedEntry = entry;
-          break;
-        }
-      }
-      if (matchedEntry) break;
+    // Spotify is tracked INDEPENDENTLY of the game scan: its window-title
+    // track is parsed even while a game is the primary activity (regression
+    // fix — a game match used to erase the music activity entirely).
+    const spotifyRunning = runningProcesses.has('spotify.exe') || runningProcesses.has('spotify');
+    const spotifyJob = ++spotifyJobId;
+    if (spotifyRunning) {
+      void getSpotifyEnrichment().then((enrichment) => {
+        if (spotifyJob !== spotifyJobId) return; // newer poll superseded
+        const next: Activity | null = enrichment
+          ? {
+              type: 'listening',
+              name: 'Spotify',
+              timestamps: { start: currentSpotifyActivity?.timestamps?.start ?? Date.now() },
+              spotify: { song: enrichment.song, artist: enrichment.artist, albumCover: enrichment.albumCover },
+            }
+          : { type: 'listening', name: 'Spotify', timestamps: { start: currentSpotifyActivity?.timestamps?.start ?? Date.now() } };
+        currentSpotifyActivity = next;
+        emitCombined();
+      });
+    } else if (currentSpotifyActivity !== null) {
+      currentSpotifyActivity = null;
+      emitCombined();
     }
 
+    // Find first matching game (dictionary order = priority)
+    const matchedEntry = matchRealGame(runningProcesses);
+
     if (matchedEntry) {
+      const isSpotify = matchedEntry.id === 'spotify';
+      if (isSpotify) {
+        // Spotify as the PRIMARY dictionary match (no other game running):
+        // the independent tracker above already owns the Spotify activity —
+        // nothing else to emit here.
+        if (currentGameId !== null) {
+          // A previous non-Spotify game just exited while Spotify keeps playing.
+          currentGameId = null;
+          currentActivity = null;
+          riotInfo = null;
+          emitCombined();
+        }
+        return; // Async path owns Spotify change-detection this poll
+      }
+
       if (matchedEntry.id !== currentGameId) {
         // New game detected (or game changed)
+        riotInfo = null; // stale from a previous game
         currentGameId = matchedEntry.id;
         currentActivity = {
           type: matchedEntry.type ?? 'playing',
           name: matchedEntry.name,
           timestamps: { start: Date.now() },
         };
-        onChangeCallback?.(currentActivity);
+        emitCombined();
+      } else if (RIOT_ENRICHED_GAME_IDS.has(matchedEntry.id)) {
+        // Same game still running — try the local Riot session for real
+        // match state. Async: emits on its own when the state changes.
+        const jobId = ++enrichmentJobId;
+        const gameEntry = matchedEntry;
+        void getRiotMatchInfo().then((info) => {
+          if (jobId !== enrichmentJobId) return; // a newer poll superseded this
+          const stateKey = (i: RiotMatchInfo | null) =>
+            i ? `${i.state}|${i.map ?? ''}|${i.mode ?? ''}|${i.scoreYou ?? ''}|${i.scoreThem ?? ''}|${i.partySize ?? ''}` : '';
+          const prevStateKey = stateKey(riotInfo);
+          riotInfo = info;
+          const nextStateKey = stateKey(info);
+          if (nextStateKey === prevStateKey) return; // nothing changed
+          if (!info) {
+            // No provable state (lockfile gone / client closed API): degrade to
+            // the bare process activity — honest, no invented data.
+            currentActivity = {
+              type: gameEntry.type ?? 'playing',
+              name: gameEntry.name,
+              timestamps: { start: currentActivity?.timestamps?.start ?? Date.now() },
+            };
+          } else {
+            // Real state: 'menu' | 'agents' | 'ingame' in state; everything
+            // else (map/mode/score/party) ONLY when the presence delivered it.
+            const realMatchData: Activity['matchData'] | undefined =
+              info.map || info.mode || info.scoreYou !== undefined || info.partySize !== undefined
+                ? {
+                    gameId: gameEntry.id,
+                    ...(info.map ? { map: info.map } : {}),
+                    ...(info.scoreYou !== undefined && info.scoreThem !== undefined
+                      ? { scoreYou: info.scoreYou, scoreThem: info.scoreThem }
+                      : {}),
+                    ...(info.partySize ? { partySize: info.partySize } : {}),
+                  }
+                : undefined;
+            currentActivity = {
+              type: gameEntry.type ?? 'playing',
+              name: gameEntry.name,
+              state: info.state,
+              ...(info.mode || info.map
+                ? { details: [info.mode, info.map].filter(Boolean).join(' · ') }
+                : {}),
+              ...(realMatchData ? { matchData: realMatchData } : {}),
+              timestamps: { start: currentActivity?.timestamps?.start ?? Date.now() },
+            };
+          }
+          emitCombined();
+        });
       }
-      // Same game still running — no change, skip IPC
+      // Same non-Riot game still running — no change, skip IPC
     } else {
+      // No real game detected.
+      // ── DEV MOCK fallback (VERTEX_MOCK_GAMES) ──
+      // Only fills the gap: a real game (handled above) ALWAYS wins over the
+      // mock. Requires explicit dev env — parseMockGames returns [] without it.
+      const mocks = getMockActivities();
+      if (mocks && mocks.length > 0) {
+        currentGameId = mocks[0] ? `mock:${mocks[0].name}` : null;
+        currentActivity = mocks[0] ?? null;
+        riotInfo = null;
+        emitCombined();
+        return;
+      }
       if (currentGameId !== null) {
-        // Game exited
+        // Game exited — Spotify (if still playing) survives via emitCombined.
         currentGameId = null;
         currentActivity = null;
-        onChangeCallback?.(null);
+        riotInfo = null;
+        emitCombined();
       }
       // No game was running before either — skip
     }
@@ -499,7 +744,7 @@ function poll(): void {
 // ─── Public API ─────────────────────────────────────────────────────────────
 
 export function startActivityDetection(
-  onActivityChange: (activity: Activity | null) => void,
+  onActivityChange: (activities: Activity[] | null) => void,
 ): void {
   if (intervalId) return; // Already running
 
@@ -540,6 +785,11 @@ export function stopActivityDetection(): void {
   onChangeCallback = null;
 }
 
-export function getCurrentActivity(): Activity | null {
-  return currentActivity;
+/** Combined current state: game (primary) + Spotify (secondary). */
+export function getCurrentActivity(): Activity[] | null {
+  const combined: Activity[] = [
+    ...(currentActivity ? [currentActivity] : []),
+    ...(currentSpotifyActivity ? [currentSpotifyActivity] : []),
+  ];
+  return combined.length > 0 ? combined : null;
 }

@@ -7,7 +7,6 @@ import { stopScreenShare, changeScreenShare } from '../../utils/screenShare';
 import { encodeStreamWatch } from '../../utils/streamWatchProtocol';
 import { AudioManager } from '../../audio/AudioManager';
 import { getSfxVolume } from '../../utils/sfx';
-import { ScreenShareSettingsPopover } from './ScreenShareSettingsPopover';
 import { useVoiceParticipantMeta } from '../../hooks/useVoiceParticipantMeta';
 import type { StreamTile as StreamTileType } from '../../hooks/useLiveKit';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -15,49 +14,6 @@ import { useLanguage } from '../../contexts/LanguageContext';
 interface StreamTileProps {
   tile: StreamTileType;
   large?: boolean;
-}
-
-/** Wrapper component for stream quality settings — needs its own state + close guard. */
-function StreamQualityItem() {
-  const { t } = useLanguage();
-  const [open, setOpen] = useState(false);
-  const btnRef = useRef<HTMLButtonElement>(null);
-  const setCloseGuard = useContextMenuStore((s) => s.setCloseGuard);
-  const screenShareConfig = useVoiceStore((s) => s.screenShareConfig);
-
-  return (
-    <div className="p-3">
-      <div className="text-xs text-txt-tertiary mb-2 font-medium uppercase tracking-wider">
-        {t('stream_quality')}
-      </div>
-      <div className="relative">
-        <button
-          ref={btnRef}
-          onClick={() => {
-            const n = !open;
-            setOpen(n);
-            setCloseGuard(n);
-          }}
-          className="w-full flex items-center justify-between px-2 py-1.5 text-sm text-txt-secondary hover:bg-interactive-hover rounded transition-colors"
-        >
-          <span>{screenShareConfig.height}p {screenShareConfig.fps}fps</span>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M7 10l5 5 5-5z" />
-          </svg>
-        </button>
-        {open && (
-          <ScreenShareSettingsPopover
-            open={open}
-            onClose={() => {
-              setOpen(false);
-              setCloseGuard(false);
-            }}
-            anchorRef={btnRef}
-          />
-        )}
-      </div>
-    </div>
-  );
 }
 
 /** Wrapper component for stream volume slider — needs store subscription. */
@@ -191,23 +147,33 @@ export function StreamTile({ tile, large }: StreamTileProps) {
   const liveScreenTrack = tile.screenTrack?.readyState === 'live' ? tile.screenTrack : null;
   const liveLkScreenTrack = liveScreenTrack ? tile.lkScreenTrack : null;
 
+  console.log(`[STREAM_TILE_RENDER] key=${tile.key} participant.identity=${participant.identity} participant.username=${participant.username} participant.userId=${participant.userId} isLocal=${isLocal} isWatching=${isWatching} hasVideo=${liveScreenTrack !== null} screenTrackId=${tile.screenTrack?.id ?? 'null'} screenTrackState=${tile.screenTrack?.readyState ?? 'null'} displayName=${displayName} ts=${Date.now()}`);
+
   // Quality badge state
   const [qualityBadge, setQualityBadge] = useState<string>('');
 
   const openContextMenu = useContextMenuStore((s) => s.open);
 
-  // --- VIDEO --- use LiveKit's track.attach() to register the element
-  // with the adaptive stream observer (enables SFU layer switching by viewport size)
+  // --- VIDEO --- use LiveKit's track.attach() for adaptive streaming,
+  // or fall back to srcObject for WebRTC direct MediaStreamTrack
   useEffect(() => {
     const videoEl = videoRef.current;
     if (!videoEl) return;
     if (liveLkScreenTrack) {
       liveLkScreenTrack.attach(videoEl);
       return () => { liveLkScreenTrack.detach(videoEl); };
+    } else if (liveScreenTrack) {
+      // WebRTC path - use srcObject directly
+      const stream = new MediaStream([liveScreenTrack]);
+      videoEl.srcObject = stream;
+      videoEl.play().catch(() => {});
+      return () => {
+        videoEl.srcObject = null;
+      };
     } else {
       videoEl.srcObject = null;
     }
-  }, [liveLkScreenTrack]);
+  }, [liveLkScreenTrack, liveScreenTrack]);
 
   // Quality badge (poll every 3s)
   useEffect(() => {
@@ -278,12 +244,6 @@ export function StreamTile({ tile, large }: StreamTileProps) {
               await changeScreenShare(room);
             }
           },
-        });
-        items.push({ key: 'quality-sep', type: 'separator' });
-        items.push({
-          key: 'stream-quality',
-          type: 'custom',
-          render: () => React.createElement(StreamQualityItem),
         });
       } else {
         // Remote stream: watch/unwatch, mute, volume, attenuation
@@ -372,7 +332,7 @@ export function StreamTile({ tile, large }: StreamTileProps) {
       }`}
       onContextMenu={handleContextMenu}
     >
-      {hasVideo && isWatching ? (
+      {hasVideo && (isWatching || isLocal) ? (
         <video
           ref={videoRef}
           autoPlay

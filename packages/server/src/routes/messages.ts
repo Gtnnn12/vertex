@@ -260,12 +260,14 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
   });
 
   // POST /api/channels/:id/messages - Create a message
+  // Generous anti-flood-only limit (30 msgs/10s per user): protects the server
+  // from API abuse without a visible cooldown for normal users (Discord-style).
   app.post<{ Params: { id: string }; Body: CreateMessageRequest }>('/api/channels/:id/messages', {
     preHandler: authenticate,
     config: {
       rateLimit: {
-        max: 5,
-        timeWindow: '5 seconds',
+        max: 30,
+        timeWindow: '10 seconds',
         keyGenerator: (request: any) => request.userId || request.ip,
       },
     },

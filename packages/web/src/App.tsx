@@ -6,7 +6,10 @@ import { AppLayout } from './components/layout/AppLayout';
 import { JoinPage } from './components/JoinPage';
 import { SwAutoUpdate } from './components/ui/SwUpdatePrompt';
 import { ScreenSharePicker } from './components/voice/ScreenSharePicker';
+import { SpotifyCallbackPage } from './components/spotify/SpotifyCallbackPage';
+import { LegalPage } from './components/legal/LegalPage';
 import { useAuthStore } from './stores/authStore';
+import { refreshNetrexEntitlement } from './stores/netrexLicenseStore';
 import { isElectron } from './platform/platform';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -43,6 +46,14 @@ export function App() {
     if (typeof window.backspace?.rendererReady === 'function') {
       window.backspace.rendererReady();
     }
+  }, []);
+
+  // Netrex entitlement refresh at boot: pull the server-side plan (Gumroad
+  // webhook already processed) into the local store.
+  useEffect(() => {
+    const token = useAuthStore.getState().token;
+    if (!token) return;
+    void refreshNetrexEntitlement();
   }, []);
 
   const showTitleBar = isElectron();
@@ -85,8 +96,32 @@ export function App() {
             path="/join/:inviteCode"
             element={<JoinPage />}
           />
+          {/* Spotify OAuth return — dashboard-registered URI; forwards ?code&state to the backend. */}
+          <Route
+            path="/auth/spotify/callback"
+            element={<SpotifyCallbackPage />}
+          />
+          {/* Legales — SIN sesión, visibles desde login/registro. */}
+          <Route path="/terms" element={<LegalPage doc="terms" />} />
+          <Route path="/privacy" element={<LegalPage doc="privacy" />} />
           <Route
             path="/explore"
+            element={
+              <ProtectedRoute>
+                <AppLayout />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/vertex"
+            element={
+              <ProtectedRoute>
+                <AppLayout />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/netrex"
             element={
               <ProtectedRoute>
                 <AppLayout />

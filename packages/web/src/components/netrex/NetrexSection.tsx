@@ -4,6 +4,7 @@ import { PersonalizationLanding } from './PersonalizationLanding';
 import { NetrexBridge } from './NetrexBridge';
 import { MusicStylePicker } from './MusicStylePicker';
 import { NetrexPurchaseModal } from './NetrexPurchaseModal';
+import { LegalLinks } from '../legal/LegalPage';
 
 // ─── Entitlement status header ──────────────────────────────────────────────
 // NetrexSection does NOT render its own status banner. The single status header
@@ -837,7 +838,7 @@ export function NetrexSection() {
         {/* ── Footer ── */}
         <footer className="mt-16 border-t border-white/[0.06] pt-6 flex flex-wrap items-center justify-between gap-2">
           <span className="text-[11px] font-medium text-txt-tertiary/80">NETREX · Premium de VERTEX</span>
-          <span className="text-[11px] text-txt-tertiary/50 tabular-nums">© {new Date().getFullYear()} Vertex</span>
+          <span className="text-[11px] text-txt-tertiary/50 tabular-nums">© {new Date().getFullYear()} Vertex · <LegalLinks /></span>
         </footer>
       </div>
 

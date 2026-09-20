@@ -70,20 +70,20 @@ describe('SystemMessage — name_changed', () => {
     const msg = buildMessage({ event: 'name_changed', oldName: null, newName: 'Cool Group' });
     renderSM(msg, dm);
     expect(screen.getByText('✎')).toBeDefined();
-    expect(screen.getByText(/Heidi renamed the group to "Cool Group"/)).toBeDefined();
+    expect(screen.getByText(/Heidi renombró el grupo a Cool Group/)).toBeDefined();
   });
 
   it('newName=null (cleared) with resolvable actor → "✎ Heidi cleared the group name"', () => {
     const msg = buildMessage({ event: 'name_changed', oldName: 'Old', newName: null });
     renderSM(msg, dm);
     expect(screen.getByText('✎')).toBeDefined();
-    expect(screen.getByText(/Heidi cleared the group name/)).toBeDefined();
+    expect(screen.getByText(/Heidi borró el nombre del grupo/)).toBeDefined();
   });
 
   it('unresolvable actor (member missing from roster) → "✎ Unknown renamed …"', () => {
     const msg = buildMessage({ event: 'name_changed', oldName: null, newName: 'X' }, 'GHOST');
     renderSM(msg, dm); // dm.members has only U1, not GHOST
-    expect(screen.getByText(/Unknown renamed the group to "X"/)).toBeDefined();
+    expect(screen.getByText(/Unknown renombró el grupo a X/)).toBeDefined();
   });
 });
 
@@ -93,6 +93,6 @@ describe('SystemMessage — icon_changed', () => {
     renderSM(msg, dm);
     // The 🖼 character is U+1F5BC (FRAME WITH PICTURE), not 🖼️ (with VS-16).
     expect(screen.getByText('\u{1F5BC}')).toBeDefined();
-    expect(screen.getByText(/Heidi updated the group icon/)).toBeDefined();
+    expect(screen.getByText(/Heidi actualizó el icono del grupo/)).toBeDefined();
   });
 });

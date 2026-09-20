@@ -73,7 +73,7 @@ function MobileMemberRow({
   return (
     <div
       onClick={() => onClickMember(member.userId)}
-      className={rowClass}
+      className={`${rowClass} member-row-enter`}
     >
       <Avatar
         src={canonical.avatar}
@@ -123,7 +123,11 @@ export function MobileMembersScreen({ params }: MobileMembersScreenProps) {
   // Mirror desktop MemberSidebar's `showMemberSkeleton`: gate the skeleton
   // behind useDelayedLoading so cached / fast loads don't flash the placeholder.
   const isLoadingSpace = !!loadingSpaceId && loadingSpaceId === spaceId;
-  const showMemberSkeleton = useDelayedLoading(isLoadingSpace);
+  // Mirror desktop MemberSidebar: skeleton only when the resident detail data
+  // belongs to another space (first load) — silent in-place refresh otherwise.
+  const detailSpaceId = useSpaceStore((s) => s.detailSpaceId);
+  const isForeignLoad = isLoadingSpace && detailSpaceId !== spaceId;
+  const showMemberSkeleton = useDelayedLoading(isForeignLoad);
 
   const { roleGroups, offlineMembers } = useMemo(() => {
     const online = members.filter(m => m.user.status !== 'offline');

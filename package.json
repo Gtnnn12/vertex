@@ -4,11 +4,11 @@
   "private": true,
   "description": "Open, self-hosted communication platform — text, voice, video, and federation",
   "license": "AGPL-3.0-only",
-  "author": "Jannis Braun",
-  "homepage": "https://github.com/TheZwiss/vertex",
+  "author": "gtnn12",
+  "homepage": "https://github.com/gtnn12/VERTEX",
   "repository": {
     "type": "git",
-    "url": "https://github.com/TheZwiss/vertex.git"
+    "url": "https://github.com/gtnn12/VERTEX.git"
   },
   "scripts": {
     "dev:server": "pnpm --filter @vertex/server dev",

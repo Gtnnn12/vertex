@@ -744,9 +744,8 @@ Remote space icons, banners, and member avatars are resolved via `resolveAssetUr
 
 ### Client Load State (`useSpaceStore`)
 
-Two distinct flags track per-space load progress:
-
-- `loadingSpaceId: string | null` — non-null while a `loadSpaceDetail` call is in flight. Drives the channel-list and member-list skeletons (gated through `useDelayedLoading`).
+Two distinct flags track per-space load progress: - `loadingSpaceId: string | null` — non-null while a `loadSpaceDetail` call is in flight. Drives the channel-list and member-list skeletons (gated through `useDelayedLoading`).
+ - `detailSpaceId: string | null` — spaceId whose detail data is currently resident (`members`, `channels`, `categories`, `roles`). Render sites combine it with `loadingSpaceId` to show skeletons ONLY when the resident data belongs to a different space (first load / space switch); re-syncs of the already-visible space (WS `ready` push, role/membership changes) refresh the list in place with no skeleton flash. Added with `loadSpaceDetail` completion, cleared on `reset`.
 - `loadedSpaceIds: Set<string>` — populated only on successful `loadSpaceDetail` completion. Used to differentiate "load not yet attempted" from "loaded with empty result." Required by mobile UI to gate the empty-state mascot — without it, the mascot flashes during the pre-skeleton load window because `state.channels` is overwritten on each `loadSpaceDetail` and a fresh space switch leaves `spaceChannels` momentarily filtered to `[]`.
 
 `loadedSpaceIds` lifecycle:

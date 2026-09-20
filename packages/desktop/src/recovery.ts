@@ -122,7 +122,7 @@ export function buildTrayMenuTemplate(
   actions?: Partial<MenuActions>,
 ): MenuItemConstructorOptions[] {
   const items: MenuItemConstructorOptions[] = [
-    { label: 'Show Backspace', click: actions?.onShow },
+    { label: 'Show VERTEX', click: actions?.onShow },
     { label: 'Hide', click: actions?.onHide },
     { type: 'separator' },
     checkForUpdatesItem(state, () => actions?.onCheckForUpdates?.()),
@@ -419,7 +419,7 @@ export function handleRecoveryAction(action: RecoveryAction): void {
       // Direct quitAndInstall — does NOT rely on autoInstallOnAppQuit.
       // Force-kill-fix: if user reaches recovery and clicks here, install
       // happens cleanly even if the on-quit hook would otherwise be bypassed.
-      autoUpdaterRef?.quitAndInstall();
+      autoUpdaterRef?.quitAndInstall(true, true);
       return;
     }
     case 'change-instance': {
@@ -440,7 +440,7 @@ export function handleRecoveryAction(action: RecoveryAction): void {
       return;
     }
     case 'open-releases': {
-      shell.openExternal('https://github.com/TheZwiss/backspace/releases/latest');
+      shell.openExternal('https://github.com/gtnn12/VERTEX/releases/latest');
       return;
     }
     case 'quit': {

@@ -26,5 +26,6 @@ export function RightPanel() {
     return <ActivityPanel />;
   }
 
+
   return <MemberSidebar />;
 }

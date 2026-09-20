@@ -91,15 +91,6 @@ function HubStatusHeader({ t }: { t: (key: string) => string }) {
 
 // ─── Feature icons (inline, small, consistent) ──────────────────────────────
 
-function PanelIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="text-txt-secondary">
-      <rect x="3" y="3" width="18" height="18" rx="2" />
-      <line x1="15" y1="3" x2="15" y2="21" />
-    </svg>
-  );
-}
-
 function GridIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="text-txt-secondary">
@@ -221,9 +212,7 @@ export function NetrexBridge() {
   const isNetrex = useAuthStore((s) => s.user?.netrexEnabled === true) || hasLicense;
   useStartupLicenseRecheck();
   const activeFeatures = useNetrexPrefsStore((s) => s.activeFeatures);
-  const memberPanelMode = useNetrexPrefsStore((s) => s.memberPanelMode);
   const toggleFeature = useNetrexPrefsStore((s) => s.toggleFeature);
-  const setMemberPanelMode = useNetrexPrefsStore((s) => s.setMemberPanelMode);
   const openModal = useUIStore((s) => s.openModal);
   // Was advanced personalization configured at least once? Reflected in the
   // row state so "Configurar → guardar" visibly changes the hub.
@@ -244,16 +233,6 @@ export function NetrexBridge() {
     configureLabel?: string;
     configured?: boolean;
   }[] = [
-    {
-      id: 'activityMemberPanel',
-      icon: <PanelIcon />,
-      nameKey: 'netrex_hub_feature_amp_name',
-      descKey: 'netrex_hub_feature_amp_desc',
-      onConfigure: () => setMemberPanelMode(memberPanelMode === 'activity' ? 'standard' : 'activity'),
-      configureLabel: memberPanelMode === 'activity'
-        ? t('netrex_hub_amp_mode_standard')
-        : t('netrex_hub_amp_mode_activity'),
-    },
     {
       id: 'memberGridCompact',
       icon: <GridIcon />,
