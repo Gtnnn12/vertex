@@ -10,22 +10,18 @@ import { useAuthStore } from './authStore';
  * (`useAuthStore().user.netrexEnabled`) before enabling a premium behavior.
  * Toggling a preference without the entitlement has no effect.
  */
-export type NetrexFeatureId = 'activityMemberPanel' | 'memberGridCompact' | 'profileGlow';
+export type NetrexFeatureId = 'memberGridCompact' | 'profileGlow';
 
 interface NetrexPrefsState {
   /** Which Netrex features the user has explicitly activated. */
   activeFeatures: NetrexFeatureId[];
-  /** Default layout of the Activity Member Panel (config for that feature). */
-  memberPanelMode: 'activity' | 'standard';
   toggleFeature: (id: NetrexFeatureId) => void;
-  setMemberPanelMode: (mode: 'activity' | 'standard') => void;
 }
 
 export const useNetrexPrefsStore = create<NetrexPrefsState>()(
   persist(
     (set, get) => ({
-      activeFeatures: ['activityMemberPanel'],
-      memberPanelMode: 'activity',
+      activeFeatures: ['memberGridCompact'],
 
       toggleFeature: (id) => {
         // Hard entitlement gate: ignore toggles when Netrex is not active.
@@ -37,18 +33,12 @@ export const useNetrexPrefsStore = create<NetrexPrefsState>()(
             : [...get().activeFeatures, id],
         });
       },
-
-      setMemberPanelMode: (mode) => {
-        if (useAuthStore.getState().user?.netrexEnabled !== true) return;
-        set({ memberPanelMode: mode });
-      },
     }),
     {
       name: 'vertex.netrex.features',
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         activeFeatures: state.activeFeatures,
-        memberPanelMode: state.memberPanelMode,
       }),
     }
   )
