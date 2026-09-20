@@ -107,7 +107,11 @@ export function ChannelSidebar() {
   const space = spaces.find(s => s.id === currentSpaceId);
   const mySpacePerms = currentSpaceId ? spacePermissions.get(currentSpaceId) : undefined;
   const isLoadingSpace = !!loadingSpaceId && loadingSpaceId === currentSpaceId;
-  const showChannelSkeleton = useDelayedLoading(isLoadingSpace);
+  // Silent re-sync: keep the channel list rendered while a refresh of the
+  // already-resident space is in flight; skeleton only for foreign data.
+  const detailSpaceId = useSpaceStore((s) => s.detailSpaceId);
+  const isForeignLoad = isLoadingSpace && detailSpaceId !== currentSpaceId;
+  const showChannelSkeleton = useDelayedLoading(isForeignLoad);
 
   const federationInstances = useInstanceStore((s) => s.instances);
   const instanceLabel = useMemo(() => {

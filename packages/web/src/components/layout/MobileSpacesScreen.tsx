@@ -518,7 +518,13 @@ export function MobileSpacesScreen() {
   // Mirrors desktop ChannelSidebar's `showChannelSkeleton` (gated by
   // useDelayedLoading to avoid flicker on cached/fast loads).
   const isLoadingSelectedSpace = !!loadingSpaceId && loadingSpaceId === selectedSpaceId;
-  const showChannelSkeleton = useDelayedLoading(isLoadingSelectedSpace);
+  // Silent re-sync: skeleton only while the resident detail data belongs to a
+  // different space (first load / space switch); refreshes of the visible
+  // space update in place. The mascot settle gate below keeps using the raw
+  // isLoading flag — it already excludes the in-flight window.
+  const detailSpaceId = useSpaceStore((s) => s.detailSpaceId);
+  const isForeignLoad = isLoadingSelectedSpace && detailSpaceId !== selectedSpaceId;
+  const showChannelSkeleton = useDelayedLoading(isForeignLoad);
   // Render-branch gating for the channel-list area:
   //
   // Render order is: skeleton (loading) → mascot (loaded but empty) → real list.

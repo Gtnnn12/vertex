@@ -128,7 +128,7 @@ export function MemberSidebarRow({
       key={member.userId}
       onClick={(e) => onClickMember(e, canonical)}
       onContextMenu={handleContextMenu}
-      className={rowClass}
+      className={`${rowClass} member-row-enter`}
     >
       <Avatar
         src={canonical.avatar}
@@ -198,7 +198,13 @@ export function MemberSidebar() {
   }, [members, ownerId, t]);
 
   const isLoadingSpace = !!loadingSpaceId && loadingSpaceId === currentSpaceId;
-  const showMemberSkeleton = useDelayedLoading(isLoadingSpace);
+  // Silent re-sync: when the resident detail data already belongs to the
+  // current space (ready push, role/membership edits), keep the list rendered
+  // and let the refresh update rows in place. Skeletons are for first load
+  // only — when the resident data belongs to another space (or nothing).
+  const detailSpaceId = useSpaceStore((s) => s.detailSpaceId);
+  const isForeignLoad = isLoadingSpace && detailSpaceId !== currentSpaceId;
+  const showMemberSkeleton = useDelayedLoading(isForeignLoad);
 
   if (!memberListOpen) return null;
 
