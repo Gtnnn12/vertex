@@ -663,9 +663,9 @@ export function ChannelSidebar() {
             setLeaveGroupDmLoading(false);
           }
         }}
-        title="Leave Group DM"
-        description="Are you sure you want to leave? You won't be able to rejoin unless someone adds you back."
-        confirmLabel="Leave"
+        title={t('leave_group_dm')}
+        description={t('leave_confirm_desc')}
+        confirmLabel={t('leave')}
         variant="danger"
         loading={leaveGroupDmLoading}
       />
@@ -738,7 +738,7 @@ export function ChannelSidebar() {
             <button
               onClick={handleSpaceMenuButton}
               className="w-10 flex-shrink-0 flex items-center justify-center text-txt-tertiary/70 hover:text-txt-primary hover:bg-white/[0.04] transition-colors"
-              title="Space actions — settings, invite, create"
+              title={t('space_actions_aria')}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M6 10a2 2 0 110 4 2 2 0 010-4zm6 0a2 2 0 110 4 2 2 0 010-4zm6 0a2 2 0 110 4 2 2 0 010-4z" />
@@ -765,7 +765,7 @@ export function ChannelSidebar() {
             <button
               onClick={() => openModal('bulkPermissions')}
               className="flex items-center gap-1 text-[9.5px] font-bold uppercase tracking-[0.14em] text-txt-tertiary/70 hover:text-txt-primary transition-colors px-1.5 py-0.5 rounded-md hover:bg-white/[0.05]"
-              title="Bulk channel permissions"
+              title={t('bulk_channel_permissions')}
             >
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="11" width="18" height="11" rx="2" />
@@ -778,7 +778,7 @@ export function ChannelSidebar() {
             <button
               onClick={() => openModal('createChannel')}
               className="text-txt-tertiary/60 hover:text-txt-primary transition-colors"
-              title="Create Channel"
+              title={t('create_channel')}
             >
               <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
                 <path d="M8 2a.5.5 0 01.5.5v5h5a.5.5 0 010 1h-5v5a.5.5 0 01-1 0v-5h-5a.5.5 0 010-1h5v-5A.5.5 0 018 2z" />
@@ -787,7 +787,7 @@ export function ChannelSidebar() {
           )}
         </div>
         {showChannelSkeleton ? (
-          <div className="flex flex-col gap-3" role="status" aria-label="Loading channels">
+          <div className="flex flex-col gap-3" role="status" aria-label={t('loading_channels')}>
             {/* Group panel skeleton 1 */}
             <div className="rounded-[12px] border border-white/[0.04] bg-white/[0.025] p-2">
               <div className="skeleton skeleton-bar h-2 w-[45%] ml-1 mb-3" />
@@ -917,7 +917,7 @@ export function ChannelSidebar() {
                         openModal('createChannel', { categoryId: category.id });
                       }}
                       className="opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded-[6px] text-txt-tertiary hover:text-accent-mint hover:bg-white/[0.05] transition-all flex-shrink-0"
-                      title="Create Channel"
+                      title={t('create_channel')}
                     >
                       <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
                         <path d="M8 2a.5.5 0 01.5.5v5h5a.5.5 0 010 1h-5v5a.5.5 0 01-1 0v-5h-5a.5.5 0 010-1h5v-5A.5.5 0 018 2z" />
@@ -1020,7 +1020,7 @@ export function ChannelSidebar() {
                         />
                       ))}
                       {catChannels.length === 0 && (
-                        <div className="px-2 py-2 text-[12px] text-txt-tertiary italic opacity-40">No channels</div>
+                        <div className="px-2 py-2 text-[12px] text-txt-tertiary italic opacity-40">{t('no_channels')}</div>
                       )}
                     </div>
                   </div>
@@ -1041,7 +1041,7 @@ export function ChannelSidebar() {
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" className="flex-shrink-0 opacity-60">
                   <path d="M8 2a.5.5 0 01.5.5v5h5a.5.5 0 010 1h-5v5a.5.5 0 01-1 0v-5h-5a.5.5 0 010-1h5v-5A.5.5 0 018 2z" />
                 </svg>
-                <span>Create Channel</span>
+                <span>{t('create_channel')}</span>
               </button>
             )}
             <button
@@ -1050,8 +1050,7 @@ export function ChannelSidebar() {
             >
               <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" className="flex-shrink-0 opacity-60">
                 <path d="M8 2a.5.5 0 01.5.5v5h5a.5.5 0 010 1h-5v5a.5.5 0 01-1 0v-5h-5a.5.5 0 010-1h5v-5A.5.5 0 018 2z" />
-              </svg>
-              <span>Create Category</span>
+              </svg>                <span>{t('create_category')}</span>
             </button>
           </div>
         )}
@@ -1094,9 +1093,9 @@ export function ChannelSidebar() {
           setDeleteCategoryLoading(false);
         }
       }}
-      title="Delete Category"
-      description="Are you sure you want to delete this category? Channels in this category will be moved to uncategorized — no channels will be deleted."
-      confirmLabel="Delete"
+      title={t('delete_category')}
+      description={t('delete_category_confirm_desc')}
+      confirmLabel={t('delete')}
       variant="danger"
       loading={deleteCategoryLoading}
     />
@@ -1127,6 +1126,7 @@ function UserAreaPanel({
   onDeafenToggle: () => void;
   onSettingsClick: (tab?: string) => void;
 }) {
+  const { t } = useLanguage();
   const [openPanel, setOpenPanel] = useState<'input' | 'output' | null>(null);
   const openContextMenu = useContextMenuStore((s) => s.open);
   const presenceMenuItems = usePresenceMenuItems(user);
@@ -1140,11 +1140,11 @@ function UserAreaPanel({
   const { permState, inputs: inputDevices, outputs: outputDevices, inputLabels, outputLabels, requestPermission } = useAudioDevices();
 
   const selectedInputLabel = inputDeviceId === 'default'
-    ? 'System Default'
-    : inputLabels.get(inputDeviceId) ?? 'System Default';
+    ? t('system_default')
+    : inputLabels.get(inputDeviceId) ?? t('system_default');
   const selectedOutputLabel = outputDeviceId === 'default'
-    ? 'System Default'
-    : outputLabels.get(outputDeviceId) ?? 'System Default';
+    ? t('system_default')
+    : outputLabels.get(outputDeviceId) ?? t('system_default');
 
   const inputVolume = useVoiceStore((s) => s.inputVolume);
   const storeSetInputVolume = useVoiceStore((s) => s.setInputVolume);
@@ -1243,7 +1243,7 @@ function UserAreaPanel({
               className="w-full px-4 py-3 flex items-center justify-between hover:bg-interactive-hover transition-colors"
             >
               <div className="min-w-0 flex-1">
-                <div className="text-[15px] font-semibold text-txt-primary text-left">Input Device</div>
+                <div className="text-[15px] font-semibold text-txt-primary text-left">{t('input_device')}</div>
                 <div className="text-[13px] text-txt-tertiary truncate text-left">{selectedInputLabel}</div>
               </div>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="text-txt-tertiary flex-shrink-0 ml-2">
@@ -1254,19 +1254,19 @@ function UserAreaPanel({
               <div className="bg-surface-base rounded-lg shadow-lg mx-2 mb-2 py-1 border border-border-hard max-h-64 overflow-y-auto">
                 {permState !== 'granted' && (
                   <div className="px-3 py-2 text-[12px] text-txt-tertiary">
-                    Microphone permission needed.{' '}
+                    {t('mic_permission_needed')}{' '}
                     <button
                       onClick={() => { requestPermission().catch(() => {}); }}
                       className="underline text-accent-primary"
                     >
-                      Enable
+                      {t('enable_microphone_access')}
                     </button>
                   </div>
                 )}
                 {permState === 'granted' && (
                   <>
                     <DropdownItem
-                      label="System Default"
+                      label={t('system_default')}
                       active={inputDeviceId === 'default'}
                       onClick={() => selectInput('default')}
                     />
@@ -1288,7 +1288,7 @@ function UserAreaPanel({
 
                       {/* Input Volume */}
                       <div className="px-4 py-3">
-                        <div className="text-[15px] font-semibold text-txt-primary mb-2">Input Volume</div>
+                        <div className="text-[15px] font-semibold text-txt-primary mb-2">{t('input_volume')}</div>
                         <input
                           type="range"
                           min={0}
@@ -1323,7 +1323,7 @@ function UserAreaPanel({
                         onClick={() => onSettingsClick('voice')}
                         className="w-full px-4 py-3 flex items-center justify-between hover:bg-interactive-hover transition-colors"
                       >
-                        <span className="text-[15px] font-semibold text-txt-primary">Voice Settings</span>
+                        <span className="text-[15px] font-semibold text-txt-primary">{t('voice_settings')}</span>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="text-txt-tertiary">
                           <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
                         </svg>
@@ -1341,7 +1341,7 @@ function UserAreaPanel({
                           className="w-full px-4 py-3 flex items-center justify-between hover:bg-interactive-hover transition-colors"
                         >
                           <div className="min-w-0 flex-1">
-                            <div className="text-[15px] font-semibold text-txt-primary text-left">Output Device</div>
+                            <div className="text-[15px] font-semibold text-txt-primary text-left">{t('output_device')}</div>
                             <div className="text-[13px] text-txt-tertiary truncate text-left">{selectedOutputLabel}</div>
                           </div>
                           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="text-txt-tertiary flex-shrink-0 ml-2">
@@ -1352,19 +1352,19 @@ function UserAreaPanel({
                           <div className="bg-surface-base rounded-lg shadow-lg mx-2 mb-2 py-1 border border-border-hard max-h-64 overflow-y-auto">
                             {permState !== 'granted' && (
                               <div className="px-3 py-2 text-[12px] text-txt-tertiary">
-                                Audio permission needed.{' '}
+                                {t('audio_permission_needed')}{' '}
                                 <button
                                   onClick={() => { requestPermission().catch(() => {}); }}
                                   className="underline text-accent-primary"
                                 >
-                                  Enable
+                                  {t('enable_audio_access')}
                                 </button>
                               </div>
                             )}
                             {permState === 'granted' && (
                               <>
                                 <DropdownItem
-                                  label="System Default"
+                                  label={t('system_default')}
                                   active={outputDeviceId === 'default'}
                                   onClick={() => selectOutput('default')}
                                 />
@@ -1386,7 +1386,7 @@ function UserAreaPanel({
           
                       {/* Output Volume */}
                       <div className="px-4 py-3">
-                        <div className="text-[15px] font-semibold text-txt-primary mb-2">Output Volume</div>
+                        <div className="text-[15px] font-semibold text-txt-primary mb-2">{t('output_volume')}</div>
                         <input
                           type="range"
                           min={0}
@@ -1409,7 +1409,7 @@ function UserAreaPanel({
             onClick={() => onSettingsClick('voice')}
             className="w-full px-4 py-3 flex items-center justify-between hover:bg-interactive-hover transition-colors"
           >
-            <span className="text-[15px] font-semibold text-txt-primary">Voice Settings</span>
+            <span className="text-[15px] font-semibold text-txt-primary">{t('voice_settings')}</span>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="text-txt-tertiary">
               <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
             </svg>

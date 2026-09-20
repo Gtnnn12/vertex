@@ -3,6 +3,7 @@ import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { useUIStore } from '../../stores/uiStore';
 import { useSpaceStore, getApiForOrigin } from '../../stores/spaceStore';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { PermissionBits, permissionsToString, stringToPermissions, hasPermissionBit } from '../../utils/permissions';
 import { Toggle } from '../ui/Toggle';
 import { PermissionsEditor } from '../ui/PermissionsEditor';
@@ -55,11 +56,12 @@ function OverviewTab({
   onTogglePrivate: () => void;
   onDeleteChannel: () => void;
 }) {
+  const { t } = useLanguage();
   return (
     <div className="space-y-4">
       <div>
         <label className="block text-xs font-bold text-txt-secondary uppercase mb-2">
-          Channel
+          {t('channel')}
         </label>
         <div className="flex items-center gap-2 text-txt-primary">
           {isPrivate ? (
@@ -84,9 +86,9 @@ function OverviewTab({
       <div className="pt-2 border-t border-border-soft">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-sm font-medium text-txt-primary">Private Channel</div>
+            <div className="text-sm font-medium text-txt-primary">{t('private_channel')}</div>
             <div className="text-xs text-txt-tertiary mt-0.5">
-              Only selected members and roles will be able to view this channel.
+              {t('private_channel_desc')}
             </div>
           </div>
           <div className={`flex-shrink-0 ml-4 ${(isLoading || isFetching) ? 'opacity-50 pointer-events-none' : ''}`}>
@@ -101,19 +103,19 @@ function OverviewTab({
             <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" />
           </svg>
           <span>
-            This channel is hidden from members without explicit access. Users with the Administrator permission or space owners can always see all channels.
+            {t('hidden_channel_hint')}
           </span>
         </div>
       )}
 
       {canManageChannels && (
         <div className="pt-4 border-t border-border-soft">
-          <label className="block text-xs font-bold text-accent-rose uppercase mb-2">Danger Zone</label>
+          <label className="block text-xs font-bold text-accent-rose uppercase mb-2">{t('danger_zone')}</label>
           <button
             onClick={onDeleteChannel}
             className="w-full px-3 py-2 bg-accent-rose/10 border border-accent-rose/30 rounded text-accent-rose text-sm font-medium hover:bg-accent-rose/20 transition-colors"
           >
-            Delete Channel
+            {t('delete_channel')}
           </button>
         </div>
       )}
@@ -124,6 +126,7 @@ function OverviewTab({
 // ─── Main Modal ─────────────────────────────────────────────────────────────────
 
 export function ChannelSettingsModal() {
+  const { t } = useLanguage();
   const activeModal = useUIStore((s) => s.activeModal);
   const modalData = useUIStore((s) => s.modalData);
   const closeModal = useUIStore((s) => s.closeModal);
@@ -181,7 +184,7 @@ export function ChannelSettingsModal() {
         }
       })
       .catch((err: Error) => {
-        setError(err.message || 'Failed to load channel overrides');
+        setError(err.message || t('failed_to_delete_channel'));
       })
       .finally(() => {
         setIsFetching(false);
@@ -224,7 +227,7 @@ export function ChannelSettingsModal() {
       // Re-fetch to keep in sync
       fetchPrivateState();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update channel privacy');
+      setError(err instanceof Error ? err.message : t('failed_to_delete_channel'));
     } finally {
       setIsLoading(false);
     }
@@ -238,7 +241,7 @@ export function ChannelSettingsModal() {
       await channelApi.channels.delete(channelId);
       closeModal();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete channel');
+      setError(err instanceof Error ? err.message : t('failed_to_delete_channel'));
       setIsDeleting(false);
     }
   };
@@ -252,17 +255,17 @@ export function ChannelSettingsModal() {
 
   return (
     <>
-      <Modal isOpen={isOpen} onClose={closeModal} title="Channel Settings" mobileStyle="fullscreen" maxWidth={showTabs ? 'max-w-2xl' : 'max-w-md'}>
+      <Modal isOpen={isOpen} onClose={closeModal} title={t('channel_settings')} mobileStyle="fullscreen" maxWidth={showTabs ? 'max-w-2xl' : 'max-w-md'}>
         {showTabs ? (
           <div className="flex gap-4 h-[min(520px,70vh)]">
             {/* Tabs */}
             <div className="w-32 flex-shrink-0 self-start z-10">
               <div className="glass-bubble rounded-lg p-1.5 space-y-0.5">
                 <button onClick={() => setTab('overview')} className={tabClass('overview')}>
-                  Overview
+                  {t('overview')}
                 </button>
                 <button onClick={() => setTab('permissions')} className={tabClass('permissions')}>
-                  Permissions
+                  {t('permissions')}
                 </button>
               </div>
             </div>

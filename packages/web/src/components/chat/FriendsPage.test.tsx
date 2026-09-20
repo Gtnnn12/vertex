@@ -195,11 +195,11 @@ describe('FriendsPage', () => {
       const user = userEvent.setup();
       renderFriendsPage();
 
-      const addFriendTab = screen.getByText('Add Friend');
+      const addFriendTab = screen.getByText('Añadir amigo');
       await user.click(addFriendTab);
 
-      expect(screen.getByPlaceholderText(/Enter a username/)).toBeInTheDocument();
-      expect(screen.getByText('Add a friend')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(/Introduce un nombre de usuario/)).toBeInTheDocument();
+      expect(screen.getByText('Añadir un amigo')).toBeInTheDocument();
     });
 
     it('shows Direct Add row and sends request for user@domain input', async () => {
@@ -210,16 +210,16 @@ describe('FriendsPage', () => {
       });
 
       renderFriendsPage();
-      await user.click(screen.getByText('Add Friend'));
+      await user.click(screen.getByText('Añadir amigo'));
 
-      const input = screen.getByPlaceholderText(/Enter a username/);
+      const input = screen.getByPlaceholderText(/Introduce un nombre de usuario/);
       await user.type(input, 'newbuddy@remote.example.com');
 
       // Direct Add row should appear
-      expect(screen.getByText(/Send request to/)).toBeInTheDocument();
+      expect(screen.getByText(/Enviar solicitud a/)).toBeInTheDocument();
 
       // Click Send Request
-      await user.click(screen.getByText('Send Request'));
+      await user.click(screen.getByText('Enviar solicitud'));
 
       await waitFor(() => {
         expect(mockSendFriendRequest).toHaveBeenCalledWith('newbuddy@remote.example.com');
@@ -238,11 +238,11 @@ describe('FriendsPage', () => {
       });
 
       renderFriendsPage();
-      await user.click(screen.getByText('Add Friend'));
+      await user.click(screen.getByText('Añadir amigo'));
 
-      const input = screen.getByPlaceholderText(/Enter a username/);
+      const input = screen.getByPlaceholderText(/Introduce un nombre de usuario/);
       await user.type(input, 'ghost@remote.example.com');
-      await user.click(screen.getByText('Send Request'));
+      await user.click(screen.getByText('Enviar solicitud'));
 
       await waitFor(() => {
         expect(mockAddToast).toHaveBeenCalledWith('User not found', 'warning');
@@ -252,37 +252,37 @@ describe('FriendsPage', () => {
     it('shows Direct Add row with resolved-form display for plain usernames', async () => {
       const user = userEvent.setup();
       renderFriendsPage();
-      await user.click(screen.getByText('Add Friend'));
+      await user.click(screen.getByText('Añadir amigo'));
 
-      const input = screen.getByPlaceholderText(/Enter a username/);
+      const input = screen.getByPlaceholderText(/Introduce un nombre de usuario/);
       await user.type(input, 'marc');
 
       // Direct Add row appears with the resolved form `marc@<window.location.host>`.
       // The exact host depends on jsdom (localhost:3000 by default), so match by prefix.
-      expect(screen.getByText(/Send request to/)).toBeInTheDocument();
+      expect(screen.getByText(/Enviar solicitud a/)).toBeInTheDocument();
       expect(screen.getByText(new RegExp(`marc@${window.location.host.replace(/[.+?^${}()|[\]\\]/g, '\\$&')}`))).toBeInTheDocument();
     });
 
     it('does not show Direct Add row for malformed @ shapes', async () => {
       const user = userEvent.setup();
       renderFriendsPage();
-      await user.click(screen.getByText('Add Friend'));
+      await user.click(screen.getByText('Añadir amigo'));
 
-      const input = screen.getByPlaceholderText(/Enter a username/);
+      const input = screen.getByPlaceholderText(/Introduce un nombre de usuario/);
 
       // Lone @
       await user.type(input, '@');
-      expect(screen.queryByText(/Send request to/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Enviar solicitud a/)).not.toBeInTheDocument();
       await user.clear(input);
 
       // Leading @ — only domain, no baseName
       await user.type(input, '@bob');
-      expect(screen.queryByText(/Send request to/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Enviar solicitud a/)).not.toBeInTheDocument();
       await user.clear(input);
 
       // Trailing @ — only baseName, no domain
       await user.type(input, 'bob@');
-      expect(screen.queryByText(/Send request to/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Enviar solicitud a/)).not.toBeInTheDocument();
     });
 
     it('calls searchUsers when typing a non-@ query', async () => {
@@ -293,9 +293,9 @@ describe('FriendsPage', () => {
       });
 
       renderFriendsPage();
-      await user.click(screen.getByText('Add Friend'));
+      await user.click(screen.getByText('Añadir amigo'));
 
-      const input = screen.getByPlaceholderText(/Enter a username/);
+      const input = screen.getByPlaceholderText(/Introduce un nombre de usuario/);
       await user.type(input, 'marc');
 
       // Wait for debounce
@@ -331,10 +331,10 @@ describe('FriendsPage', () => {
       renderFriendsPage();
 
       // Switch to "All" tab to see the friend
-      await user.click(screen.getByText('All'));
+      await user.click(screen.getByText('Todos'));
 
       // Find the Message button by title
-      const dmButton = screen.getByTitle('Message');
+      const dmButton = screen.getByTitle('Mensaje');
       await user.click(dmButton);
 
       await waitFor(() => {
@@ -389,13 +389,13 @@ describe('FriendsPage', () => {
       renderFriendsPage();
 
       // Switch to Pending tab
-      await user.click(screen.getByText('Pending'));
+      await user.click(screen.getByText('Pendientes'));
 
       // Should see the outgoing request
-      expect(screen.getByText('Outgoing — 1')).toBeInTheDocument();
+      expect(screen.getByText('Enviadas — 1')).toBeInTheDocument();
 
       // Click the cancel button (the X icon button with title "Cancel Request")
-      const cancelButton = screen.getByTitle('Cancel Request');
+      const cancelButton = screen.getByTitle('Cancelar solicitud');
       await user.click(cancelButton);
 
       await waitFor(() => {
@@ -439,12 +439,12 @@ describe('FriendsPage', () => {
       });
 
       renderFriendsPage();
-      await user.click(screen.getByText('Pending'));
+      await user.click(screen.getByText('Pendientes'));
 
-      expect(screen.getByText('Incoming — 1')).toBeInTheDocument();
+      expect(screen.getByText('Recibidas — 1')).toBeInTheDocument();
 
       // Click accept button (title "Accept")
-      const acceptButton = screen.getByTitle('Accept');
+      const acceptButton = screen.getByTitle('Aceptar');
       await user.click(acceptButton);
 
       await waitFor(() => {
@@ -486,9 +486,9 @@ describe('FriendsPage', () => {
       });
 
       renderFriendsPage();
-      await user.click(screen.getByText('Pending'));
+      await user.click(screen.getByText('Pendientes'));
 
-      const declineButton = screen.getByTitle('Decline');
+      const declineButton = screen.getByTitle('Rechazar');
       await user.click(declineButton);
 
       await waitFor(() => {
@@ -502,7 +502,7 @@ describe('FriendsPage', () => {
       useSocialStore.setState({ friends: [], requests: [] });
       renderFriendsPage();
 
-      expect(screen.getByText("No one's online right now.")).toBeInTheDocument();
+      expect(screen.getByText(/nadie está en línea/i)).toBeInTheDocument();
       expect(screen.queryByText(/Wumpus/)).not.toBeInTheDocument();
     });
 
@@ -511,9 +511,9 @@ describe('FriendsPage', () => {
       useSocialStore.setState({ friends: [], requests: [] });
       renderFriendsPage();
 
-      await user.click(screen.getByText('All'));
+      await user.click(screen.getByText('Todos'));
 
-      expect(screen.getByText('No friends yet — add someone!')).toBeInTheDocument();
+      expect(screen.getByText(/aún no tienes amigos/i)).toBeInTheDocument();
       expect(screen.queryByText(/Wumpus/)).not.toBeInTheDocument();
     });
 
@@ -522,9 +522,9 @@ describe('FriendsPage', () => {
       useSocialStore.setState({ friends: [], requests: [] });
       renderFriendsPage();
 
-      await user.click(screen.getByText('Pending'));
+      await user.click(screen.getByText('Pendientes'));
 
-      expect(screen.getByText('No pending requests — Nori is resting.')).toBeInTheDocument();
+      expect(screen.getByText(/nori está descansando/i)).toBeInTheDocument();
       expect(screen.queryByText(/Wumpus/)).not.toBeInTheDocument();
     });
   });

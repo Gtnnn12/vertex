@@ -210,7 +210,7 @@ export function FriendsPage({ mobile }: FriendsPageProps) {
                   </svg>
                 }
                 title={t('no_one_online')}
-                subtitle="When your friends come online, they'll appear here."
+                subtitle={t('friends_subtitle_when_online_short')}
               />
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -231,7 +231,7 @@ export function FriendsPage({ mobile }: FriendsPageProps) {
               <EmptyState
                 icon={<Mascot state="lonely" className="w-11 h-11 opacity-90" />}
                 title={t('no_friends_yet')}
-                subtitle="Add friends to start chatting privately."
+                subtitle={t('friends_subtitle_add')}
               />
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -256,14 +256,14 @@ export function FriendsPage({ mobile }: FriendsPageProps) {
                     <path d="M8 20h8M12 16v4" strokeLinecap="round" />
                   </svg>
                 }
-                title="All caught up"
-                subtitle="No pending requests — Nori is resting."
+                title={t('friends_all_caught_up')}
+                subtitle={t('friends_no_pending')}
               />
             ) : (
               <>
                 {pendingIncoming.length > 0 && (
                   <section className="flex flex-col gap-3">
-                    <SubSectionLabel dotClass="bg-accent-rose/60">Incoming — {pendingIncoming.length}</SubSectionLabel>
+                    <SubSectionLabel dotClass="bg-accent-rose/60">{t('incoming_label').replace('{count}', String(pendingIncoming.length))}</SubSectionLabel>
                     <ListPanel>
                       {pendingIncoming.map(req => (
                         <RequestItem
@@ -279,7 +279,7 @@ export function FriendsPage({ mobile }: FriendsPageProps) {
                 )}
                 {pendingOutgoing.length > 0 && (
                   <section className="flex flex-col gap-3">
-                    <SubSectionLabel dotClass="bg-accent-amber/60">Outgoing — {pendingOutgoing.length}</SubSectionLabel>
+                    <SubSectionLabel dotClass="bg-accent-amber/60">{t('outgoing_label').replace('{count}', String(pendingOutgoing.length))}</SubSectionLabel>
                     <ListPanel>
                       {pendingOutgoing.map(req => (
                         <RequestItem
@@ -342,7 +342,7 @@ export function FriendsPage({ mobile }: FriendsPageProps) {
 
         return (
           <section className="animate-fade-in flex flex-col gap-6">
-            <SectionLabel dotClass="bg-accent-mint/80">Activity</SectionLabel>
+            <SectionLabel dotClass="bg-accent-mint/80">{t('activity_label')}</SectionLabel>
             {activeFriends.length === 0 && idleFriends.length === 0 && offlineActivityFriends.length === 0 ? (
               <EmptyState
                 icon={
@@ -351,14 +351,14 @@ export function FriendsPage({ mobile }: FriendsPageProps) {
                     <path d="M8 21h8M12 17v4" strokeLinecap="round" />
                   </svg>
                 }
-                title="Quiet for now"
-                subtitle="When friends start an activity, it'll show up here."
+                title={t('friends_quiet_for_now')}
+                subtitle={t('friends_activity_hint')}
               />
             ) : (
               <>
                 {activeFriends.length > 0 && (
                   <section className="flex flex-col gap-3">
-                    <SubSectionLabel dotClass="bg-accent-mint/70">Active — {activeFriends.length}</SubSectionLabel>
+                    <SubSectionLabel dotClass="bg-accent-mint/70">{t('active_label').replace('{count}', String(activeFriends.length))}</SubSectionLabel>
                     <ListPanel>
                       {activeFriends.map(f => renderActivityFriend(f))}
                     </ListPanel>
@@ -366,7 +366,7 @@ export function FriendsPage({ mobile }: FriendsPageProps) {
                 )}
                 {idleFriends.length > 0 && (
                   <section className="flex flex-col gap-3">
-                    <SubSectionLabel dotClass="bg-status-idle/60">Online — {idleFriends.length}</SubSectionLabel>
+                    <SubSectionLabel dotClass="bg-status-idle/60">{t('online_section_label').replace('{count}', String(idleFriends.length))}</SubSectionLabel>
                     <ListPanel>
                       {idleFriends.map(f => renderActivityFriend(f))}
                     </ListPanel>
@@ -529,7 +529,7 @@ export function FriendsPage({ mobile }: FriendsPageProps) {
             setPendingUnfriend(null);
           }
         }}
-        title="Remove Friend"
+        title={t('remove_friend')}
         description={`Are you sure you want to remove ${pendingUnfriend?.name ?? 'this user'} as a friend? You can always send them a new friend request later.`}
         confirmLabel="Remove"
         variant="danger"
@@ -552,6 +552,7 @@ function AddFriendTab({
   const currentUser = useAuthStore((s) => s.user);
   const instances = useInstanceStore((s) => s.instances);
   const addToast = useUIStore((s) => s.addToast);
+  const { t } = useLanguage();
 
   const discoverUsers = useDiscoverStore((s) => s.users);
   const discoverLoading = useDiscoverStore((s) => s.isLoading);
@@ -664,16 +665,16 @@ function AddFriendTab({
   const displayUsers = isSearchMode ? enrichedSearchResults : discoverUsers;
   const displayLoading = isSearchMode ? searchLoading : discoverLoading;
   const emptyLabel = isSearchMode
-    ? 'No users match your search.'
-    : 'No discoverable users yet — invite people to join!';
+    ? t('no_users_match_search_short')
+    : t('no_discoverable_users');
 
   return (
     <div className="animate-fade-in flex flex-col gap-6">
       {/* Search section */}
       <section className="flex flex-col gap-2.5">
-        <h2 className="text-[18px] font-semibold text-txt-primary tracking-[-0.02em]">Add a friend</h2>
+        <h2 className="text-[18px] font-semibold text-txt-primary tracking-[-0.02em]">{t('add_a_friend')}</h2>
         <p className="text-[12.5px] text-txt-tertiary leading-relaxed">
-          Search by username or paste <span className="font-medium text-txt-secondary/80">user@instance</span> to send a direct request.
+          {t('add_friend_desc')}
         </p>
       </section>
 
@@ -681,7 +682,7 @@ function AddFriendTab({
       <div className="relative">
         <input
           type="text"
-          placeholder="Enter a username..."
+          placeholder={t('enter_a_username')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="w-full h-11 pl-11 pr-10 bg-white/[0.03] text-txt-primary placeholder:text-txt-tertiary/50 rounded-xl border border-white/[0.06] focus:bg-white/[0.04] focus:border-accent-primary/40 focus:ring-2 focus:ring-accent-primary/15 focus:outline-none transition-all duration-200 text-[13.5px]"
@@ -713,14 +714,14 @@ function AddFriendTab({
             </svg>
           </div>
           <div className="flex-1 min-w-0 text-[13px] text-txt-secondary">
-            Send request to <span className="font-medium text-txt-primary">{directAddDisplay}</span>
+            {t('send_request_to').replace('{user}', directAddDisplay)}
           </div>
           <button
             onClick={handleDirectAdd}
             disabled={directAddLoading}
             className="px-4 py-2 rounded-lg bg-accent-primary hover:bg-accent-primary-hover text-white text-[12.5px] font-medium transition-colors disabled:opacity-50 flex-shrink-0"
           >
-            {directAddLoading ? 'Sending...' : 'Send Request'}
+            {directAddLoading ? t('sending') : t('send_request')}
           </button>
         </div>
       )}
@@ -729,7 +730,7 @@ function AddFriendTab({
       {!isSearchMode && discoverUsers.length > 0 && (
         <div className="flex items-center gap-2.5 px-1">
           <span className="w-[3px] h-3.5 rounded-full bg-accent-primary/50" />
-          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-txt-tertiary/60">People you may know</span>
+          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-txt-tertiary/60">{t('people_you_may_know')}</span>
         </div>
       )}
 
@@ -1128,7 +1129,7 @@ function FriendItem({ friend, onRemove, onDm }: { friend: TaggedFriend, onRemove
         <button
           onClick={(e) => { e.stopPropagation(); onDm(); }}
           className="w-7 h-7 flex items-center justify-center rounded-lg text-txt-tertiary/60 hover:text-txt-primary hover:bg-white/[0.06] transition-colors"
-          title="Message"
+          title={t('message')}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
@@ -1137,7 +1138,7 @@ function FriendItem({ friend, onRemove, onDm }: { friend: TaggedFriend, onRemove
         <button
           onClick={(e) => { e.stopPropagation(); onRemove(); }}
           className="w-7 h-7 flex items-center justify-center rounded-lg text-txt-tertiary/40 hover:text-txt-danger hover:bg-accent-rose/10 transition-colors"
-          title="Remove Friend"
+          title={t('remove_friend')}
         >
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <path d="M18 6L6 18M6 6l12 12" />
@@ -1159,6 +1160,7 @@ function RequestItem({ request, type, onAccept, onDecline, onCancel }: {
   const _FALLBACK_USER = { id: '', username: '', createdAt: 0, isAdmin: false, replicatedInstances: [] } as unknown as User;
   const canonicalUser = useCanonicalUserView((rawUser as unknown as User | null) ?? _FALLBACK_USER);
   const user = rawUser ? canonicalUser : null;
+  const { t } = useLanguage();
   if (!user) return null;
   const instanceLabel = request._instanceOrigin ? (() => { try { return new URL(request._instanceOrigin).host; } catch { return request._instanceOrigin; } })() : '';
   const { baseName: reqBaseName, domain } = parseFederatedUsername(user.username);
@@ -1186,7 +1188,7 @@ function RequestItem({ request, type, onAccept, onDecline, onCancel }: {
           </div>
           <div className="flex items-center gap-1.5 min-w-0">
             <span className={`text-[11px] font-medium ${isIncoming ? 'text-accent-rose/90' : 'text-accent-amber/90'}`}>
-              {isIncoming ? 'Wants to be friends' : 'Request sent'}
+              {isIncoming ? t('wants_to_be_friends') : t('request_sent')}
             </span>
             {instanceLabel && (
               <>
@@ -1203,7 +1205,7 @@ function RequestItem({ request, type, onAccept, onDecline, onCancel }: {
             <button
               onClick={() => onAccept?.()}
               className="w-8 h-8 flex items-center justify-center rounded-lg bg-accent-mint/10 text-accent-mint hover:bg-accent-mint hover:text-[#0b0b10] transition-all"
-              title="Accept"
+              title={t('accept')}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12" />
@@ -1212,7 +1214,7 @@ function RequestItem({ request, type, onAccept, onDecline, onCancel }: {
             <button
               onClick={() => onDecline?.()}
               className="w-8 h-8 flex items-center justify-center rounded-lg text-txt-tertiary/50 hover:text-txt-danger hover:bg-accent-rose/10 transition-colors"
-              title="Decline"
+              title={t('decline')}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                 <path d="M18 6L6 18M6 6l12 12" />
@@ -1223,7 +1225,7 @@ function RequestItem({ request, type, onAccept, onDecline, onCancel }: {
           <button
             onClick={() => onCancel?.()}
             className="w-8 h-8 flex items-center justify-center rounded-lg text-txt-tertiary/50 hover:text-txt-danger hover:bg-accent-rose/10 transition-colors"
-            title="Cancel Request"
+            title={t('profile_action_cancel_request')}
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <path d="M18 6L6 18M6 6l12 12" />

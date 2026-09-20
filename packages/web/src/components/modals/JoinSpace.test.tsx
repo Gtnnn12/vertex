@@ -18,6 +18,7 @@ import { JoinSpaceModal } from './JoinSpace';
 import { useUIStore } from '../../stores/uiStore';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { useExploreStore } from '../../stores/exploreStore';
+import { LanguageProvider } from '../../contexts/LanguageContext';
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -52,7 +53,9 @@ beforeEach(() => {
 function renderModal() {
   return render(
     <MemoryRouter>
-      <JoinSpaceModal />
+      <LanguageProvider>
+        <JoinSpaceModal />
+      </LanguageProvider>
     </MemoryRouter>
   );
 }
@@ -67,11 +70,11 @@ describe('JoinSpaceModal', () => {
   it('renders the form when opened', () => {
     useUIStore.setState({ activeModal: 'joinSpace' });
     renderModal();
-    expect(screen.getByText('Join a Space')).toBeInTheDocument();
+    expect(screen.getByText(/Unirse a un espacio/i)).toBeInTheDocument();
     expect(
-      screen.getByPlaceholderText('e.g. abc123 or https://instance.com/join/abc123')
+      screen.getByPlaceholderText(/abc123 o https:\/\/instancia\.com\/join\/abc123/)
     ).toBeInTheDocument();
-    expect(screen.getByText('Join Space')).toBeInTheDocument();
+    expect(screen.getByText('Unirse al espacio')).toBeInTheDocument();
   });
 
   it('disables the Join Space button while the input is empty', () => {
@@ -81,7 +84,7 @@ describe('JoinSpaceModal', () => {
     // The submit button is the validation gate in this UI — there is no
     // click-to-show-error path. parseInviteInput's 'Invite code is required'
     // branch is defensive only and unreachable from the rendered form.
-    expect(screen.getByText('Join Space')).toBeDisabled();
+    expect(screen.getByText('Unirse al espacio')).toBeDisabled();
   });
 
   it('calls joinByCode with the entered invite code and navigates on success', async () => {
@@ -93,11 +96,11 @@ describe('JoinSpaceModal', () => {
     renderModal();
 
     // Type invite code
-    const input = screen.getByPlaceholderText('e.g. abc123 or https://instance.com/join/abc123');
+    const input = screen.getByPlaceholderText(/abc123 o https:\/\/instancia\.com\/join\/abc123/);
     await user.type(input, 'my-invite-code');
 
     // Click join
-    const submitButton = screen.getByText('Join Space');
+    const submitButton = screen.getByText('Unirse al espacio');
     await user.click(submitButton);
 
     // joinByCode(code, origin) — bare code has no origin, so second arg is
@@ -123,10 +126,10 @@ describe('JoinSpaceModal', () => {
 
     renderModal();
 
-    const input = screen.getByPlaceholderText('e.g. abc123 or https://instance.com/join/abc123');
+    const input = screen.getByPlaceholderText(/abc123 o https:\/\/instancia\.com\/join\/abc123/);
     await user.type(input, 'bad-code');
 
-    const submitButton = screen.getByText('Join Space');
+    const submitButton = screen.getByText('Unirse al espacio');
     await user.click(submitButton);
 
     await waitFor(() => {
@@ -137,9 +140,9 @@ describe('JoinSpaceModal', () => {
   it('shows the discovery heading and fetches spaces on open', () => {
     useUIStore.setState({ activeModal: 'joinSpace' });
     renderModal();
-    expect(screen.getByText(/Discover spaces to join/i)).toBeInTheDocument();
+    expect(screen.getByText(/Descubre spaces a los que unirte/i)).toBeInTheDocument();
     expect(useExploreStore.getState().fetchSpaces).toHaveBeenCalled();
-    expect(screen.getByText('Browse all in Explore')).toBeInTheDocument();
+    expect(screen.getByText('Explorar todos')).toBeInTheDocument();
   });
 
   it('renders live preview cards for unjoined discoverable spaces', () => {
@@ -159,7 +162,7 @@ describe('JoinSpaceModal', () => {
     const user = userEvent.setup();
     useUIStore.setState({ activeModal: 'joinSpace', isMobile: false });
     renderModal();
-    await user.click(screen.getByText('Browse all in Explore'));
+    await user.click(screen.getByText('Explorar todos'));
     expect(mockNavigate).toHaveBeenCalledWith('/explore');
     expect(useUIStore.getState().activeModal).toBeNull();
   });
@@ -169,7 +172,7 @@ describe('JoinSpaceModal', () => {
     const pushMobileScreen = vi.fn();
     useUIStore.setState({ activeModal: 'joinSpace', isMobile: true, pushMobileScreen });
     renderModal();
-    await user.click(screen.getByText('Browse all in Explore'));
+    await user.click(screen.getByText('Explorar todos'));
     expect(pushMobileScreen).toHaveBeenCalledWith('explore');
     expect(mockNavigate).not.toHaveBeenCalledWith('/explore');
   });
@@ -188,10 +191,10 @@ describe('JoinSpaceModal', () => {
     useUIStore.setState({ activeModal: 'joinSpace' });
     renderModal();
     // Discovery failure shows a degrade note...
-    expect(screen.getByText(/Couldn.t load spaces/i)).toBeInTheDocument();
-    // ...but the invite input stays usable so the user can still join.
+    expect(screen.getByText(/No se pudo cargar los spaces/i)).toBeInTheDocument();
+    // The invite input stays usable so the user can still join.
     expect(
-      screen.getByPlaceholderText('e.g. abc123 or https://instance.com/join/abc123')
+      screen.getByPlaceholderText(/abc123 o https:\/\/instancia\.com\/join\/abc123/)
     ).toBeInTheDocument();
   });
 
@@ -199,9 +202,9 @@ describe('JoinSpaceModal', () => {
     useExploreStore.setState({ discoveryEnabled: false });
     useUIStore.setState({ activeModal: 'joinSpace' });
     renderModal();
-    expect(screen.getByText(/discovery is turned off/i)).toBeInTheDocument();
-    expect(screen.queryByText('Browse all in Explore')).not.toBeInTheDocument();
+    expect(screen.getByText(/descubrimiento de spaces está desactivado/i)).toBeInTheDocument();
+    expect(screen.queryByText('Explorar todos')).not.toBeInTheDocument();
     // invite path still available
-    expect(screen.getByPlaceholderText('e.g. abc123 or https://instance.com/join/abc123')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/abc123 o https:\/\/instancia\.com\/join\/abc123/)).toBeInTheDocument();
   });
 });

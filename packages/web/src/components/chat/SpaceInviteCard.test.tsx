@@ -51,8 +51,8 @@ describe('SpaceInviteCard', () => {
     });
     render(<MemoryRouter><SpaceInviteCard payload={basePayload} senderName="Alice" /></MemoryRouter>);
     expect(screen.getByText('Aether')).toBeInTheDocument();
-    expect(screen.getByText(/12 members/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /join/i })).toBeEnabled();
+    expect(screen.getByText(/12 Miembros/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /unirse/i })).toBeEnabled();
   });
 
   it('refreshes member count when live preview resolves (live-confirmed state)', async () => {
@@ -60,7 +60,7 @@ describe('SpaceInviteCard', () => {
       spaces: { invitePreview:vi.fn().mockResolvedValue({ ...basePayload.snapshot, spaceId: 'S1', memberCount: 99 }) },
     });
     render(<MemoryRouter><SpaceInviteCard payload={basePayload} senderName="Alice" /></MemoryRouter>);
-    await waitFor(() => expect(screen.getByText(/99 members/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/99 Miembros/i)).toBeInTheDocument());
   });
 
   it('shows revoked state when preview rejects (revoked state)', async () => {
@@ -69,10 +69,10 @@ describe('SpaceInviteCard', () => {
     });
     render(<MemoryRouter><SpaceInviteCard payload={basePayload} senderName="Alice" /></MemoryRouter>);
     await waitFor(() =>
-      expect(screen.getByText(/invite no longer valid/i)).toBeInTheDocument(),
+      expect(screen.getByText(/ya no es válida/i)).toBeInTheDocument(),
     );
     // Join button replaced with disabled pill
-    expect(screen.queryByRole('button', { name: /^join$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^unirse$/i })).not.toBeInTheDocument();
   });
 
   it('Join click passes payload.spaceInstanceOrigin to joinByCode (three-way federation invariant)', async () => {
@@ -88,7 +88,7 @@ describe('SpaceInviteCard', () => {
     });
 
     render(<MemoryRouter><SpaceInviteCard payload={basePayload} senderName="Alice" /></MemoryRouter>);
-    const btn = await screen.findByRole('button', { name: /^join$/i });
+    const btn = await screen.findByRole('button', { name: /^unirse$/i });
     await user.click(btn);
 
     expect(mockJoinByCode).toHaveBeenCalledTimes(1);
@@ -111,7 +111,7 @@ describe('SpaceInviteCard', () => {
     });
 
     render(<MemoryRouter><SpaceInviteCard payload={basePayload} senderName="Alice" /></MemoryRouter>);
-    const btn = await screen.findByRole('button', { name: /^join$/i });
+    const btn = await screen.findByRole('button', { name: /^unirse$/i });
     await user.click(btn);
 
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/channels/S1'));

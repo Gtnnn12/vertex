@@ -273,7 +273,7 @@ describe('DmRosterPanel — visibility gates', () => {
     setScenario({ caller: owner, members: [owner], ownerId: 'owner-1' });
     const { container } = renderPanel();
     expect(container.querySelector('[data-dm-roster-panel]')).toBeTruthy();
-    expect(container.querySelector('[data-dm-roster-header]')?.textContent).toContain('Members — 1');
+    expect(container.querySelector('[data-dm-roster-header]')?.textContent).toContain('Miembros — 1');
   });
 });
 
@@ -294,7 +294,7 @@ describe('DmRosterPanel — section grouping', () => {
     expect(container.querySelector('[data-dm-roster-section="owner"]')).toBeTruthy();
     expect(container.querySelector('[data-dm-roster-section="online"]')).toBeTruthy();
     expect(container.querySelector('[data-dm-roster-section="offline"]')).toBeTruthy();
-    expect(container.querySelector('[data-dm-roster-header]')?.textContent).toContain('Members — 4');
+    expect(container.querySelector('[data-dm-roster-header]')?.textContent).toContain('Miembros — 4');
   });
 
   it('sorts ONLINE and OFFLINE alphabetically by displayName', () => {
@@ -344,7 +344,7 @@ describe('DmRosterPanel — action wiring', () => {
     await u.click(kickBtn);
 
     // Confirm dialog visible.
-    const confirmBtn = await screen.findByRole('button', { name: 'Remove' });
+    const confirmBtn = await screen.findByRole('button', { name: 'Quitar' });
     await u.click(confirmBtn);
 
     await waitFor(() => {
@@ -369,7 +369,7 @@ describe('DmRosterPanel — action wiring', () => {
     const transferBtn = await screen.findByText('Transfer Ownership');
     await u.click(transferBtn);
 
-    const confirmBtn = await screen.findByRole('button', { name: 'Transfer' });
+    const confirmBtn = await screen.findByRole('button', { name: 'Transferir' });
     await u.click(confirmBtn);
 
     await waitFor(() => {
