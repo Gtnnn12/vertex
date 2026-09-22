@@ -178,23 +178,50 @@ export function ensureDefaults(db: Database.Database): void {
   try { db.prepare('CREATE INDEX IF NOT EXISTS idx_web_thread_messages_created_at ON web_support_thread_messages(created_at)').run(); } catch {}
 
   // 4. Owner bootstrap (backend source of truth for the OWNER rank).
-  // If OWNER_EMAIL is configured, the matching account is promoted to
-  // staffRole='owner' (+ is_admin=1) on every boot. Idempotent: an account that
-  // is already owner is left untouched, and no other account is ever demoted
-  // here — owner removal stays an explicit Admin Center operation.
-  const ownerEmail = config.ownerEmail;
+  if (config.ownerEmail) ensureOwnerBootstrap(db, config.ownerEmail);
+}
+
+/**
+ * Owner bootstrap (backend source of truth for the OWNER rank and its
+ * permanent Netrex entitlement). Idempotent — safe to run on every boot.
+ *
+ * If OWNER_EMAIL is configured, the matching account is promoted to
+ * staffRole='owner' (+ is_admin=1) on every boot, and its Netrex grant is
+ * ensured as PERMANENT (netrex_enabled=1 with NULL expiration — the same
+ * shape the Admin Center permanent grant produces). Idempotent: an account
+ * that is already owner is left untouched, no other account is ever demoted
+ * here (owner removal stays an explicit Admin Center operation), and the
+ * Netrex sweep never touches permanent grants (NULL expiry rows are skipped
+ * by expireDueNetrexGrants).
+ *
+ * Uses raw better-sqlite3 handle (not Drizzle ORM).
+ */
+export function ensureOwnerBootstrap(db: Database.Database, ownerEmail: string): void {
   const usersTableExists = !!db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='users'").get();
-  if (ownerEmail && usersTableExists) {
-    const hasUsernameCol = !!db.prepare("SELECT name FROM pragma_table_info('users') WHERE name='username'").get();
-    if (hasUsernameCol) {
-      const ownerRow = db.prepare(
-        "SELECT id, staff_role FROM users WHERE lower(username) = ? AND is_deleted = 0 LIMIT 1"
-      ).get(ownerEmail) as { id: string; staff_role: string | null } | undefined;
-      if (ownerRow && ownerRow.staff_role !== 'owner') {
-        db.prepare("UPDATE users SET staff_role = 'owner', is_admin = 1 WHERE id = ?").run(ownerRow.id);
-        console.log(`[defaults] Promoted ${ownerRow.id} (${ownerEmail}) to owner`);
-      }
-    }
+  if (!usersTableExists) return;
+  const hasUsernameCol = !!db.prepare("SELECT name FROM pragma_table_info('users') WHERE name='username'").get();
+  if (!hasUsernameCol) return;
+
+  const ownerRow = db.prepare(
+    "SELECT id, staff_role FROM users WHERE lower(username) = ? AND is_deleted = 0 LIMIT 1"
+  ).get(ownerEmail) as { id: string; staff_role: string | null } | undefined;
+  if (!ownerRow) return;
+
+  if (ownerRow.staff_role !== 'owner') {
+    db.prepare("UPDATE users SET staff_role = 'owner', is_admin = 1 WHERE id = ?").run(ownerRow.id);
+    console.log(`[defaults] Promoted ${ownerRow.id} (${ownerEmail}) to owner`);
+  }
+
+  // Permanent Netrex for the owner account. Purchase-plan state (netrex_until)
+  // is intentionally untouched — this only manages the admin-grant shape.
+  const hasNetrexCol = !!db.prepare("SELECT name FROM pragma_table_info('users') WHERE name='netrex_enabled'").get();
+  if (!hasNetrexCol) return;
+  const netrex = db.prepare(
+    "SELECT netrex_enabled, netrex_expires_at FROM users WHERE id = ?"
+  ).get(ownerRow.id) as { netrex_enabled: number; netrex_expires_at: number | null };
+  if (!(netrex.netrex_enabled === 1 && netrex.netrex_expires_at == null)) {
+    db.prepare("UPDATE users SET netrex_enabled = 1, netrex_expires_at = NULL WHERE id = ?").run(ownerRow.id);
+    console.log(`[defaults] Ensured permanent netrex for ${ownerRow.id} (${ownerEmail})`);
   }
 }
 
