@@ -87,14 +87,6 @@ function ServerIcon() {
   );
 }
 
-function ActivityIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-txt-secondary">
-      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-    </svg>
-  );
-}
-
 function StreamingIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-txt-secondary">
@@ -237,170 +229,6 @@ function VertservPreview() {
           ))}
         </div>
       </div>
-    </div>
-  );
-}
-
-// ─── Activity Member Panel preview ──────────────────────────────────────────
-
-function ActivityPanelPreview({ t }: { t: (key: string) => string }) {
-  const [activeMode, setActiveMode] = useState<'standard' | 'compact' | 'activity' | 'cards'>('activity');
-
-  const members = [
-    { name: 'Alice', status: 'online', activity: 'Playing Valorant', activityType: 'playing', color: '#86efac', role: 'Admin' },
-    { name: 'Bob', status: 'online', activity: 'Listening to Spotify', activityType: 'listening', color: '#7dd3fc', role: null },
-    { name: 'Charlie', status: 'idle', activity: 'In a voice channel', activityType: 'voice', color: '#fcd34d', role: 'Moderator' },
-    { name: 'Diana', status: 'online', activity: 'Watching YouTube', activityType: 'watching', color: '#c4b5fd', role: null },
-    { name: 'Eve', status: 'offline', activity: '', activityType: null, color: '#6b7280', role: null },
-    { name: 'Frank', status: 'dnd', activity: 'In a meeting', activityType: 'focus', color: '#fda4af', role: null },
-    { name: 'Grace', status: 'online', activity: 'Building VERTEX', activityType: 'working', color: '#86efac', role: 'Owner' },
-    { name: 'Henry', status: 'idle', activity: 'Editing a document', activityType: 'focus', color: '#fcd34d', role: null },
-  ];
-
-  const modeLabels = {
-    standard: t('netrex_activity_mode_standard'),
-    compact: t('netrex_activity_mode_compact'),
-    activity: t('netrex_activity_mode_activity'),
-    cards: t('netrex_activity_mode_cards'),
-  };
-
-  return (
-    <div className="relative rounded-2xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
-      {/* Mode tabs */}
-      <div className="flex items-center border-b border-white/[0.05]">
-        {(['standard', 'compact', 'activity', 'cards'] as const).map((mode) => (
-          <button
-            key={mode}
-            onClick={() => setActiveMode(mode)}
-            className={`flex-1 px-3 py-2.5 text-[10px] font-semibold uppercase tracking-[0.1em] transition-all duration-200 border-b-2 ${
-              activeMode === mode
-                ? 'text-accent-peach border-accent-peach bg-accent-peach/5'
-                : 'text-txt-tertiary border-transparent hover:text-txt-secondary hover:bg-white/[0.02]'
-            }`}
-          >
-            {modeLabels[mode]}
-          </button>
-        ))}
-      </div>
-
-      {activeMode === 'activity' && (
-        <>
-          {/* Group members header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.05]">
-            <div className="flex items-center gap-2">
-              <span className="text-[12px] font-bold text-txt-primary">{t('netrex_activity_group_members')}</span>
-              <span className="text-[10px] text-txt-tertiary">{members.length}</span>
-            </div>
-            <button className="text-[10px] font-semibold text-accent-primary hover:text-accent-primary/80 transition-colors px-2 py-1 rounded-md hover:bg-accent-primary/10">
-              {t('netrex_activity_invite')}
-            </button>
-          </div>
-          {/* Member grid */}
-          <div className="p-3 grid grid-cols-4 gap-2">
-            {members.map((m) => (
-              <div key={m.name} className="flex flex-col items-center gap-1.5 p-2 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.04] transition-colors">
-                <div className="relative">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-accent-peach/20 to-accent-rose/20 border-2 flex items-center justify-center text-[10px] font-bold text-txt-secondary"
-                    style={{ borderColor: m.color + '40' }}>
-                    {m.name[0]}
-                  </div>
-                  <div
-                    className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-surface-base"
-                    style={{ background: m.color }}
-                  />
-                  {m.role && (
-                    <div className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-accent-amber border border-surface-base flex items-center justify-center">
-                      <span className="text-[6px]">★</span>
-                    </div>
-                  )}
-                </div>
-                <span className="text-[9px] font-medium text-txt-secondary truncate w-full text-center">{m.name}</span>
-              </div>
-            ))}
-          </div>
-          {/* Activity section */}
-          <div className="px-4 py-3 border-t border-white/[0.05]">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent-peach">✦ {t('netrex_activity_active_now')}</span>
-              <span className="h-px flex-1 bg-white/[0.05]" />
-            </div>
-            <div className="space-y-2.5">
-              {members.slice(0, 3).filter(m => m.activity).map((m) => (
-                <div key={m.name} className="flex items-center gap-3 py-1.5 px-2 rounded-lg bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent-peach/20 to-accent-rose/20 flex items-center justify-center text-[10px] font-bold text-txt-secondary flex-shrink-0">
-                    {m.name[0]}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[11px] font-medium text-txt-primary truncate">{m.name}</div>
-                    <div className="text-[10px] text-txt-tertiary truncate flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: m.color }} />
-                      {m.activity}
-                    </div>
-                  </div>
-                  <span className="text-[9px] text-txt-tertiary flex-shrink-0">2m ago</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
-
-      {activeMode === 'cards' && (
-        <div className="p-3 space-y-2">
-          {members.slice(0, 4).map((m) => (
-            <div key={m.name} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.04] transition-colors">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent-peach/20 to-accent-rose/20 border border-white/[0.08] flex items-center justify-center text-[12px] font-bold text-txt-secondary">
-                {m.name[0]}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-[12px] font-semibold text-txt-primary truncate">{m.name}</span>
-                  {m.role && (
-                    <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-accent-amber/20 text-accent-amber border border-accent-amber/20">{m.role}</span>
-                  )}
-                </div>
-                <div className="text-[10px] text-txt-tertiary truncate flex items-center gap-1 mt-0.5">
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: m.color }} />
-                  {m.activity || 'Offline'}
-                </div>
-              </div>
-              <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: m.color }} />
-            </div>
-          ))}
-        </div>
-      )}
-
-      {activeMode === 'standard' && (
-        <div className="p-2 space-y-0.5">
-          {members.map((m) => (
-            <div key={m.name} className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-white/[0.03] transition-colors">
-              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-accent-peach/20 to-accent-rose/20 flex items-center justify-center text-[9px] font-bold text-txt-secondary flex-shrink-0">
-                {m.name[0]}
-              </div>
-              <span className="text-[12px] text-txt-secondary flex-1 truncate">{m.name}</span>
-              <div className="w-2 h-2 rounded-full" style={{ background: m.color }} />
-            </div>
-          ))}
-        </div>
-      )}
-
-      {activeMode === 'compact' && (
-        <div className="p-2">
-          <div className="flex flex-wrap gap-1">
-            {members.map((m) => (
-              <div key={m.name} className="relative group">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent-peach/20 to-accent-rose/20 border border-white/[0.08] flex items-center justify-center text-[9px] font-bold text-txt-secondary">
-                  {m.name[0]}
-                </div>
-                <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-surface-base" style={{ background: m.color }} />
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 rounded-md bg-[#1a1a23] border border-white/[0.08] text-[10px] text-txt-secondary whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                  {m.name}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -635,7 +463,6 @@ export function NetrexSection() {
             <FeatureCard icon={<PaletteIcon />} title={t('netrex_personalization')} description={t('netrex_personalization_desc')} accent="rgb(196,181,253)" />
             <FeatureCard icon={<UserIcon />} title={t('netrex_profiles')} description={t('netrex_profiles_desc')} accent="rgb(252,165,165)" />
             <FeatureCard icon={<ServerIcon />} title={t('netrex_vertserver')} description={t('netrex_vertserver_desc')} accent="rgb(125,211,252)" />
-            <FeatureCard icon={<ActivityIcon />} title={t('netrex_activity')} description={t('netrex_activity_desc')} accent="rgb(134,239,172)" />
             <FeatureCard icon={<StreamingIcon />} title={t('netrex_streaming')} description={t('netrex_streaming_desc')} accent="rgb(252,211,77)" />
             <FeatureCard icon={<SparkleIcon />} title={t('netrex_experience')} description={t('netrex_experience_desc')} accent="rgb(251,146,60)" />
             <FeatureCard icon={<SparkleFillIcon />} title={t('netrex_feature_effects')} description={t('netrex_feature_effects_desc')} accent="rgb(196,181,253)" />
@@ -731,25 +558,6 @@ export function NetrexSection() {
               </div>
             </div>
             <VertservPreview />
-          </div>
-        </section>
-
-        {/* ── Activity Member Panel ── */}
-        <section className="mb-20 md:mb-28">
-          <SectionLabel>{t('netrex_activity_panel_title')}</SectionLabel>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
-            <div>
-              <h2 className="text-[32px] md:text-[36px] font-bold tracking-[-0.03em] text-txt-primary leading-tight">
-                {t('netrex_activity_panel_title')}
-              </h2>
-              <p className="mt-4 text-[14px] leading-relaxed text-txt-secondary">
-                {t('netrex_activity_panel_desc')}
-              </p>
-              <p className="mt-4 text-[12px] text-txt-tertiary">
-                {t('netrex_activity_layouts_hint')}
-              </p>
-            </div>
-            <ActivityPanelPreview t={t} />
           </div>
         </section>
 
