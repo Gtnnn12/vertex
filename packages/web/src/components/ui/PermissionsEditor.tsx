@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useSpaceStore } from '../../stores/spaceStore';
 import { permissionsToString, stringToPermissions } from '../../utils/permissions';
 import { OverrideEntry, type PermissionDef } from './OverrideEntry';
+import { useLanguage } from '../../contexts/LanguageContext';
 import type { Role, MemberWithUser } from '@backspace/shared';
 
 export interface Override {
@@ -30,6 +31,7 @@ export function PermissionsEditor({
   putOverride,
   deleteOverride,
 }: PermissionsEditorProps) {
+  const { t } = useLanguage();
   const roles = useSpaceStore((s) => s.roles);
   const members = useSpaceStore((s) => s.members);
 
@@ -422,13 +424,13 @@ export function PermissionsEditor({
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
               </svg>
-              Add Role
+              {t('add_role')}
             </button>
           ) : (
             <div ref={roleDropdownRef} className="glass rounded-lg overflow-hidden">
               <div className="p-1.5 max-h-48 overflow-y-auto scrollbar-thin">
                 {availableRoles.length === 0 ? (
-                  <div className="px-2.5 py-1.5 text-xs text-txt-muted">No more roles to add</div>
+                  <div className="px-2.5 py-1.5 text-xs text-txt-muted">{t('no_more_roles_to_add')}</div>
                 ) : (
                   availableRoles.map(role => (
                     <button
@@ -490,7 +492,7 @@ export function PermissionsEditor({
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
               </svg>
-              Add Member
+              {t('add_member')}
             </button>
           ) : (
             <div ref={memberDropdownRef} className="glass rounded-lg overflow-hidden">
@@ -499,14 +501,14 @@ export function PermissionsEditor({
                   type="text"
                   value={memberSearch}
                   onChange={(e) => setMemberSearch(e.target.value)}
-                  placeholder="Search members..."
+                  placeholder={t('search_members')}
                   className="input-search w-full mb-1"
                   autoFocus
                 />
               </div>
               <div className="px-1.5 max-h-48 overflow-y-auto scrollbar-thin">
                 {availableMembers.length === 0 ? (
-                  <div className="px-2.5 py-1.5 text-xs text-txt-muted">No members found</div>
+                  <div className="px-2.5 py-1.5 text-xs text-txt-muted">{t('no_members_found')}</div>
                 ) : (
                   availableMembers.map(member => (
                     <button

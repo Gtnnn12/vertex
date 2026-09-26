@@ -190,7 +190,7 @@ export function BulkPermissionsModal() {
       setSaveSuccess(true);
       setTimeout(() => closeModal(), 1200);
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Failed to save permissions');
+      setSaveError(err instanceof Error ? err.message : t('failed_to_save'));
     } finally {
       setSaving(false);
     }
@@ -199,9 +199,9 @@ export function BulkPermissionsModal() {
   if (!isOpen) return null;
   if (!canManage) {
     return (
-      <Modal isOpen onClose={closeModal} title="Permissions" maxWidth="max-w-md">
+      <Modal isOpen onClose={closeModal} title={t('permissions')} maxWidth="max-w-md">
         <p className="text-sm text-txt-secondary px-1 py-4">
-          You need the Manage Roles permission to edit channel permissions.
+          {t('bulk_perm_need_manage_roles')}
         </p>
       </Modal>
     );
@@ -212,7 +212,7 @@ export function BulkPermissionsModal() {
     : t('bulk_perm_roles_title');
 
   return (
-    <Modal isOpen onClose={closeModal} title="Channel Permissions" maxWidth="max-w-2xl">
+    <Modal isOpen onClose={closeModal} title={t('channel_permissions')} maxWidth="max-w-2xl">
       {/* Step indicator */}
       <div className="flex items-center gap-2 px-1 mb-3">
         {[1, 2].map((s) => (
