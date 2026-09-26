@@ -7,6 +7,7 @@ import { ensureDefaults, backfillOneOnOneDmMembership } from './migrate.js';
 import { setWorkerId } from '../utils/snowflake.js';
 import { createSnapshot } from '../utils/backup.js';
 import { hasPendingMigrations } from './pendingMigrations.js';
+import { wrapWithHranaRetry } from './hranaRetry.js';
 import { mkdirSync, existsSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
@@ -57,6 +58,10 @@ export async function initDatabase() {
     // no ensureDirectory/dbExisted/snapshot logic applies (Turso has its own
     // backups; local snapshots of a remote DB are meaningless).
     sqlite = new DatabaseCtor(url, authToken ? { authToken } : undefined);
+    // Turso expires idle Hrana streams — wrap the handle so any statement that
+    // hits a dead stream is transparently retried on a fresh one (local SQLite
+    // stays untouched: errors there must surface immediately).
+    sqlite = wrapWithHranaRetry(sqlite) as typeof sqlite;
     sqlite.pragma('foreign_keys = ON');
   } else {
     ensureDirectory(config.dbPath);
