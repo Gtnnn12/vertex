@@ -907,7 +907,7 @@ if (process.platform === 'linux') {
 // Windows: AppUserModelId so toast notifications attribute correctly to VERTEX
 // (without this, recovery / update notifications appear under "electron.exe").
 if (process.platform === 'win32') {
-  app.setAppUserModelId('com.backspace.desktop');
+  app.setAppUserModelId('com.vertex.desktop');
 }
 
 /**
