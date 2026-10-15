@@ -27,7 +27,7 @@
     "@electron/rebuild": "^3.7.1",
     "electron": "^40.0.0",
     "electron-builder": "^25.1.8",
-    "typescript": "^5.7.2",
+    "typescript": "^7.0.2",
     "vitest": "^4.0.18"
   }
 }
